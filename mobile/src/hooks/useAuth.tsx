@@ -68,10 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
       setSession(newSession);
     });
 
+    // Lê a sessão diretamente do Supabase (não do estado React) — um
+    // closure sobre `session` ficaria preso ao valor de quando o efeito
+    // correu pela primeira vez (null, antes do login).
     function onVisibilityChange(): void {
-      if (document.visibilityState === 'visible' && session) {
-        void verificarAtivo(session);
-      }
+      if (document.visibilityState !== 'visible') return;
+      void supabase.auth.getSession().then(({ data }) => {
+        if (data.session) void verificarAtivo(data.session);
+      });
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
 

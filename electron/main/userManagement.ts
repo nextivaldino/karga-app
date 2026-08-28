@@ -173,7 +173,9 @@ export async function desabilitarPwa(requestedByRole: UserRole, userId: string):
     await upsertPwaUser({ id: existing.id, nome: existing.name, email: existing.email, ativo: false, authUid: existing.pwaAuthUid });
   }
 
-  const updated = userRepository.setPwaStatus(userId, false, null);
+  // Mantém pwa_auth_uid (não o limpa) — a conta no Supabase Auth só é
+  // banida, nunca eliminada, para permitir reativação sem duplicar a conta.
+  const updated = userRepository.setPwaStatus(userId, false, existing.pwaAuthUid);
   return toPublicUser(updated);
 }
 

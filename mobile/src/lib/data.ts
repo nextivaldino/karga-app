@@ -83,23 +83,27 @@ export async function listMinhasCargasPendentes(contentorId?: string): Promise<C
   return (data ?? []).map(mapCargaPendente);
 }
 
+function vazioParaNull(v: string | null): string | null {
+  return v && v.trim() ? v.trim() : null;
+}
+
 export async function enviarCargasPendentes(userId: string, items: NovaCargaPendenteInput[]): Promise<void> {
   const rows = items.map((item) => ({
     contentor_id: item.contentorId,
     inserido_por_user_id: userId,
-    emissor_nome: item.emissorNome,
-    emissor_telefone: item.emissorTelefone,
-    emissor_email: item.emissorEmail,
-    recetor_nome: item.recetorNome,
-    recetor_telefone: item.recetorTelefone,
-    nome_carga: item.nomeCarga,
+    emissor_nome: item.emissorNome.trim(),
+    emissor_telefone: vazioParaNull(item.emissorTelefone),
+    emissor_email: vazioParaNull(item.emissorEmail),
+    recetor_nome: item.recetorNome.trim(),
+    recetor_telefone: vazioParaNull(item.recetorTelefone),
+    nome_carga: item.nomeCarga.trim(),
     comprimento_cm: item.comprimentoCm,
     largura_cm: item.larguraCm,
     altura_cm: item.alturaCm,
     peso_kg: item.pesoKg,
     valor: item.valor,
     pago: item.pago,
-    notas: item.notas,
+    notas: vazioParaNull(item.notas),
   }));
   const { error } = await supabase.from('cargas_pendentes').insert(rows);
   if (error) throw new Error(error.message);

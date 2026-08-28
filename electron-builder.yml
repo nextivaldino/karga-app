@@ -1,0 +1,23 @@
+appId: com.nextlab.kragadesktop
+productName: Kraga Desktop
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+mac:
+  target: dmg
+  category: public.app-category.business
+win:
+  target:
+    - nsis
+    - portable
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Office

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-electron/
+release/
+*.local
+*.tsbuildinfo
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+docs/.claude/
+.env*
+!.env.example
+supabase/.temp/

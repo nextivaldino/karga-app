@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { userRepository } from '../models/repositories/userRepository';
 import { permissaoRepository } from '../models/repositories/permissaoRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
-import { criarUtilizadorPwaAuth, desativarUtilizadorPwaAuth, upsertPwaUser } from '../lib/supabaseClient';
+import { criarUtilizadorPwaAuth, desativarUtilizadorPwaAuth, reativarUtilizadorPwaAuth, upsertPwaUser } from '../lib/supabaseClient';
 import type { CreateUserInput, HabilitarPwaResult, PermissaoInput, PublicUser, UserRole, UsuarioComSessao } from '../../src/types';
 
 const SALT_ROUNDS = 10;
@@ -150,7 +150,12 @@ export async function habilitarPwa(requestedByRole: UserRole, userId: string): P
   if (existing.role !== 'user') throw new Error('Só utilizadores do tipo "user" podem ter acesso PWA.');
 
   const passwordTemporaria = gerarPasswordTemporaria();
-  const authUid = await criarUtilizadorPwaAuth(existing.email, passwordTemporaria);
+  let authUid = existing.pwaAuthUid;
+  if (authUid) {
+    await reativarUtilizadorPwaAuth(authUid, passwordTemporaria);
+  } else {
+    authUid = await criarUtilizadorPwaAuth(existing.email, passwordTemporaria);
+  }
   await upsertPwaUser({ id: existing.id, nome: existing.name, email: existing.email, ativo: true, authUid });
 
   const updated = userRepository.setPwaStatus(userId, true, authUid);

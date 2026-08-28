@@ -93,6 +93,7 @@ export async function criarUtilizadorPwaAuth(email: string, passwordTemporaria: 
     email,
     password: passwordTemporaria,
     email_confirm: true,
+    user_metadata: { must_change_password: true },
   });
   if (error || !data.user) throw new Error(error?.message ?? 'Falha ao criar conta no Supabase Auth.');
   return data.user.id;
@@ -103,6 +104,20 @@ export async function desativarUtilizadorPwaAuth(authUid: string): Promise<void>
   // ban_duration muito longo em vez de eliminar — mantém o histórico de
   // mensagens/cargas associadas ao auth_uid intacto caso seja reativado.
   const { error } = await supabase.auth.admin.updateUserById(authUid, { ban_duration: '876000h' });
+  if (error) throw new Error(error.message);
+}
+
+// Reativa uma conta banida por desativarUtilizadorPwaAuth, com uma nova
+// password temporária — usado quando o Admin volta a ligar o toggle PWA de
+// um utilizador que já teve conta antes (evita duplicar a conta no Auth,
+// que falharia por email já existir).
+export async function reativarUtilizadorPwaAuth(authUid: string, passwordTemporaria: string): Promise<void> {
+  const supabase = requireSupabaseClient();
+  const { error } = await supabase.auth.admin.updateUserById(authUid, {
+    ban_duration: 'none',
+    password: passwordTemporaria,
+    user_metadata: { must_change_password: true },
+  });
   if (error) throw new Error(error.message);
 }
 

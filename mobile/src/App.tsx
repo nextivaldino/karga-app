@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
+import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
 import { ToastContainer } from '@/components/ui/Toast';
-import { BottomNav } from '@/components/BottomNav';
 import { PasswordBanner } from '@/components/PasswordBanner';
+import { Header } from '@/components/Header';
+import { Dock } from '@/components/Dock';
+import { NovaCargaOverlay } from '@/components/NovaCargaOverlay';
 import { LoginPage } from '@/pages/LoginPage';
 import { TrocarPasswordPage } from '@/pages/TrocarPasswordPage';
 import { HomePage } from '@/pages/HomePage';
-import { ContentoresPage } from '@/pages/ContentoresPage';
 import { CargasPage } from '@/pages/CargasPage';
 import { MensagensPage } from '@/pages/MensagensPage';
-import { ConfiguracoesPage } from '@/pages/ConfiguracoesPage';
 
 function AppShell(): React.JSX.Element {
   const { loading, session, mustChangePassword } = useAuth();
@@ -30,15 +31,15 @@ function AppShell(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
+      <Header onTrocarPassword={() => setTrocarPasswordAberto(true)} />
       {mustChangePassword ? <PasswordBanner onAlterar={() => setTrocarPasswordAberto(true)} /> : null}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto pb-24">
         {page === 'home' ? <HomePage /> : null}
-        {page === 'contentores' ? <ContentoresPage /> : null}
         {page === 'cargas' ? <CargasPage /> : null}
         {page === 'mensagens' ? <MensagensPage /> : null}
-        {page === 'configuracoes' ? <ConfiguracoesPage /> : null}
       </main>
-      <BottomNav />
+      <Dock />
+      <NovaCargaOverlay />
     </div>
   );
 }
@@ -48,8 +49,10 @@ export default function App(): React.JSX.Element {
     <ThemeProvider>
       <AuthProvider>
         <NavigationProvider>
-          <AppShell />
-          <ToastContainer />
+          <NovaCargaOverlayProvider>
+            <AppShell />
+            <ToastContainer />
+          </NovaCargaOverlayProvider>
         </NavigationProvider>
       </AuthProvider>
     </ThemeProvider>

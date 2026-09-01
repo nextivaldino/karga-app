@@ -65,3 +65,16 @@ export interface PwaUser {
   ativo: boolean;
   authUid: string | null;
 }
+
+// Estado que só existe localmente, antes de a carga chegar ao Supabase —
+// nunca é enviado ao servidor, só usado para mostrar o item na Lista de
+// Cargas enquanto está na fila offline (doc 19 §6).
+export type EstadoItemFila = 'fila' | 'erro';
+
+export interface ItemFilaOffline {
+  id: string;
+  item: NovaCargaPendenteInput;
+  estado: EstadoItemFila;
+  criadoEm: string;
+  ultimoErro: string | null;
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Bell, Clock, Euro, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { listMinhasCargasPendentes, listMensagens } from '@/lib/data';
 import { toast } from '@/components/ui/Toast';
 import type { CargaPendente, Mensagem } from '@/types';
@@ -15,9 +16,8 @@ export function HomePage(): React.JSX.Element {
   const { navigate } = useNavigation();
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState<Mensagem[]>([]);
-  // A fila offline (19f) ainda não existe — fica sempre 0 até essa etapa
-  // ligar os dados reais do IndexedDB. O card só aparece quando > 0.
-  const [porEnviar] = useState(0);
+  const { fila } = useFilaOffline();
+  const porEnviar = fila.length;
 
   useEffect(() => {
     let cancelado = false;

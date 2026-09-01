@@ -1,32 +1,77 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
+import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
-import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente } from '@/types';
+import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, EstadoItemFila, NovaCargaPendenteInput } from '@/types';
 
-const ESTADO_LABEL: Record<EstadoCargaPendente, string> = { pendente: 'Pendente', importada: 'Importada', rejeitada: 'Rejeitada' };
-const ESTADO_ICONE: Record<EstadoCargaPendente, string> = { pendente: '⏳', importada: '✅', rejeitada: '⚠️' };
-const ESTADO_CLASS: Record<EstadoCargaPendente, string> = {
+type EstadoListaCarga = EstadoCargaPendente | EstadoItemFila;
+type FiltroEstado = EstadoCargaPendente | 'todas';
+
+interface LinhaCarga {
+  id: string;
+  nomeCarga: string;
+  emissorNome: string;
+  recetorNome: string;
+  valor: number | null;
+  estado: EstadoListaCarga;
+  contentorId: string;
+  motivoRejeicao: string | null;
+  ultimoErro: string | null;
+  prefill: NovaCargaPendenteInput;
+  filaId: string | null;
+}
+
+const ESTADO_LABEL: Record<EstadoListaCarga, string> = {
+  pendente: 'Pendente',
+  importada: 'Importada',
+  rejeitada: 'Rejeitada',
+  fila: 'Por enviar',
+  erro: 'Erro',
+};
+const ESTADO_ICONE: Record<EstadoListaCarga, string> = {
+  pendente: '⏳',
+  importada: '✅',
+  rejeitada: '⚠️',
+  fila: '⏳',
+  erro: '⚠️',
+};
+const ESTADO_CLASS: Record<EstadoListaCarga, string> = {
   pendente: 'text-warning',
   importada: 'text-success',
   rejeitada: 'text-error',
+  fila: 'text-text-tertiary',
+  erro: 'text-error',
 };
 
-const OPCOES_FILTRO: (EstadoCargaPendente | 'todas')[] = ['todas', 'pendente', 'importada', 'rejeitada'];
+const OPCOES_FILTRO: FiltroEstado[] = ['todas', 'pendente', 'importada', 'rejeitada'];
 
 function formatMoeda(valor: number | null): string {
   if (valor == null) return '—';
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(valor);
 }
 
-function FiltroEstadoButton({
-  filtro,
-  onChange,
-}: {
-  filtro: EstadoCargaPendente | 'todas';
-  onChange: (f: EstadoCargaPendente | 'todas') => void;
-}): React.JSX.Element {
+function prefillDe(c: CargaPendente): NovaCargaPendenteInput {
+  return {
+    contentorId: c.contentorId,
+    emissorNome: c.emissorNome,
+    emissorTelefone: c.emissorTelefone,
+    emissorEmail: c.emissorEmail,
+    recetorNome: c.recetorNome,
+    recetorTelefone: c.recetorTelefone,
+    nomeCarga: c.nomeCarga,
+    comprimentoCm: c.comprimentoCm,
+    larguraCm: c.larguraCm,
+    alturaCm: c.alturaCm,
+    pesoKg: c.pesoKg,
+    valor: c.valor,
+    pago: c.pago,
+    notas: c.notas,
+  };
+}
+
+function FiltroEstadoButton({ filtro, onChange }: { filtro: FiltroEstado; onChange: (f: FiltroEstado) => void }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -74,10 +119,11 @@ function FiltroEstadoButton({
 
 export function CargasPage(): React.JSX.Element {
   const { abrir } = useNovaCargaOverlay();
+  const { fila, removerItem, processarFila } = useFilaOffline();
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtro, setFiltro] = useState<EstadoCargaPendente | 'todas'>('todas');
+  const [filtro, setFiltro] = useState<FiltroEstado>('todas');
 
   useEffect(() => {
     listContentoresDisponiveis()
@@ -93,35 +139,58 @@ export function CargasPage(): React.JSX.Element {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtradas = filtro === 'todas' ? cargas : cargas.filter((c) => c.estado === filtro);
+  const linhas = useMemo<LinhaCarga[]>(() => {
+    const doServidor: LinhaCarga[] = cargas.map((c) => ({
+      id: c.id,
+      nomeCarga: c.nomeCarga,
+      emissorNome: c.emissorNome,
+      recetorNome: c.recetorNome,
+      valor: c.valor,
+      estado: c.estado,
+      contentorId: c.contentorId,
+      motivoRejeicao: c.motivoRejeicao,
+      ultimoErro: null,
+      prefill: prefillDe(c),
+      filaId: null,
+    }));
+    const daFila: LinhaCarga[] = fila.map((f) => ({
+      id: f.id,
+      nomeCarga: f.item.nomeCarga,
+      emissorNome: f.item.emissorNome,
+      recetorNome: f.item.recetorNome,
+      valor: f.item.valor,
+      estado: f.estado,
+      contentorId: f.item.contentorId,
+      motivoRejeicao: null,
+      ultimoErro: f.ultimoErro,
+      prefill: f.item,
+      filaId: f.id,
+    }));
+    return [...daFila, ...doServidor];
+  }, [cargas, fila]);
+
+  const filtradas = filtro === 'todas' ? linhas : linhas.filter((l) => l.estado === filtro);
 
   const grupos = useMemo(() => {
-    const mapa = new Map<string, CargaPendente[]>();
-    for (const c of filtradas) {
-      const lista = mapa.get(c.emissorNome) ?? [];
-      lista.push(c);
-      mapa.set(c.emissorNome, lista);
+    const mapa = new Map<string, LinhaCarga[]>();
+    for (const l of filtradas) {
+      const lista = mapa.get(l.emissorNome) ?? [];
+      lista.push(l);
+      mapa.set(l.emissorNome, lista);
     }
     return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtradas]);
 
-  function handleReenviar(c: CargaPendente): void {
-    abrir({
-      contentorId: c.contentorId,
-      emissorNome: c.emissorNome,
-      emissorTelefone: c.emissorTelefone,
-      emissorEmail: c.emissorEmail,
-      recetorNome: c.recetorNome,
-      recetorTelefone: c.recetorTelefone,
-      nomeCarga: c.nomeCarga,
-      comprimentoCm: c.comprimentoCm,
-      larguraCm: c.larguraCm,
-      alturaCm: c.alturaCm,
-      pesoKg: c.pesoKg,
-      valor: c.valor,
-      pago: c.pago,
-      notas: c.notas,
-    });
+  async function handleLinhaClick(l: LinhaCarga): Promise<void> {
+    if (l.estado === 'erro' && l.filaId) {
+      // Tentativa rápida de reenviar tal-e-qual antes de abrir para editar.
+      await processarFila();
+      return;
+    }
+    if (l.estado === 'fila' || l.estado === 'rejeitada') {
+      if (l.filaId) await removerItem(l.filaId);
+      abrir(l.prefill);
+    }
   }
 
   return (
@@ -142,28 +211,32 @@ export function CargasPage(): React.JSX.Element {
               <div className="flex items-center gap-2 border-b border-border pb-1.5">
                 <span className="text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">{emissor}</span>
               </div>
-              {itens.map((c) => {
-                const contentor = contentores.find((ct) => ct.id === c.contentorId);
-                const podeReenviar = c.estado === 'rejeitada';
+              {itens.map((l) => {
+                const contentor = contentores.find((ct) => ct.id === l.contentorId);
+                const tocavel = l.estado === 'rejeitada' || l.estado === 'fila' || l.estado === 'erro';
                 return (
                   <button
-                    key={c.id}
+                    key={l.id}
                     type="button"
-                    disabled={!podeReenviar}
-                    onClick={() => podeReenviar && handleReenviar(c)}
+                    disabled={!tocavel}
+                    onClick={() => void handleLinhaClick(l)}
                     className="flex min-h-touch flex-col gap-0.5 border-b border-border py-2 text-left last:border-b-0 disabled:cursor-default"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-[14px] text-text-primary">{c.nomeCarga}</span>
-                      <span className="shrink-0 text-[13px] tabular-nums text-text-secondary">{formatMoeda(c.valor)}</span>
-                      <span className={`shrink-0 text-[12px] font-medium ${ESTADO_CLASS[c.estado]}`}>
-                        {ESTADO_ICONE[c.estado]} {ESTADO_LABEL[c.estado]}
+                      <span className="min-w-0 flex-1 truncate text-[14px] text-text-primary">{l.nomeCarga}</span>
+                      <span className="shrink-0 text-[13px] tabular-nums text-text-secondary">{formatMoeda(l.valor)}</span>
+                      <span className={`shrink-0 text-[12px] font-medium ${ESTADO_CLASS[l.estado]}`}>
+                        {ESTADO_ICONE[l.estado]} {ESTADO_LABEL[l.estado]}
                       </span>
                     </div>
                     {contentor ? <span className="text-[11px] text-text-tertiary">{contentor.codigo}</span> : null}
-                    {c.estado === 'rejeitada' && c.motivoRejeicao ? (
-                      <span className="text-[12px] text-error">Motivo: {c.motivoRejeicao} · toca para reenviar corrigida</span>
+                    {l.estado === 'rejeitada' && l.motivoRejeicao ? (
+                      <span className="text-[12px] text-error">Motivo: {l.motivoRejeicao} · toca para reenviar corrigida</span>
                     ) : null}
+                    {l.estado === 'erro' && l.ultimoErro ? (
+                      <span className="text-[12px] text-error">{l.ultimoErro} · toca para tentar novamente</span>
+                    ) : null}
+                    {l.estado === 'fila' ? <span className="text-[12px] text-text-tertiary">Toca para editar</span> : null}
                   </button>
                 );
               })}

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { guardarCache, lerCacheCargas, lerCacheContentores } from './offlineQueue';
 import type { CargaPendente, ContentorDisponivel, Mensagem, NovaCargaPendenteInput } from '@/types';
 
 interface ContentorRow {
@@ -13,14 +14,24 @@ function mapContentor(row: ContentorRow): ContentorDisponivel {
   return { id: row.id, nome: row.nome, codigo: row.codigo, estado: row.estado, updatedAt: row.updated_at };
 }
 
+// Cai para a cache local (última leitura com sucesso) quando offline ou a
+// ligação falha — a app não fica em branco, mesmo sem net (doc 19 §6).
 export async function listContentoresDisponiveis(): Promise<ContentorDisponivel[]> {
-  const { data, error } = await supabase
-    .from('contentores_disponiveis')
-    .select('*')
-    .eq('estado', 'aberto')
-    .order('codigo', { ascending: true });
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(mapContentor);
+  try {
+    const { data, error } = await supabase
+      .from('contentores_disponiveis')
+      .select('*')
+      .eq('estado', 'aberto')
+      .order('codigo', { ascending: true });
+    if (error) throw new Error(error.message);
+    const contentores = (data ?? []).map(mapContentor);
+    void guardarCache('contentores', contentores);
+    return contentores;
+  } catch (err) {
+    const cache = await lerCacheContentores();
+    if (cache.length > 0) return cache;
+    throw err;
+  }
 }
 
 interface CargaPendenteRow {
@@ -76,11 +87,20 @@ function mapCargaPendente(row: CargaPendenteRow): CargaPendente {
 // RLS já restringe a leitura às próprias cargas pendentes do utilizador
 // autenticado — não é preciso filtrar por inserido_por_user_id aqui.
 export async function listMinhasCargasPendentes(contentorId?: string): Promise<CargaPendente[]> {
-  let query = supabase.from('cargas_pendentes').select('*').order('created_at', { ascending: false });
-  if (contentorId) query = query.eq('contentor_id', contentorId);
-  const { data, error } = await query;
-  if (error) throw new Error(error.message);
-  return (data ?? []).map(mapCargaPendente);
+  try {
+    let query = supabase.from('cargas_pendentes').select('*').order('created_at', { ascending: false });
+    if (contentorId) query = query.eq('contentor_id', contentorId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    const cargas = (data ?? []).map(mapCargaPendente);
+    if (!contentorId) void guardarCache('cargas', cargas);
+    return cargas;
+  } catch (err) {
+    if (contentorId) throw err;
+    const cache = await lerCacheCargas();
+    if (cache.length > 0) return cache;
+    throw err;
+  }
 }
 
 function vazioParaNull(v: string | null): string | null {

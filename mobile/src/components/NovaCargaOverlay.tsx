@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
+import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
-import { listContentoresDisponiveis, enviarCargasPendentes } from '@/lib/data';
+import { listContentoresDisponiveis } from '@/lib/data';
 import { guardarSugestaoNome, listarSugestoesNomes } from '@/lib/contactSuggestions';
 import type { ContentorDisponivel, NovaCargaPendenteInput } from '@/types';
 
@@ -37,6 +38,7 @@ function numOrNull(v: string): number | null {
 export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
+  const { enviarOuEnfileirar } = useFilaOffline();
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [form, setForm] = useState<NovaCargaPendenteInput>(CAMPOS_VAZIOS);
   const [lote, setLote] = useState<NovaCargaPendenteInput[]>([]);
@@ -101,11 +103,15 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     }
     setEnviando(true);
     try {
-      await enviarCargasPendentes(pwaUser.id, itens);
-      toast.success(`${itens.length} carga${itens.length === 1 ? '' : 's'} enviada${itens.length === 1 ? '' : 's'}.`);
+      const resultado = await enviarOuEnfileirar(itens);
+      if (resultado === 'enviado') {
+        toast.success(`${itens.length} carga${itens.length === 1 ? '' : 's'} enviada${itens.length === 1 ? '' : 's'}.`);
+      } else {
+        toast.info(`${itens.length} carga${itens.length === 1 ? '' : 's'} guardada${itens.length === 1 ? '' : 's'} — vai${itens.length === 1 ? '' : 'ão'} enviar quando voltares a ficar online.`);
+      }
       fechar();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Falha ao enviar cargas.');
+      toast.error(err instanceof Error ? err.message : 'Falha ao guardar as cargas.');
     } finally {
       setEnviando(false);
     }

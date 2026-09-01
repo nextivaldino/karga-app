@@ -73,24 +73,35 @@ export function HomePage(): React.JSX.Element {
       </button>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">Contentores Disponíveis</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">Contentores Disponíveis</h2>
+          {contentores.length > 0 ? (
+            <button type="button" onClick={() => navigate('contentores')} className="text-[13px] font-medium text-primary">
+              Ver todos ›
+            </button>
+          ) : null}
+        </div>
         {loading ? (
           <p className="text-[14px] text-text-tertiary">A carregar...</p>
         ) : contentores.length === 0 ? (
           <p className="text-[14px] text-text-tertiary">Nenhum contentor disponível de momento.</p>
         ) : (
-          <BoxedList>
-            {contentores.map((c) => (
-              <BoxedListRow
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {contentores.slice(0, 5).map((c) => (
+              <button
                 key={c.id}
-                icon={<Package size={18} />}
-                iconColorClass="text-primary"
-                title={c.codigo}
-                subtitle={c.nome}
+                type="button"
                 onClick={() => navigate('contentores', { contentorId: c.id })}
-              />
+                className="flex w-36 shrink-0 flex-col items-start gap-2 rounded-surface border border-border bg-bg-surface p-4 text-left active:bg-bg-app"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-control bg-primary/10 text-primary">
+                  <Package size={20} />
+                </span>
+                <span className="text-[15px] font-medium text-text-primary">{c.codigo}</span>
+                <span className="w-full truncate text-[13px] text-text-tertiary">{c.nome}</span>
+              </button>
             ))}
-          </BoxedList>
+          </div>
         )}
       </section>
 

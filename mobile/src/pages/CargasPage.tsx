@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { Switch } from '@/components/ui/Switch';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes, enviarCargasPendentes } from '@/lib/data';
 import { guardarSugestaoNome, listarSugestoesNomes } from '@/lib/contactSuggestions';
@@ -117,6 +118,16 @@ function NovaCargaTab({ contentores, prefill, onEnviado }: NovaCargaTabProps): R
     }
   }
 
+  const detalhesPreenchidos = [
+    form.emissorEmail,
+    form.comprimentoCm,
+    form.larguraCm,
+    form.alturaCm,
+    form.pesoKg,
+    form.valor,
+    form.notas,
+  ].filter((v) => v !== null && v !== '').length + (form.pago ? 1 : 0);
+
   return (
     <div className="flex flex-col gap-3 p-4">
       <FloatingLabelInput as="select" label="Contentor de destino" value={form.contentorId} onChange={(e) => update('contentorId', e.target.value)}>
@@ -140,7 +151,6 @@ function NovaCargaTab({ contentores, prefill, onEnviado }: NovaCargaTabProps): R
         ))}
       </datalist>
       <FloatingLabelInput label="Telefone do emissor" value={form.emissorTelefone ?? ''} onChange={(e) => update('emissorTelefone', e.target.value || null)} />
-      <FloatingLabelInput label="Email do emissor (opcional)" value={form.emissorEmail ?? ''} onChange={(e) => update('emissorEmail', e.target.value || null)} />
 
       <FloatingLabelInput
         label="Nome do recetor"
@@ -152,15 +162,24 @@ function NovaCargaTab({ contentores, prefill, onEnviado }: NovaCargaTabProps): R
 
       <FloatingLabelInput label="Nome da carga" value={form.nomeCarga} onChange={(e) => update('nomeCarga', e.target.value)} />
 
-      <div className="grid grid-cols-2 gap-2">
-        <FloatingLabelInput label="Comprimento (cm)" type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
-        <FloatingLabelInput label="Largura (cm)" type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
-        <FloatingLabelInput label="Altura (cm)" type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
-        <FloatingLabelInput label="Peso (kg)" type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
-      </div>
-      <FloatingLabelInput label="Valor" type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
+      <CollapsibleSection
+        title="Mais detalhes"
+        subtitle={detalhesPreenchidos > 0 ? `${detalhesPreenchidos} preenchido${detalhesPreenchidos === 1 ? '' : 's'}` : 'Email, dimensões, peso, valor, notas'}
+      >
+        <FloatingLabelInput label="Email do emissor" value={form.emissorEmail ?? ''} onChange={(e) => update('emissorEmail', e.target.value || null)} />
 
-      <Switch checked={form.pago} onChange={(v) => update('pago', v)} label="Pago" />
+        <div className="grid grid-cols-2 gap-2">
+          <FloatingLabelInput label="Comprimento (cm)" type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
+          <FloatingLabelInput label="Largura (cm)" type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
+          <FloatingLabelInput label="Altura (cm)" type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
+          <FloatingLabelInput label="Peso (kg)" type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
+        </div>
+        <FloatingLabelInput label="Valor" type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
+
+        <Switch checked={form.pago} onChange={(v) => update('pago', v)} label="Pago" />
+
+        <FloatingLabelInput as="textarea" label="Notas" value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
+      </CollapsibleSection>
 
       <button
         type="button"
@@ -317,25 +336,27 @@ export function CargasPage(): React.JSX.Element {
 
   return (
     <div className="flex flex-col">
-      <div className="flex gap-1 border-b border-border bg-bg-surface p-2">
-        <button
-          type="button"
-          onClick={() => setSubAba('nova')}
-          className={`min-h-touch flex-1 rounded-control text-[14px] font-medium ${
-            subAba === 'nova' ? 'bg-primary/10 text-primary' : 'text-text-secondary'
-          }`}
-        >
-          Nova Carga
-        </button>
-        <button
-          type="button"
-          onClick={() => setSubAba('lista')}
-          className={`min-h-touch flex-1 rounded-control text-[14px] font-medium ${
-            subAba === 'lista' ? 'bg-primary/10 text-primary' : 'text-text-secondary'
-          }`}
-        >
-          Lista de Cargas
-        </button>
+      <div className="border-b border-border bg-bg-surface p-3">
+        <div className="flex items-center gap-0.5 rounded-control bg-bg-input p-0.5">
+          <button
+            type="button"
+            onClick={() => setSubAba('nova')}
+            className={`min-h-touch flex-1 rounded-[6px] text-[14px] font-medium transition-colors ${
+              subAba === 'nova' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary'
+            }`}
+          >
+            Nova Carga
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubAba('lista')}
+            className={`min-h-touch flex-1 rounded-[6px] text-[14px] font-medium transition-colors ${
+              subAba === 'lista' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary'
+            }`}
+          >
+            Lista de Cargas
+          </button>
+        </div>
       </div>
 
       {subAba === 'nova' ? (

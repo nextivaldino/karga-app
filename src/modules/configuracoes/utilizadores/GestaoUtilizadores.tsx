@@ -24,7 +24,7 @@ export function GestaoUtilizadores(): React.JSX.Element {
   const [resetando, setResetando] = useState<UsuarioComSessao | null>(null);
   const [eliminando, setEliminando] = useState<UsuarioComSessao | null>(null);
   const [pwaEmProgresso, setPwaEmProgresso] = useState<string | null>(null);
-  const [pwaAtivado, setPwaAtivado] = useState<{ user: UsuarioComSessao; password: string } | null>(null);
+  const [pwaAtivado, setPwaAtivado] = useState<{ user: UsuarioComSessao; email: string; password: string } | null>(null);
 
   async function carregar(): Promise<void> {
     setLoading(true);
@@ -57,7 +57,11 @@ export function GestaoUtilizadores(): React.JSX.Element {
     try {
       if (habilitado) {
         const result = await ipcService.users.habilitarPwa(u.id);
-        setPwaAtivado({ user: { ...u, pwaHabilitado: true, pwaAuthUid: result.user.pwaAuthUid }, password: result.passwordTemporaria });
+        setPwaAtivado({
+          user: { ...u, pwaHabilitado: true, pwaAuthUid: result.user.pwaAuthUid },
+          email: result.pwaEmail,
+          password: result.passwordTemporaria,
+        });
       } else {
         await ipcService.users.desabilitarPwa(u.id);
         toast.success(`Acesso PWA de ${u.name} desativado.`);
@@ -174,6 +178,7 @@ export function GestaoUtilizadores(): React.JSX.Element {
         open={pwaAtivado != null}
         onClose={() => setPwaAtivado(null)}
         target={pwaAtivado?.user ?? null}
+        pwaEmail={pwaAtivado?.email ?? null}
         passwordTemporaria={pwaAtivado?.password ?? null}
       />
 

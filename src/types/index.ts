@@ -372,6 +372,7 @@ export interface ImportarCargaInput {
 export interface HabilitarPwaResult {
   user: PublicUser;
   passwordTemporaria: string;
+  pwaEmail: string;
 }
 
 export interface OrigemPwaLinha {

@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import { ArrowLeft, KeyRound } from 'lucide-react';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from '@/hooks/useAuth';
 
-export function TrocarPasswordPage(): React.JSX.Element {
+interface TrocarPasswordPageProps {
+  onCancel?: () => void;
+  onDone?: () => void;
+}
+
+export function TrocarPasswordPage({ onCancel, onDone }: TrocarPasswordPageProps): React.JSX.Element {
   const { changePassword } = useAuth();
   const [novaPassword, setNovaPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
@@ -24,6 +29,7 @@ export function TrocarPasswordPage(): React.JSX.Element {
     setSubmitting(true);
     try {
       await changePassword(novaPassword);
+      onDone?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao alterar a password.');
     } finally {
@@ -32,7 +38,17 @@ export function TrocarPasswordPage(): React.JSX.Element {
   }
 
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-8 p-6">
+    <div className="relative flex min-h-full flex-col items-center justify-center gap-8 p-6">
+      {onCancel ? (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute left-4 top-4 flex min-h-touch items-center gap-1.5 text-[14px] font-medium text-text-secondary"
+        >
+          <ArrowLeft size={18} /> Voltar
+        </button>
+      ) : null}
+
       <div className="flex flex-col items-center gap-2 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-surface bg-warning/10 text-warning">
           <KeyRound size={32} />

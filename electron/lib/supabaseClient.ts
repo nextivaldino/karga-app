@@ -85,6 +85,30 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
   }
 }
 
+// Doc 19 §2 — próximo email sequencial userNN@karga.com, calculado a partir
+// dos emails já usados em pwa_users (evita colisão mesmo que algum tenha
+// sido desativado/eliminado entretanto).
+export async function proximoEmailPwa(): Promise<string> {
+  const supabase = requireSupabaseClient();
+  const { data, error } = await supabase.from('pwa_users').select('email').ilike('email', 'user%@karga.com');
+  if (error) throw new Error(error.message);
+
+  let maior = 0;
+  for (const row of data ?? []) {
+    const match = /^user(\d+)@karga\.com$/i.exec(row.email);
+    if (match) maior = Math.max(maior, Number(match[1]));
+  }
+  const proximo = maior + 1;
+  return `user${String(proximo).padStart(2, '0')}@karga.com`;
+}
+
+export async function obterEmailUtilizadorPwaAuth(authUid: string): Promise<string> {
+  const supabase = requireSupabaseClient();
+  const { data, error } = await supabase.auth.admin.getUserById(authUid);
+  if (error || !data.user?.email) throw new Error(error?.message ?? 'Não foi possível obter o email desta conta.');
+  return data.user.email;
+}
+
 // Doc 16 §1 — cria a conta do funcionário no Supabase Auth com uma password
 // temporária. Devolve o auth_uid para guardar localmente em users.pwa_auth_uid.
 export async function criarUtilizadorPwaAuth(email: string, passwordTemporaria: string): Promise<string> {

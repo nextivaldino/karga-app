@@ -1,9 +1,15 @@
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
 import { userRepository } from '../models/repositories/userRepository';
 import { permissaoRepository } from '../models/repositories/permissaoRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
-import { criarUtilizadorPwaAuth, desativarUtilizadorPwaAuth, reativarUtilizadorPwaAuth, upsertPwaUser } from '../lib/supabaseClient';
+import {
+  criarUtilizadorPwaAuth,
+  desativarUtilizadorPwaAuth,
+  obterEmailUtilizadorPwaAuth,
+  proximoEmailPwa,
+  reativarUtilizadorPwaAuth,
+  upsertPwaUser,
+} from '../lib/supabaseClient';
 import type { CreateUserInput, HabilitarPwaResult, PermissaoInput, PublicUser, UserRole, UsuarioComSessao } from '../../src/types';
 
 const SALT_ROUNDS = 10;
@@ -139,9 +145,11 @@ export async function resetPasswordUser(
   userRepository.update(targetUserId, { passwordHash });
 }
 
-function gerarPasswordTemporaria(): string {
-  return randomBytes(9).toString('base64url');
-}
+// Doc 19 §2 — password inicial fixa e igual para todos, mais simples de
+// comunicar verbalmente a um funcionário de campo do que uma gerada ao
+// acaso. A troca deixou de ser obrigatória (banner dispensável no mobile),
+// por isso previsibilidade aqui pesa mais do que aleatoriedade.
+const PASSWORD_PWA_INICIAL = '1234567';
 
 export async function habilitarPwa(requestedByRole: UserRole, userId: string): Promise<HabilitarPwaResult> {
   if (requestedByRole !== 'admin') throw new Error('Só um Admin pode ativar o acesso PWA.');
@@ -149,17 +157,20 @@ export async function habilitarPwa(requestedByRole: UserRole, userId: string): P
   if (!existing) throw new Error('Utilizador não encontrado.');
   if (existing.role !== 'user') throw new Error('Só utilizadores do tipo "user" podem ter acesso PWA.');
 
-  const passwordTemporaria = gerarPasswordTemporaria();
   let authUid = existing.pwaAuthUid;
+  let pwaEmail: string;
   if (authUid) {
-    await reativarUtilizadorPwaAuth(authUid, passwordTemporaria);
+    // Reativação — mantém o mesmo email userNN@karga.com já atribuído.
+    await reativarUtilizadorPwaAuth(authUid, PASSWORD_PWA_INICIAL);
+    pwaEmail = await obterEmailUtilizadorPwaAuth(authUid);
   } else {
-    authUid = await criarUtilizadorPwaAuth(existing.email, passwordTemporaria);
+    pwaEmail = await proximoEmailPwa();
+    authUid = await criarUtilizadorPwaAuth(pwaEmail, PASSWORD_PWA_INICIAL);
   }
-  await upsertPwaUser({ id: existing.id, nome: existing.name, email: existing.email, ativo: true, authUid });
+  await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid });
 
   const updated = userRepository.setPwaStatus(userId, true, authUid);
-  return { user: toPublicUser(updated), passwordTemporaria };
+  return { user: toPublicUser(updated), passwordTemporaria: PASSWORD_PWA_INICIAL, pwaEmail };
 }
 
 export async function desabilitarPwa(requestedByRole: UserRole, userId: string): Promise<PublicUser> {
@@ -169,8 +180,9 @@ export async function desabilitarPwa(requestedByRole: UserRole, userId: string):
   if (existing.role !== 'user') throw new Error('Só utilizadores do tipo "user" podem ter acesso PWA.');
 
   if (existing.pwaAuthUid) {
+    const pwaEmail = await obterEmailUtilizadorPwaAuth(existing.pwaAuthUid);
     await desativarUtilizadorPwaAuth(existing.pwaAuthUid);
-    await upsertPwaUser({ id: existing.id, nome: existing.name, email: existing.email, ativo: false, authUid: existing.pwaAuthUid });
+    await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: false, authUid: existing.pwaAuthUid });
   }
 
   // Mantém pwa_auth_uid (não o limpa) — a conta no Supabase Auth só é

@@ -6,10 +6,11 @@ interface PwaPasswordModalProps {
   open: boolean;
   onClose: () => void;
   target: PublicUser | null;
+  pwaEmail: string | null;
   passwordTemporaria: string | null;
 }
 
-export function PwaPasswordModal({ open, onClose, target, passwordTemporaria }: PwaPasswordModalProps): React.JSX.Element {
+export function PwaPasswordModal({ open, onClose, target, pwaEmail, passwordTemporaria }: PwaPasswordModalProps): React.JSX.Element {
   async function handleCopy(): Promise<void> {
     if (!passwordTemporaria) return;
     await navigator.clipboard.writeText(passwordTemporaria);
@@ -47,7 +48,7 @@ export function PwaPasswordModal({ open, onClose, target, passwordTemporaria }: 
             Copiar
           </button>
         </div>
-        <p className="text-[12px] text-text-tertiary">Email de acesso: {target?.email}</p>
+        <p className="text-[12px] text-text-tertiary">Email de acesso: {pwaEmail}</p>
       </div>
     </HeaderBarModal>
   );

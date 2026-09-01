@@ -2,6 +2,7 @@ import { LogOut, Moon, Search, Sun } from 'lucide-react';
 import { MainTabs } from './MainTabs';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificacoesBell } from './NotificacoesBell';
+import { SincronizacaoBell } from './SincronizacaoBell';
 import { StatusBar } from './StatusBar';
 import { ToastContainer } from '@/components/ui/Toast';
 import { useAuth } from '@/modules/auth/AuthContext';
@@ -20,7 +21,7 @@ const PAGES = {
 };
 
 const IS_MAC = window.kraga.platform === 'darwin';
-const HEADER_SIDE_WIDTH = IS_MAC ? 210 : 140;
+const HEADER_SIDE_WIDTH = IS_MAC ? 246 : 176;
 
 export function AppShell(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -67,6 +68,7 @@ export function AppShell(): React.JSX.Element {
           >
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
+          <SincronizacaoBell />
           <NotificacoesBell />
           <button
             type="button"

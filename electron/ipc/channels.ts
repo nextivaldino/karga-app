@@ -82,6 +82,7 @@ export const IPC_CHANNELS = [
   'relatorios:resumoFinanceiro',
   'relatorios:exportar',
   'sync:listPendentes',
+  'sync:listPendentesComSugestoes',
   'sync:revisarCarga',
   'sync:importarCarga',
   'sync:rejeitarCarga',

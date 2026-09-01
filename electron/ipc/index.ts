@@ -529,6 +529,11 @@ export function registerIpcHandlers(): void {
     return sync.listarPendentes();
   });
 
+  ipcMain.handle('sync:listPendentesComSugestoes', () => {
+    requirePermissao('configuracoes', 'ver');
+    return sync.listarPendentesComSugestoes();
+  });
+
   ipcMain.handle('sync:revisarCarga', (_event, pendenteId: string) => {
     requirePermissao('configuracoes', 'ver');
     return sync.revisarCarga(pendenteId);

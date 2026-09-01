@@ -345,6 +345,9 @@ export interface SugestaoContacto {
   telefoneOriginal: string | null;
   sugestaoId: string | null;
   sugestaoNome: string | null;
+  // true quando o nome é igual (só difere em acentos/maiúsculas) a um
+  // contacto existente — associa-se sem pedir decisão ao Admin.
+  automatico: boolean;
 }
 
 export interface RevisaoCargaPendente {

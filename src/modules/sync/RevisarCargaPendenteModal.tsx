@@ -131,7 +131,7 @@ export function RevisarCargaPendenteModal({
     decisao: DecisaoContacto,
     setDecisao: (d: DecisaoContacto) => void,
   ): React.JSX.Element | null {
-    if (!sugestao) return null;
+    if (!sugestao || sugestao.automatico) return null; // nome igual — associa sem perguntar
     const label = campo === 'emissor' ? 'Emissor' : 'Recetor';
     return (
       <div className="rounded-control border border-border bg-bg-app p-3">

@@ -83,27 +83,38 @@ async function obterPendente(id: string): Promise<CargaPendente> {
   return mapPendenteRow(data as CargaPendenteRow);
 }
 
-export async function revisarCarga(id: string): Promise<RevisaoCargaPendente> {
-  const pendente = await obterPendente(id);
-  const contactos = contactoRepository.list();
-
+function calcularSugestoes(pendente: CargaPendente, contactos: { id: string; nome: string }[]): SugestaoContacto[] {
   function sugestaoPara(campo: 'emissor' | 'recetor', nome: string, telefone: string | null): SugestaoContacto {
-    const sugestao = sugerirContacto(nome, contactos);
+    const resultado = sugerirContacto(nome, contactos);
     return {
       campo,
       nomeOriginal: nome,
       telefoneOriginal: telefone,
-      sugestaoId: sugestao?.id ?? null,
-      sugestaoNome: sugestao?.nome ?? null,
+      sugestaoId: resultado.tipo === 'nenhum' ? null : resultado.contacto.id,
+      sugestaoNome: resultado.tipo === 'nenhum' ? null : resultado.contacto.nome,
+      automatico: resultado.tipo === 'exato',
     };
   }
 
-  const sugestoes = [
+  return [
     sugestaoPara('emissor', pendente.emissorNome, pendente.emissorTelefone),
     sugestaoPara('recetor', pendente.recetorNome, pendente.recetorTelefone),
   ];
+}
 
-  return { pendente, sugestoes };
+export async function revisarCarga(id: string): Promise<RevisaoCargaPendente> {
+  const pendente = await obterPendente(id);
+  const contactos = contactoRepository.list();
+  return { pendente, sugestoes: calcularSugestoes(pendente, contactos) };
+}
+
+// Mesmo cálculo de conflito do revisarCarga, mas para a lista toda de uma
+// só vez — usado pela vista de revisão em massa, para mostrar o sinal de
+// conflito em cada linha sem precisar de 1 pedido por carga.
+export async function listarPendentesComSugestoes(): Promise<RevisaoCargaPendente[]> {
+  const pendentes = await listarPendentes();
+  const contactos = contactoRepository.list();
+  return pendentes.map((pendente) => ({ pendente, sugestoes: calcularSugestoes(pendente, contactos) }));
 }
 
 export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {

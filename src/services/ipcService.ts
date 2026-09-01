@@ -207,6 +207,7 @@ export const ipcService = {
   },
   sync: {
     listPendentes: () => invoke<CargaPendente[]>('sync:listPendentes'),
+    listPendentesComSugestoes: () => invoke<RevisaoCargaPendente[]>('sync:listPendentesComSugestoes'),
     revisarCarga: (pendenteId: string) => invoke<RevisaoCargaPendente>('sync:revisarCarga', pendenteId),
     importarCarga: (input: ImportarCargaInput) => invoke<Carga>('sync:importarCarga', input),
     rejeitarCarga: (pendenteId: string, motivo: string) => invoke<void>('sync:rejeitarCarga', pendenteId, motivo),

@@ -32,18 +32,27 @@ interface ContactoBasico {
   nome: string;
 }
 
-// Devolve o contacto existente cujo nome é "parecido" (mas não igual) com o
-// dado, usando distância de edição normalizada pelo comprimento — um limiar
-// simples, suficiente para apanhar erros de escrita/acentos no PWA (doc 16 §4).
-export function sugerirContacto(nome: string, contactos: ContactoBasico[]): ContactoBasico | null {
+export type ResultadoSugestao =
+  | { tipo: 'exato'; contacto: ContactoBasico }
+  | { tipo: 'parecido'; contacto: ContactoBasico }
+  | { tipo: 'nenhum' };
+
+// Compara o nome dado contra os contactos existentes:
+// - "exato" (igual após normalizar acentos/maiúsculas) — mesma pessoa,
+//   associa-se sem perguntar nada ao Admin.
+// - "parecido" (dentro do limiar de distância de edição, mas não igual) —
+//   pode ser a mesma pessoa com erro de escrita, ou pode não ser — pede
+//   decisão humana (doc 16 §4).
+// - "nenhum" — sem candidato plausível, cria-se um contacto novo.
+export function sugerirContacto(nome: string, contactos: ContactoBasico[]): ResultadoSugestao {
   const alvo = normalizar(nome);
-  if (!alvo) return null;
+  if (!alvo) return { tipo: 'nenhum' };
 
   let melhor: { contacto: ContactoBasico; distancia: number } | null = null;
 
   for (const contacto of contactos) {
     const candidato = normalizar(contacto.nome);
-    if (candidato === alvo) return null; // igual — associa automaticamente, sem conflito a resolver
+    if (candidato === alvo) return { tipo: 'exato', contacto };
     const distancia = levenshtein(alvo, candidato);
     const limiar = Math.max(2, Math.floor(Math.max(alvo.length, candidato.length) * 0.3));
     if (distancia <= limiar && (!melhor || distancia < melhor.distancia)) {
@@ -51,7 +60,7 @@ export function sugerirContacto(nome: string, contactos: ContactoBasico[]): Cont
     }
   }
 
-  return melhor?.contacto ?? null;
+  return melhor ? { tipo: 'parecido', contacto: melhor.contacto } : { tipo: 'nenhum' };
 }
 
 export function nomesIguais(a: string, b: string): boolean {

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, ChevronDown, Copy, Euro, IdCard, Mail, MoreVertical, Package, Pencil, Phone, Plus, Ruler, Trash2, Weight, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Copy, Euro, IdCard, Mail, MoreVertical, Package, Pencil, Phone, Plus, Ruler, StickyNote, Trash2, Weight, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
+import { useTheme } from '@/hooks/useTheme';
+import { estiloTema } from '@/lib/themeTokens';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
@@ -128,6 +130,11 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
   const { enviarOuEnfileirar } = useFilaOffline();
+  // O popup e os seus menus usam sempre o tema oposto ao da app — cria
+  // contraste deliberado (destaque de "primeiro plano") independente da
+  // escolha de tema do utilizador.
+  const { theme } = useTheme();
+  const temaInvertido = theme === 'dark' ? 'light' : 'dark';
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [form, setForm] = useState<NovaCargaPendenteInput>(CAMPOS_VAZIOS);
   const [lote, setLote] = useState<NovaCargaPendenteInput[]>([]);
@@ -226,7 +233,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg-app">
+    <div data-theme={temaInvertido} style={estiloTema(temaInvertido)} className="fixed inset-0 z-50 flex flex-col bg-bg-app">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-bg-header px-3 backdrop-blur-md">
         <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary">
           <X size={20} />
@@ -356,26 +363,31 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             <FloatingLabelInput label="L (cm)" icon={Ruler} type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
             <FloatingLabelInput label="A (cm)" icon={Ruler} type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
           </div>
-          <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <FloatingLabelInput label="Peso (kg)" icon={Weight} type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
             <FloatingLabelInput label="Valor" icon={Euro} type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Pago</span>
+          </div>
+
+          {/* Pago fica no fim do formulário, na mesma linha do gatilho de Notas */}
+          <div className="flex items-center gap-2">
+            {notasExpandido ? null : (
+              <button
+                type="button"
+                onClick={() => setNotasExpandido(true)}
+                className="flex min-h-touch flex-1 items-center gap-2 rounded-control border border-dashed border-border px-3 text-[13px] text-text-tertiary active:bg-bg-app"
+              >
+                <StickyNote size={14} /> Notas (opcional)
+              </button>
+            )}
+            <div className="flex min-h-touch shrink-0 items-center gap-2 rounded-control border border-border bg-bg-surface px-3">
+              <span className="text-[13px] font-medium text-text-primary">Pago</span>
               <Switch checked={form.pago} onChange={(v) => update('pago', v)} />
             </div>
           </div>
 
           {notasExpandido ? (
-            <FloatingLabelInput as="textarea" label="Notas" value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setNotasExpandido(true)}
-              className="flex min-h-touch items-center gap-2 rounded-control border border-dashed border-border px-3 text-[13px] text-text-tertiary active:bg-bg-app"
-            >
-              <Plus size={14} /> Notas (opcional)
-            </button>
-          )}
+            <FloatingLabelInput as="textarea" label="Notas" icon={StickyNote} value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
+          ) : null}
         </div>
 
         {lote.length > 0 ? (

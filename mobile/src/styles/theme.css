@@ -8,7 +8,12 @@
   font-display: swap;
 }
 
-:root[data-theme='light'] {
+/* [data-theme] sem ":root" (não só ":root[data-theme]") permite aplicar
+   um tema a qualquer subárvore — usado para inverter o tema só dentro do
+   popup Nova Carga e dos seus menus, criando contraste deliberado com o
+   resto da app independentemente do tema global escolhido. */
+:root[data-theme='light'],
+[data-theme='light'] {
   --color-primary: #3584e4;
   --color-primary-hover: #1c71d8;
   --color-primary-light: #eaf2fc;
@@ -34,7 +39,8 @@
   --border: #deddda;
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+[data-theme='dark'] {
   --color-primary: #78aeed;
   --color-primary-hover: #97c4f2;
   --color-primary-light: rgba(120, 174, 237, 0.15);

@@ -22,22 +22,26 @@ type SelectProps = BaseProps & SelectHTMLAttributes<HTMLSelectElement> & { as: '
 
 type FloatingLabelInputProps = InputProps | TextareaProps | SelectProps;
 
-// text-[16px] (não 14px) — evita o auto-zoom do iOS ao focar um input com
-// menos de 16px; py-3 dá um alvo de toque confortável (≥44px de altura).
-const fieldClasses =
-  'peer w-full rounded-control border border-border bg-bg-input px-3 pb-2.5 pt-6 text-[16px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
+// text-[17px] (não <16px) — evita o auto-zoom do iOS ao focar o campo, e
+// fica um pouco maior para se ler bem o que se escreve. Vertical mais
+// compacto (pt-4.5/pb-1.5) do que a versão anterior, sem perder o alvo de
+// toque (min-h-touch trata da altura mínima). O padding-left NUNCA é
+// duplicado (só existe uma classe pl-* de cada vez) — combinar px-3 com
+// pl-11 já causou uma sobreposição de ícone com texto difícil de depurar.
+const BASE_FIELD =
+  'peer w-full rounded-control border border-border bg-bg-input pr-3 pb-1.5 pt-[18px] text-[17px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
 
-const fieldClassesSm =
-  'peer w-full rounded-control border border-border bg-bg-input px-2.5 pb-1 pt-4 text-[16px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
+const BASE_FIELD_SM =
+  'peer w-full rounded-control border border-border bg-bg-input pr-2.5 pb-1 pt-[14px] text-[16px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
 
-const labelClasses =
-  'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-text-tertiary transition-all peer-focus:top-3.5 peer-focus:text-[12px] peer-focus:text-primary';
+const BASE_LABEL =
+  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-[16px] text-text-tertiary transition-all peer-focus:top-3 peer-focus:text-[11px] peer-focus:text-primary';
 
-const labelClassesSm =
-  'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary transition-all peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-primary';
+const BASE_LABEL_SM =
+  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary transition-all peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-primary';
 
-const labelFloatedClasses = 'top-3.5 text-[12px]';
-const labelFloatedClassesSm = 'top-1.5 text-[10px]';
+const LABEL_FLOATED = 'top-3 text-[11px]';
+const LABEL_FLOATED_SM = 'top-1.5 text-[10px]';
 
 export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.Element {
   const generatedId = useId();
@@ -48,24 +52,26 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   const floated = hasValue || rest.as === 'select';
   const withIcon = Boolean(Icon);
   const sm = fieldSize === 'sm';
-  const iconLeftClass = sm ? 'left-2.5' : 'left-3.5';
-  const iconSize = sm ? 15 : 19;
-  const fieldPlClass = withIcon ? (sm ? 'pl-8' : 'pl-11') : '';
-  const labelLeftClass = withIcon ? (sm ? 'left-8' : 'left-11') : '';
-  const fieldWithIconClasses = `${sm ? fieldClassesSm : fieldClasses} ${fieldPlClass}`;
-  const labelWithIconClasses = `${sm ? labelClassesSm : labelClasses} ${labelLeftClass}`;
+
+  const iconLeftClass = sm ? 'left-2.5' : 'left-3';
+  const iconSize = sm ? 15 : 18;
+  const plClass = withIcon ? (sm ? 'pl-8' : 'pl-10') : sm ? 'pl-2.5' : 'pl-3';
+  const labelLeftClass = withIcon ? (sm ? 'left-8' : 'left-10') : sm ? 'left-2.5' : 'left-3';
+
+  const fieldFinalClasses = `${sm ? BASE_FIELD_SM : BASE_FIELD} ${plClass}`;
+  const labelFinalClasses = `${sm ? BASE_LABEL_SM : BASE_LABEL} ${labelLeftClass}`;
 
   return (
     <div className="w-full">
       <div className="relative">
         {Icon ? (
-          <Icon size={iconSize} className={`pointer-events-none absolute ${iconLeftClass} top-1/2 -translate-y-1/2 ${iconClassName ?? 'text-text-tertiary'}`} />
+          <Icon size={iconSize} className={`pointer-events-none absolute z-10 ${iconLeftClass} top-1/2 -translate-y-1/2 ${iconClassName ?? 'text-text-tertiary'}`} />
         ) : null}
         {props.as === 'textarea' ? (
           <textarea
             {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
             id={id}
-            className={`${fieldWithIconClasses} min-h-[88px] resize-y ${className ?? ''}`}
+            className={`${fieldFinalClasses} min-h-[80px] resize-y ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as TextareaProps).onChange?.(e);
@@ -76,7 +82,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
           <select
             {...(rest as SelectHTMLAttributes<HTMLSelectElement>)}
             id={id}
-            className={`${fieldWithIconClasses} ${sm ? 'min-h-[38px]' : 'min-h-touch'} appearance-none ${className ?? ''}`}
+            className={`${fieldFinalClasses} ${sm ? 'min-h-[36px]' : 'min-h-touch'} appearance-none ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as SelectProps).onChange?.(e);
@@ -88,7 +94,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
           <input
             {...(rest as InputHTMLAttributes<HTMLInputElement>)}
             id={id}
-            className={`${fieldWithIconClasses} ${sm ? 'min-h-[38px]' : 'min-h-touch'} ${className ?? ''}`}
+            className={`${fieldFinalClasses} ${sm ? 'min-h-[36px]' : 'min-h-touch'} ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as InputProps).onChange?.(e);
@@ -96,7 +102,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             placeholder={(rest as InputHTMLAttributes<HTMLInputElement>).placeholder ?? ' '}
           />
         )}
-        <label htmlFor={id} className={`${labelWithIconClasses} ${floated ? (sm ? labelFloatedClassesSm : labelFloatedClasses) : ''} bg-bg-input px-1 -ml-1`}>
+        <label htmlFor={id} className={`${labelFinalClasses} ${floated ? (sm ? LABEL_FLOATED_SM : LABEL_FLOATED) : ''} bg-bg-input px-1 -ml-1`}>
           {label}
         </label>
       </div>

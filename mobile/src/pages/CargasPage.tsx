@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical, UserRound } from 'lucide-react';
+import { ChevronDown, FoldVertical, LayoutGrid, List, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical, UserRound } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTopBarSlot } from '@/hooks/useTopBarSlot';
@@ -8,6 +8,7 @@ import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/dat
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
 import { corAcento, corAcentoEscura } from '@/lib/rowAccents';
 import { CargaListHeader, CargaListRow, LARGURA_ACAO, LARGURA_VALOR, type AcaoLinhaCarga, type CargaListRowData } from '@/components/CargaListRow';
+import { CargaGridCard } from '@/components/CargaGridCard';
 import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, NovaCargaPendenteInput } from '@/types';
 
 type FiltroEstado = EstadoCargaPendente | 'todas';
@@ -247,6 +248,7 @@ export function CargasPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<FiltroEstado>('todas');
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [vista, setVista] = useState<'lista' | 'grelha'>('lista');
   const seedFeita = useRef(false);
 
   useEffect(() => {
@@ -314,6 +316,14 @@ export function CargasPage(): React.JSX.Element {
     return [...mapa.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, [filtradas]);
 
+  // Mesma cor por contacto nas duas vistas — a grelha usa este mapa para
+  // que um cartão de uma carga tenha a cor do respetivo grupo na lista.
+  const corPorContacto = useMemo(() => {
+    const mapa = new Map<string, string>();
+    grupos.forEach((g, i) => mapa.set(g.chave, corAcento(i)));
+    return mapa;
+  }, [grupos]);
+
   // Por omissão, só os contactos com algo por resolver começam expandidos
   // — os já sincronizados ficam recolhidos para poupar espaço. Só corre
   // uma vez, depois disso a escolha é sempre do utilizador.
@@ -360,14 +370,34 @@ export function CargasPage(): React.JSX.Element {
   useTopBarSlot(
     <>
       <span className="shrink-0 text-[16px] font-semibold text-text-primary">Cargas</span>
-      <button
-        type="button"
-        onClick={alternarTodos}
-        title={todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app"
-      >
-        {todosExpandidos ? <FoldVertical size={16} /> : <UnfoldVertical size={16} />}
-      </button>
+      {vista === 'lista' ? (
+        <button
+          type="button"
+          onClick={alternarTodos}
+          title={todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app"
+        >
+          {todosExpandidos ? <FoldVertical size={16} /> : <UnfoldVertical size={16} />}
+        </button>
+      ) : null}
+      <div className="flex shrink-0 items-center rounded-control border border-border bg-bg-surface p-0.5">
+        <button
+          type="button"
+          onClick={() => setVista('lista')}
+          title="Vista em lista"
+          className={`flex h-8 w-8 items-center justify-center rounded-control ${vista === 'lista' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+        >
+          <List size={15} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setVista('grelha')}
+          title="Vista em grelha"
+          className={`flex h-8 w-8 items-center justify-center rounded-control ${vista === 'grelha' ? 'bg-primary text-white' : 'text-text-secondary'}`}
+        >
+          <LayoutGrid size={15} />
+        </button>
+      </div>
       <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
     </>,
   );
@@ -378,6 +408,17 @@ export function CargasPage(): React.JSX.Element {
         <p className="px-4 text-[14px] text-text-tertiary">A carregar...</p>
       ) : grupos.length === 0 ? (
         <p className="px-4 text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
+      ) : vista === 'grelha' ? (
+        <div className="grid grid-cols-2 gap-3 px-4">
+          {filtradas.map((l) => (
+            <CargaGridCard
+              key={l.id}
+              linha={l}
+              cor={corPorContacto.get(l.emissorNome.trim().toLowerCase()) ?? corAcento(0)}
+              acoes={acoesPara(l)}
+            />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col">
           <CargaListHeader />

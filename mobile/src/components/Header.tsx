@@ -2,6 +2,7 @@ import { Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { GearMenu } from './GearMenu';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   onTrocarPassword: () => void;
@@ -21,6 +22,7 @@ export function Header({ onTrocarPassword }: HeaderProps): React.JSX.Element {
         >
           {online ? <Wifi size={14} /> : <WifiOff size={14} />}
         </span>
+        <NotificationBell />
         <GearMenu onTrocarPassword={onTrocarPassword} />
       </div>
     </header>

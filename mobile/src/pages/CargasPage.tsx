@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Trash2, UnfoldVertical } from 'lucide-react';
+import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
 import { corAcento, corAcentoEscura } from '@/lib/rowAccents';
-import { CargaListHeader, CargaListRow, type AcaoLinhaCarga, type CargaListRowData } from '@/components/CargaListRow';
+import { CargaListHeader, CargaListRow, LARGURA_ACAO, LARGURA_VALOR, type AcaoLinhaCarga, type CargaListRowData } from '@/components/CargaListRow';
 import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, NovaCargaPendenteInput } from '@/types';
 
 type FiltroEstado = EstadoCargaPendente | 'todas';
@@ -128,10 +128,76 @@ function FiltroEstadoButton({ filtro, onChange }: { filtro: FiltroEstado; onChan
   );
 }
 
+// Botão único de "enviar" — largura fixa sempre presente (mesmo sem
+// contacto, só que apagado), para o Valor alinhar sempre na mesma
+// posição em todas as linhas. Ao clicar, revela WhatsApp/Email conforme
+// o que esse emissor tiver guardado.
+function BotaoEnviarContacto({ telefone, email }: { telefone: string | null; email: string | null }): React.JSX.Element {
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const disponivel = Boolean(telefone || email);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent): void {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className={`relative flex h-9 ${LARGURA_ACAO} shrink-0 items-center justify-center`}>
+      <button
+        type="button"
+        disabled={!disponivel}
+        onClick={(e) => {
+          e.stopPropagation();
+          setAberto((v) => !v);
+        }}
+        title="Enviar para o contacto"
+        className={`flex h-9 w-9 items-center justify-center rounded-control ${
+          disponivel ? 'text-text-secondary active:bg-bg-app' : 'text-text-tertiary opacity-30'
+        }`}
+      >
+        <Share2 size={17} />
+      </button>
+      {aberto ? (
+        <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+          {telefone ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAberto(false);
+                abrirWhatsapp(telefone);
+              }}
+              className="flex min-h-touch w-full items-center gap-2 px-3 text-left text-[13px] text-text-primary active:bg-bg-app"
+            >
+              <MessageCircle size={16} className="text-success" /> WhatsApp
+            </button>
+          ) : null}
+          {email ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAberto(false);
+                abrirEmail(email);
+              }}
+              className={`flex min-h-touch w-full items-center gap-2 px-3 text-left text-[13px] text-text-primary active:bg-bg-app ${telefone ? 'border-t border-border' : ''}`}
+            >
+              <Mail size={16} className="text-primary" /> Email
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // Cabeçalho de um contacto — mostra o resumo (nº de cargas, valor total,
 // estado mais urgente) e funciona como o gatilho para expandir/colapsar
-// a lista de cargas desse emissor, ao estilo "lista de contactos". Os
-// ícones de WhatsApp/Email só aparecem se esse emissor tiver esse dado.
+// a lista de cargas desse emissor, ao estilo "lista de contactos".
 function GrupoContactoHeader({
   grupo,
   cor,
@@ -162,35 +228,9 @@ function GrupoContactoHeader({
           {grupo.itens.length} {grupo.itens.length === 1 ? 'carga' : 'cargas'}
         </span>
         <EstadoIcon size={14} className={`shrink-0 ${ESTADO_CLASS[estado]}`} aria-label={ESTADO_LABEL[estado]} />
-        <span className="w-[70px] shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary">{formatMoeda(totalValor)}</span>
       </button>
-
-      {contacto.telefone ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            abrirWhatsapp(contacto.telefone ?? '');
-          }}
-          title="Enviar WhatsApp"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-success active:bg-success/10"
-        >
-          <MessageCircle size={18} />
-        </button>
-      ) : null}
-      {contacto.email ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            abrirEmail(contacto.email ?? '');
-          }}
-          title="Enviar email"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-primary active:bg-primary/10"
-        >
-          <Mail size={18} />
-        </button>
-      ) : null}
+      <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary`}>{formatMoeda(totalValor)}</span>
+      <BotaoEnviarContacto telefone={contacto.telefone} email={contacto.email} />
     </div>
   );
 }
@@ -336,9 +376,7 @@ export function CargasPage(): React.JSX.Element {
         <p className="px-4 text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
       ) : (
         <div className="flex flex-col">
-          <div className="px-4">
-            <CargaListHeader />
-          </div>
+          <CargaListHeader />
           {grupos.map((grupo, grupoIndex) => {
             const cor = corAcento(grupoIndex);
             const corTexto = corAcentoEscura(grupoIndex);

@@ -29,21 +29,30 @@ interface CargaListRowProps {
   acoes?: AcaoLinhaCarga[];
 }
 
+// Grelha comum a esta linha e ao cabeçalho do grupo (GrupoContactoHeader,
+// em CargasPage.tsx) — a coluna de Valor e o botão de ação à direita têm
+// SEMPRE a mesma largura e o mesmo preenchimento exterior nos dois sítios,
+// para o "Valor" alinhar verticalmente entre o resumo e as suas cargas.
+export const LARGURA_VALOR = 'w-[70px]';
+export const LARGURA_ACAO = 'w-9';
+
 // Cabeçalho de colunas — companion do CargaListRow.
 export function CargaListHeader(): React.JSX.Element {
   return (
-    <div className="flex items-center gap-2 py-1 pl-2.5 pr-2 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
+    <div className="flex items-center gap-2 py-1 pl-5 pr-4 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
       <span className="w-16 shrink-0">Código</span>
       <span className="w-[150px] shrink-0">Contactos</span>
       <span className="min-w-0 flex-1">Carga</span>
-      <span className="w-7 shrink-0" />
+      <span className={`${LARGURA_VALOR} shrink-0 text-right`}>Valor</span>
+      <span className={`${LARGURA_ACAO} shrink-0`} />
     </div>
   );
 }
 
 // Linha "encostada" (sem cantos arredondados, sem sombra, sem espaço entre
 // linhas) — faixa de cor à esquerda identifica o GRUPO (emissor), não a
-// linha individual. Não há tap na linha: todas as ações vivem no menu "☰".
+// linha individual; indentada (pl-5) para se ler como filha do cabeçalho
+// do grupo. Não há tap na linha: todas as ações vivem no menu "☰".
 export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): React.JSX.Element {
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -59,7 +68,7 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
   }, []);
 
   return (
-    <div className="relative border-b border-border bg-bg-surface py-2 pl-2.5 pr-2" style={{ borderLeft: `3px solid ${corGrupo}` }}>
+    <div className="relative border-b border-border bg-bg-surface py-2 pl-5 pr-4" style={{ borderLeft: `3px solid ${corGrupo}` }}>
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
 
@@ -79,25 +88,26 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text-primary">{linha.nomeCarga}</span>
             <EstadoIcon size={14} className={`shrink-0 ${ESTADO_CLASS[linha.estado]}`} aria-label={ESTADO_LABEL[linha.estado]} />
           </div>
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[11px] font-light text-text-tertiary">{dimensoes ?? ''}</span>
-            <span className="shrink-0 text-[13px] font-bold tabular-nums text-text-primary">{formatMoeda(linha.valor)}</span>
-          </div>
+          {dimensoes ? <span className="block truncate text-[11px] font-light text-text-tertiary">{dimensoes}</span> : null}
         </div>
 
-        <div ref={menuRef} className="relative flex w-7 shrink-0 items-center justify-center">
+        <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary`}>
+          {formatMoeda(linha.valor)}
+        </span>
+
+        <div ref={menuRef} className={`relative flex ${LARGURA_ACAO} shrink-0 items-center justify-center`}>
           {acoes && acoes.length > 0 ? (
             <>
               <button
                 type="button"
                 onClick={() => setMenuAberto((v) => !v)}
                 title="Opções"
-                className="flex h-8 w-8 items-center justify-center rounded-control text-text-tertiary active:bg-bg-app"
+                className="flex h-9 w-9 items-center justify-center rounded-control text-text-tertiary active:bg-bg-app"
               >
                 <Menu size={17} />
               </button>
               {menuAberto ? (
-                <div className="absolute right-0 top-9 z-30 w-40 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+                <div className="absolute right-0 top-10 z-30 w-40 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
                   {acoes.map((acao) => (
                     <button
                       key={acao.label}

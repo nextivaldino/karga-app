@@ -41,6 +41,7 @@ interface CargaPendenteRow {
   emissor_nome: string;
   emissor_telefone: string | null;
   emissor_email: string | null;
+  emissor_nif: string | null;
   recetor_nome: string;
   recetor_telefone: string | null;
   nome_carga: string;
@@ -66,6 +67,7 @@ function mapCargaPendente(row: CargaPendenteRow): CargaPendente {
     emissorNome: row.emissor_nome,
     emissorTelefone: row.emissor_telefone,
     emissorEmail: row.emissor_email,
+    emissorNif: row.emissor_nif,
     recetorNome: row.recetor_nome,
     recetorTelefone: row.recetor_telefone,
     nomeCarga: row.nome_carga,
@@ -114,6 +116,7 @@ export async function enviarCargasPendentes(userId: string, items: NovaCargaPend
     emissor_nome: item.emissorNome.trim(),
     emissor_telefone: vazioParaNull(item.emissorTelefone),
     emissor_email: vazioParaNull(item.emissorEmail),
+    emissor_nif: vazioParaNull(item.emissorNif),
     recetor_nome: item.recetorNome.trim(),
     recetor_telefone: vazioParaNull(item.recetorTelefone),
     nome_carga: item.nomeCarga.trim(),

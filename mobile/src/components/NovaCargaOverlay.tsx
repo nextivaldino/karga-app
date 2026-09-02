@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Copy, Euro, Mail, MoreVertical, Package, Pencil, Phone, Plus, Ruler, Trash2, Weight, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ChevronDown, Copy, Euro, IdCard, Mail, MoreVertical, Package, Pencil, Phone, Plus, Ruler, Trash2, Weight, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
@@ -17,6 +17,7 @@ const CAMPOS_VAZIOS: NovaCargaPendenteInput = {
   emissorNome: '',
   emissorTelefone: '',
   emissorEmail: '',
+  emissorNif: '',
   recetorNome: '',
   recetorTelefone: '',
   nomeCarga: '',
@@ -175,6 +176,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
       emissorNome: f.emissorNome,
       emissorTelefone: f.emissorTelefone,
       emissorEmail: f.emissorEmail,
+      emissorNif: f.emissorNif,
       recetorNome: f.recetorNome,
       recetorTelefone: f.recetorTelefone,
     }));
@@ -265,13 +267,14 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 title="Mais campos do emissor"
                 className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${emissorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-primary/25 bg-primary/5 text-primary'}`}
               >
-                <Plus size={16} />
+                <ChevronDown size={18} className={`transition-transform ${emissorExpandido ? 'rotate-180' : ''}`} />
               </button>
             </div>
             {emissorExpandido ? (
-              <div className="ml-4 flex flex-col gap-2 border-l-2 border-primary/25 pl-3">
+              <div className="ml-4 flex flex-col gap-1.5 border-l-2 border-primary/25 pl-3">
                 <FloatingLabelInput
                   label="Telefone do emissor"
+                  fieldSize="sm"
                   icon={Phone}
                   iconClassName="text-primary/70"
                   value={form.emissorTelefone ?? ''}
@@ -279,10 +282,21 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 />
                 <FloatingLabelInput
                   label="Email do emissor"
+                  fieldSize="sm"
                   icon={Mail}
                   iconClassName="text-primary/70"
                   value={form.emissorEmail ?? ''}
                   onChange={(e) => update('emissorEmail', e.target.value || null)}
+                />
+                <FloatingLabelInput
+                  label="NIF (Luxemburgo)"
+                  fieldSize="sm"
+                  icon={IdCard}
+                  iconClassName="text-primary/70"
+                  inputMode="numeric"
+                  maxLength={13}
+                  value={form.emissorNif ?? ''}
+                  onChange={(e) => update('emissorNif', e.target.value.replace(/[^0-9]/g, '') || null)}
                 />
               </div>
             ) : null}
@@ -293,6 +307,9 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
               <option key={n} value={n} />
             ))}
           </datalist>
+
+          {/* Separador fluido entre Emissor e Recetor — a cor faz a transição azul → verde */}
+          <div className="h-px bg-gradient-to-r from-primary/40 via-border to-success/40" />
 
           {/* Recetor — verde + seta a entrar, em todo o sistema identifica quem recebe */}
           <div className="flex flex-col gap-1.5">
@@ -313,13 +330,14 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 title="Mais campos do recetor"
                 className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${recetorExpandido ? 'border-success bg-success/10 text-success' : 'border-success/25 bg-success/5 text-success'}`}
               >
-                <Plus size={16} />
+                <ChevronDown size={18} className={`transition-transform ${recetorExpandido ? 'rotate-180' : ''}`} />
               </button>
             </div>
             {recetorExpandido ? (
-              <div className="ml-4 flex flex-col gap-2 border-l-2 border-success/25 pl-3">
+              <div className="ml-4 flex flex-col gap-1.5 border-l-2 border-success/25 pl-3">
                 <FloatingLabelInput
                   label="Telefone do recetor"
+                  fieldSize="sm"
                   icon={Phone}
                   iconClassName="text-success/70"
                   value={form.recetorTelefone ?? ''}

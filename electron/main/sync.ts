@@ -15,6 +15,7 @@ interface CargaPendenteRow {
   emissor_nome: string;
   emissor_telefone: string | null;
   emissor_email: string | null;
+  emissor_nif: string | null;
   recetor_nome: string;
   recetor_telefone: string | null;
   nome_carga: string;
@@ -47,6 +48,7 @@ function mapPendenteRow(row: CargaPendenteRow): CargaPendente {
     emissorNome: row.emissor_nome,
     emissorTelefone: row.emissor_telefone,
     emissorEmail: row.emissor_email,
+    emissorNif: row.emissor_nif,
     recetorNome: row.recetor_nome,
     recetorTelefone: row.recetor_telefone,
     nomeCarga: row.nome_carga,
@@ -132,6 +134,7 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
       nome: pendente.emissorNome,
       telefone: pendente.emissorTelefone,
       email: pendente.emissorEmail,
+      nif: pendente.emissorNif,
     });
     emissorId = novo.id;
   }

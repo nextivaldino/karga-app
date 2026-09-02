@@ -58,6 +58,7 @@ function prefillDe(c: CargaPendente): NovaCargaPendenteInput {
     emissorNome: c.emissorNome,
     emissorTelefone: c.emissorTelefone,
     emissorEmail: c.emissorEmail,
+    emissorNif: c.emissorNif,
     recetorNome: c.recetorNome,
     recetorTelefone: c.recetorTelefone,
     nomeCarga: c.nomeCarga,

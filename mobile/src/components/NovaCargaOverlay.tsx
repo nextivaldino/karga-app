@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Copy, MoreVertical, Package, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Copy, Euro, Mail, MoreVertical, Package, Pencil, Phone, Plus, Ruler, Trash2, Weight, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
@@ -269,9 +269,21 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
               </button>
             </div>
             {emissorExpandido ? (
-              <div className="flex flex-col gap-1.5 rounded-control border border-primary/20 bg-primary/5 p-2.5">
-                <FloatingLabelInput label="Telefone do emissor" value={form.emissorTelefone ?? ''} onChange={(e) => update('emissorTelefone', e.target.value || null)} />
-                <FloatingLabelInput label="Email do emissor" value={form.emissorEmail ?? ''} onChange={(e) => update('emissorEmail', e.target.value || null)} />
+              <div className="ml-4 flex flex-col gap-2 border-l-2 border-primary/25 pl-3">
+                <FloatingLabelInput
+                  label="Telefone do emissor"
+                  icon={Phone}
+                  iconClassName="text-primary/70"
+                  value={form.emissorTelefone ?? ''}
+                  onChange={(e) => update('emissorTelefone', e.target.value || null)}
+                />
+                <FloatingLabelInput
+                  label="Email do emissor"
+                  icon={Mail}
+                  iconClassName="text-primary/70"
+                  value={form.emissorEmail ?? ''}
+                  onChange={(e) => update('emissorEmail', e.target.value || null)}
+                />
               </div>
             ) : null}
           </div>
@@ -305,8 +317,14 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
               </button>
             </div>
             {recetorExpandido ? (
-              <div className="flex flex-col gap-1.5 rounded-control border border-success/20 bg-success/5 p-2.5">
-                <FloatingLabelInput label="Telefone do recetor" value={form.recetorTelefone ?? ''} onChange={(e) => update('recetorTelefone', e.target.value || null)} />
+              <div className="ml-4 flex flex-col gap-2 border-l-2 border-success/25 pl-3">
+                <FloatingLabelInput
+                  label="Telefone do recetor"
+                  icon={Phone}
+                  iconClassName="text-success/70"
+                  value={form.recetorTelefone ?? ''}
+                  onChange={(e) => update('recetorTelefone', e.target.value || null)}
+                />
               </div>
             ) : null}
           </div>
@@ -316,13 +334,13 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
           <FloatingLabelInput label="Nome da carga" icon={Package} value={form.nomeCarga} onChange={(e) => update('nomeCarga', e.target.value)} />
 
           <div className="grid grid-cols-3 gap-2">
-            <FloatingLabelInput label="C (cm)" type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput label="L (cm)" type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput label="A (cm)" type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label="C (cm)" icon={Ruler} type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label="L (cm)" icon={Ruler} type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label="A (cm)" icon={Ruler} type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
           </div>
           <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
-            <FloatingLabelInput label="Peso (kg)" type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
-            <FloatingLabelInput label="Valor" type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
+            <FloatingLabelInput label="Peso (kg)" icon={Weight} type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
+            <FloatingLabelInput label="Valor" icon={Euro} type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
             <div className="flex flex-col items-center gap-1">
               <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Pago</span>
               <Switch checked={form.pago} onChange={(v) => update('pago', v)} />

@@ -2,6 +2,7 @@ import { Wifi, WifiOff } from 'lucide-react';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useTopBarSlotContent } from '@/hooks/useTopBarSlot';
 import { GearMenu } from './GearMenu';
+import { MessagesButton } from './MessagesButton';
 import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
@@ -25,6 +26,7 @@ export function Header({ onTrocarPassword }: HeaderProps): React.JSX.Element {
         >
           {online ? <Wifi size={14} /> : <WifiOff size={14} />}
         </span>
+        <MessagesButton />
         <NotificationBell />
         <GearMenu onTrocarPassword={onTrocarPassword} />
       </div>

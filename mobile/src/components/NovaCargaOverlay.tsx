@@ -142,7 +142,19 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const [emissorExpandido, setEmissorExpandido] = useState(false);
   const [recetorExpandido, setRecetorExpandido] = useState(false);
   const [notasExpandido, setNotasExpandido] = useState(false);
+  // Controla a animação de entrada — arranca fechado (perto do botão "+"
+  // na dock) e no frame seguinte transita suavemente para a posição final.
+  const [entrada, setEntrada] = useState(false);
   const sugestoes = listarSugestoesNomes();
+
+  useEffect(() => {
+    if (!aberto) {
+      setEntrada(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() => setEntrada(true));
+    return () => cancelAnimationFrame(frame);
+  }, [aberto]);
 
   useEffect(() => {
     if (!aberto) return;
@@ -233,7 +245,22 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   }
 
   return (
-    <div data-theme={temaInvertido} style={estiloTema(temaInvertido)} className="fixed inset-0 z-50 flex flex-col bg-bg-app">
+    <div
+      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 pb-[calc(env(safe-area-inset-bottom)+92px)] transition-opacity duration-300 ${
+        entrada ? 'opacity-100' : 'opacity-0'
+      }`}
+      onClick={fechar}
+    >
+      {/* Painel flutuante — não ocupa as bordas do ecrã; "cresce" a partir
+          do botão "+" da dock (transform-origin em baixo) de forma suave. */}
+      <div
+        data-theme={temaInvertido}
+        style={{ ...estiloTema(temaInvertido), maxHeight: 'calc(100% - 8px)', transformOrigin: 'bottom center' }}
+        onClick={(e) => e.stopPropagation()}
+        className={`flex w-full max-w-[440px] flex-col overflow-hidden rounded-3xl bg-bg-app shadow-2xl transition-all duration-300 ease-out ${
+          entrada ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-90 opacity-0'
+        }`}
+      >
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-bg-header px-3 backdrop-blur-md">
         <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary">
           <X size={20} />
@@ -426,6 +453,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
         >
           {enviando ? 'A enviar...' : `Enviar${lote.length > 0 ? ` (${lote.length})` : ''}`}
         </button>
+      </div>
       </div>
     </div>
   );

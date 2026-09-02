@@ -1,9 +1,14 @@
 import { useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 interface BaseProps {
   label: string;
   error?: string;
+  // Ícone à esquerda, dentro da caixa (ex: distinguir Emissor/Recetor por
+  // cor — azul/verde — sem depender só do texto da label).
+  icon?: LucideIcon;
+  iconClassName?: string;
 }
 
 type InputProps = BaseProps & InputHTMLAttributes<HTMLInputElement> & { as?: 'input' };
@@ -27,17 +32,23 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   const id = props.id ?? generatedId;
   const [hasValue, setHasValue] = useState(Boolean(props.value ?? props.defaultValue));
 
-  const { label, error, className, ...rest } = props;
+  const { label, error, className, icon: Icon, iconClassName, ...rest } = props;
   const floated = hasValue || rest.as === 'select';
+  const withIcon = Boolean(Icon);
+  const fieldWithIconClasses = withIcon ? `${fieldClasses} pl-11` : fieldClasses;
+  const labelWithIconClasses = withIcon ? `${labelClasses} left-11` : labelClasses;
 
   return (
     <div className="w-full">
       <div className="relative">
+        {Icon ? (
+          <Icon size={19} className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 ${iconClassName ?? 'text-text-tertiary'}`} />
+        ) : null}
         {props.as === 'textarea' ? (
           <textarea
             {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
             id={id}
-            className={`${fieldClasses} min-h-[88px] resize-y ${className ?? ''}`}
+            className={`${fieldWithIconClasses} min-h-[88px] resize-y ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as TextareaProps).onChange?.(e);
@@ -48,7 +59,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
           <select
             {...(rest as SelectHTMLAttributes<HTMLSelectElement>)}
             id={id}
-            className={`${fieldClasses} min-h-touch appearance-none ${className ?? ''}`}
+            className={`${fieldWithIconClasses} min-h-touch appearance-none ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as SelectProps).onChange?.(e);
@@ -60,7 +71,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
           <input
             {...(rest as InputHTMLAttributes<HTMLInputElement>)}
             id={id}
-            className={`${fieldClasses} min-h-touch ${className ?? ''}`}
+            className={`${fieldWithIconClasses} min-h-touch ${className ?? ''}`}
             onChange={(e) => {
               setHasValue(Boolean(e.target.value));
               (props as InputProps).onChange?.(e);
@@ -68,7 +79,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             placeholder=" "
           />
         )}
-        <label htmlFor={id} className={`${labelClasses} ${floated ? labelFloatedClasses : ''} bg-bg-input px-1 -ml-1`}>
+        <label htmlFor={id} className={`${labelWithIconClasses} ${floated ? labelFloatedClasses : ''} bg-bg-input px-1 -ml-1`}>
           {label}
         </label>
       </div>

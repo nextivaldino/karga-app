@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDownLeft, ArrowUpRight, Copy, MoreVertical, Package, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
@@ -35,6 +35,94 @@ function numOrNull(v: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function formatValorChip(v: number | null): string {
+  return v != null ? `${v} €` : '—';
+}
+
+interface LinhaEmpilhadaProps {
+  item: NovaCargaPendenteInput;
+  onEditar: () => void;
+  onDuplicar: () => void;
+  onEliminar: () => void;
+}
+
+// Linha em texto+ícones (não cartão) — mais parecido com uma linha de
+// tabela/recibo; o "..." abre as ações em vez de um ícone fixo de remover.
+function LinhaEmpilhada({ item, onEditar, onDuplicar, onEliminar }: LinhaEmpilhadaProps): React.JSX.Element {
+  const [menuAberto, setMenuAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent): void {
+      if (ref.current && !ref.current.contains(e.target as Node)) setMenuAberto(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2 py-2.5">
+      <Package size={16} className="shrink-0 text-text-tertiary" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="truncate text-[13px] font-medium text-text-primary">{item.nomeCarga}</p>
+          <span className="shrink-0 text-[12px] tabular-nums text-text-secondary">{formatValorChip(item.valor)}</span>
+        </div>
+        <p className="mt-0.5 flex items-center gap-1 text-[11px] text-text-tertiary">
+          <ArrowUpRight size={13} className="shrink-0 text-primary" />
+          <span className="max-w-[36%] truncate">{item.emissorNome}</span>
+          <ArrowDownLeft size={13} className="ml-1 shrink-0 text-success" />
+          <span className="max-w-[36%] truncate">{item.recetorNome}</span>
+        </p>
+      </div>
+      <div ref={ref} className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setMenuAberto((v) => !v)}
+          title="Opções"
+          className="flex h-8 w-8 items-center justify-center rounded-control text-text-tertiary active:bg-bg-app"
+        >
+          <MoreVertical size={17} />
+        </button>
+        {menuAberto ? (
+          <div className="absolute right-0 top-9 z-10 w-36 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAberto(false);
+                onEditar();
+              }}
+              className="flex min-h-touch w-full items-center gap-2 px-3 text-left text-[13px] text-text-primary active:bg-bg-app"
+            >
+              <Pencil size={14} className="text-text-secondary" /> Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAberto(false);
+                onDuplicar();
+              }}
+              className="flex min-h-touch w-full items-center gap-2 border-t border-border px-3 text-left text-[13px] text-text-primary active:bg-bg-app"
+            >
+              <Copy size={14} className="text-text-secondary" /> Duplicar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAberto(false);
+                onEliminar();
+              }}
+              className="flex min-h-touch w-full items-center gap-2 border-t border-border px-3 text-left text-[13px] text-error active:bg-error/10"
+            >
+              <Trash2 size={14} /> Eliminar
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
@@ -45,6 +133,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const [enviando, setEnviando] = useState(false);
   const [emissorExpandido, setEmissorExpandido] = useState(false);
   const [recetorExpandido, setRecetorExpandido] = useState(false);
+  const [notasExpandido, setNotasExpandido] = useState(false);
   const sugestoes = listarSugestoesNomes();
 
   useEffect(() => {
@@ -58,6 +147,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     setLote([]);
     setEmissorExpandido(false);
     setRecetorExpandido(false);
+    setNotasExpandido(Boolean(prefill?.notas));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto]);
 
@@ -92,6 +182,22 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
 
   function handleRemoverDoLote(index: number): void {
     setLote((l) => l.filter((_, i) => i !== index));
+  }
+
+  function handleEditarDoLote(index: number): void {
+    const item = lote[index];
+    if (!item) return;
+    setForm(item);
+    setNotasExpandido(Boolean(item.notas));
+    setLote((l) => l.filter((_, i) => i !== index));
+  }
+
+  function handleDuplicarDoLote(index: number): void {
+    setLote((l) => {
+      const item = l[index];
+      if (!item) return l;
+      return [...l.slice(0, index + 1), item, ...l.slice(index + 1)];
+    });
   }
 
   async function handleEnviar(): Promise<void> {
@@ -139,14 +245,16 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="flex flex-col gap-4">
-          {/* Emissor */}
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
+          {/* Emissor — azul + seta a sair, em todo o sistema identifica quem envia */}
+          <div className="flex flex-col gap-1.5">
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
                   label="Emissor"
                   list="sugestoes-nomes"
+                  icon={ArrowUpRight}
+                  iconClassName="text-primary"
                   value={form.emissorNome}
                   onChange={(e) => update('emissorNome', e.target.value)}
                 />
@@ -155,13 +263,13 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 type="button"
                 onClick={() => setEmissorExpandido((v) => !v)}
                 title="Mais campos do emissor"
-                className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${emissorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-border text-text-secondary'}`}
+                className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${emissorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-primary/25 bg-primary/5 text-primary'}`}
               >
-                <Plus size={18} />
+                <Plus size={16} />
               </button>
             </div>
             {emissorExpandido ? (
-              <div className="flex flex-col gap-2 rounded-control border border-border bg-bg-surface p-3">
+              <div className="flex flex-col gap-1.5 rounded-control border border-primary/20 bg-primary/5 p-2.5">
                 <FloatingLabelInput label="Telefone do emissor" value={form.emissorTelefone ?? ''} onChange={(e) => update('emissorTelefone', e.target.value || null)} />
                 <FloatingLabelInput label="Email do emissor" value={form.emissorEmail ?? ''} onChange={(e) => update('emissorEmail', e.target.value || null)} />
               </div>
@@ -174,13 +282,15 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             ))}
           </datalist>
 
-          {/* Recetor */}
-          <div className="flex flex-col gap-2">
+          {/* Recetor — verde + seta a entrar, em todo o sistema identifica quem recebe */}
+          <div className="flex flex-col gap-1.5">
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
                   label="Recetor"
                   list="sugestoes-nomes"
+                  icon={ArrowDownLeft}
+                  iconClassName="text-success"
                   value={form.recetorNome}
                   onChange={(e) => update('recetorNome', e.target.value)}
                 />
@@ -189,13 +299,13 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 type="button"
                 onClick={() => setRecetorExpandido((v) => !v)}
                 title="Mais campos do recetor"
-                className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${recetorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-border text-text-secondary'}`}
+                className={`flex min-h-touch min-w-touch shrink-0 items-center justify-center rounded-control border ${recetorExpandido ? 'border-success bg-success/10 text-success' : 'border-success/25 bg-success/5 text-success'}`}
               >
-                <Plus size={18} />
+                <Plus size={16} />
               </button>
             </div>
             {recetorExpandido ? (
-              <div className="flex flex-col gap-2 rounded-control border border-border bg-bg-surface p-3">
+              <div className="flex flex-col gap-1.5 rounded-control border border-success/20 bg-success/5 p-2.5">
                 <FloatingLabelInput label="Telefone do recetor" value={form.recetorTelefone ?? ''} onChange={(e) => update('recetorTelefone', e.target.value || null)} />
               </div>
             ) : null}
@@ -203,43 +313,53 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
 
           <div className="h-px bg-border" />
 
-          <FloatingLabelInput label="Nome da carga" value={form.nomeCarga} onChange={(e) => update('nomeCarga', e.target.value)} />
+          <FloatingLabelInput label="Nome da carga" icon={Package} value={form.nomeCarga} onChange={(e) => update('nomeCarga', e.target.value)} />
 
           <div className="grid grid-cols-3 gap-2">
             <FloatingLabelInput label="C (cm)" type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
             <FloatingLabelInput label="L (cm)" type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
             <FloatingLabelInput label="A (cm)" type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
             <FloatingLabelInput label="Peso (kg)" type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
             <FloatingLabelInput label="Valor" type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-medium uppercase tracking-wide text-text-tertiary">Pago</span>
+              <Switch checked={form.pago} onChange={(v) => update('pago', v)} />
+            </div>
           </div>
 
-          <Switch checked={form.pago} onChange={(v) => update('pago', v)} label="Pago" />
+          {notasExpandido ? (
+            <FloatingLabelInput as="textarea" label="Notas" value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNotasExpandido(true)}
+              className="flex min-h-touch items-center gap-2 rounded-control border border-dashed border-border px-3 text-[13px] text-text-tertiary active:bg-bg-app"
+            >
+              <Plus size={14} /> Notas (opcional)
+            </button>
+          )}
+        </div>
 
-          <FloatingLabelInput as="textarea" label="Notas (opcional)" value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
-
-          {lote.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">
-                Empilhadas ({lote.length})
-              </h2>
+        {lote.length > 0 ? (
+          <div className="-mx-4 mt-4 border-t-2 border-dashed border-warning/30 bg-warning/[0.05] px-4 pb-1 pt-3">
+            <h2 className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+              <Package size={13} /> Empilhadas ({lote.length})
+            </h2>
+            <div className="flex flex-col divide-y divide-border/60">
               {lote.map((item, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 rounded-control border border-border bg-bg-surface p-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium text-text-primary">{item.nomeCarga}</p>
-                    <p className="truncate text-[12px] text-text-tertiary">
-                      {item.emissorNome} → {item.recetorNome}
-                    </p>
-                  </div>
-                  <button type="button" onClick={() => handleRemoverDoLote(index)} className="shrink-0 p-2 text-error">
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                <LinhaEmpilhada
+                  key={index}
+                  item={item}
+                  onEditar={() => handleEditarDoLote(index)}
+                  onDuplicar={() => handleDuplicarDoLote(index)}
+                  onEliminar={() => handleRemoverDoLote(index)}
+                />
               ))}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex shrink-0 gap-2 border-t border-border bg-bg-surface p-3">

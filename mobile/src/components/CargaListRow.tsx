@@ -34,7 +34,7 @@ export function CargaListHeader(): React.JSX.Element {
   return (
     <div className="flex items-center gap-2 py-1 pl-2.5 pr-2 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
       <span className="w-16 shrink-0">Código</span>
-      <span className="w-[132px] shrink-0">Contactos</span>
+      <span className="w-[150px] shrink-0">Contactos</span>
       <span className="min-w-0 flex-1">Carga</span>
       <span className="w-7 shrink-0" />
     </div>
@@ -63,7 +63,7 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
 
-        <span className="flex w-[132px] shrink-0 flex-col gap-0.5 text-[12px]">
+        <span className="flex w-[150px] shrink-0 flex-col gap-0.5 text-[12px]">
           <span className="flex items-center gap-1 font-medium text-text-primary">
             <ArrowUpRight size={12} className="shrink-0 text-primary" />
             <span className="truncate">{linha.emissorNome}</span>
@@ -120,7 +120,7 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
         </div>
       </div>
 
-      {linha.nota ? <p className="mt-1 pl-[222px] text-[11px] text-error">{linha.nota}</p> : null}
+      {linha.nota ? <p className="mt-1 pl-[240px] text-[11px] text-error">{linha.nota}</p> : null}
     </div>
   );
 }

@@ -206,15 +206,18 @@ export function CargasPage(): React.JSX.Element {
             const cor = corAcento(grupoIndex);
             return (
               <div key={label} className={grupoIndex > 0 ? 'mt-4 flex flex-col' : 'flex flex-col'}>
-                <div className="px-4">
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-t-surface px-3 py-1.5"
-                    style={{ backgroundColor: `${cor}26`, borderBottom: `2px solid ${cor}` }}
-                  >
+                <div
+                  className="flex items-center justify-between gap-2 px-4 py-1.5"
+                  style={{ backgroundColor: `${cor}26`, borderBottom: `2px solid ${cor}` }}
+                >
+                  <span className="flex min-w-0 items-center gap-1.5">
                     <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
-                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: cor }}>
+                    <span className="truncate text-[11px] font-semibold uppercase tracking-wide" style={{ color: cor }}>
                       {label}
                     </span>
+                  </span>
+                  <span className="shrink-0 text-[10px] font-medium" style={{ color: cor }}>
+                    {itens.length} {itens.length === 1 ? 'carga' : 'cargas'}
                   </span>
                 </div>
                 {itens.map((l) => (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical } from 'lucide-react';
+import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical, UserRound } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { toast } from '@/components/ui/Toast';
@@ -217,13 +217,16 @@ function GrupoContactoHeader({
   const contacto = contactoDoGrupo(grupo.itens);
 
   return (
-    <div className="flex w-full items-center gap-2 px-4 py-3" style={{ backgroundColor: `${cor}26` }}>
+    <div
+      className="flex w-full items-center gap-2 px-4 py-3"
+      style={{ backgroundColor: `${cor}26`, borderLeft: `3px solid ${cor}` }}
+    >
       <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
         <ChevronDown size={18} className={`shrink-0 transition-transform ${expandido ? 'rotate-180' : ''}`} style={{ color: corTexto }} />
-        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
-        <span className="min-w-0 flex-1 truncate text-[15px] font-bold" style={{ color: corTexto }}>
-          {grupo.label}
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${cor}33`, color: corTexto }}>
+          <UserRound size={13} />
         </span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-text-primary">{grupo.label}</span>
         <span className="shrink-0 text-[11px] font-medium text-text-secondary">
           {grupo.itens.length} {grupo.itens.length === 1 ? 'carga' : 'cargas'}
         </span>

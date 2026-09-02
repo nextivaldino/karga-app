@@ -77,7 +77,7 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
             <ArrowUpRight size={12} className="shrink-0 text-primary" />
             <span className="truncate">{linha.emissorNome}</span>
           </span>
-          <span className="flex items-center gap-1 text-text-secondary">
+          <span className="flex items-center gap-1 font-medium text-text-primary">
             <ArrowDownLeft size={12} className="shrink-0 text-success" />
             <span className="truncate">{linha.recetorNome}</span>
           </span>

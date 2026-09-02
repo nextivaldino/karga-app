@@ -8,3 +8,14 @@ const PALETA_ACENTOS = ['#f97316', '#6366f1', '#ec4899', '#14b8a6', '#eab308', '
 export function corAcento(index: number): string {
   return PALETA_ACENTOS[index % PALETA_ACENTOS.length] ?? '#6366f1';
 }
+
+// Versão escurecida da cor de acento — usada no texto (sobre um fundo já
+// tingido com a mesma cor a baixa opacidade, um tom escuro lê-se melhor
+// do que a cor "crua", mais vibrante, pensada para a barra lateral).
+export function corAcentoEscura(index: number): string {
+  const hex = corAcento(index).replace('#', '');
+  const r = Math.round(parseInt(hex.slice(0, 2), 16) * 0.6);
+  const g = Math.round(parseInt(hex.slice(2, 4), 16) * 0.6);
+  const b = Math.round(parseInt(hex.slice(4, 6), 16) * 0.6);
+  return `rgb(${r}, ${g}, ${b})`;
+}

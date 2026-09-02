@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Pencil, Send, Trash2 } from 'lucide-react';
+import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Trash2, UnfoldVertical } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
-import { ESTADO_LABEL } from '@/lib/cargaEstado';
-import { corAcento } from '@/lib/rowAccents';
+import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
+import { corAcento, corAcentoEscura } from '@/lib/rowAccents';
 import { CargaListHeader, CargaListRow, type AcaoLinhaCarga, type CargaListRowData } from '@/components/CargaListRow';
 import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, NovaCargaPendenteInput } from '@/types';
 
@@ -16,7 +16,17 @@ interface LinhaCarga extends CargaListRowData {
   filaId: string | null;
 }
 
+interface GrupoEmissor {
+  chave: string;
+  label: string;
+  itens: LinhaCarga[];
+}
+
 const OPCOES_FILTRO: FiltroEstado[] = ['todas', 'pendente', 'importada', 'rejeitada'];
+
+// Prioridade de "o que precisa de atenção primeiro" — o resumo do
+// contacto mostra o ícone do estado mais urgente entre as suas cargas.
+const PRIORIDADE_ESTADO: EstadoListaCarga[] = ['erro', 'rejeitada', 'fila', 'pendente', 'importada'];
 
 function tituloCase(nome: string): string {
   return nome
@@ -44,6 +54,32 @@ function prefillDe(c: CargaPendente): NovaCargaPendenteInput {
     pago: c.pago,
     notas: c.notas,
   };
+}
+
+function estadoDominante(itens: LinhaCarga[]): EstadoListaCarga {
+  for (const estado of PRIORIDADE_ESTADO) {
+    if (itens.some((i) => i.estado === estado)) return estado;
+  }
+  return 'importada';
+}
+
+function precisaAtencao(itens: LinhaCarga[]): boolean {
+  return itens.some((i) => i.estado === 'fila' || i.estado === 'erro' || i.estado === 'rejeitada');
+}
+
+function contactoDoGrupo(itens: LinhaCarga[]): { telefone: string | null; email: string | null } {
+  const comTelefone = itens.find((i) => i.prefill.emissorTelefone?.trim());
+  const comEmail = itens.find((i) => i.prefill.emissorEmail?.trim());
+  return { telefone: comTelefone?.prefill.emissorTelefone ?? null, email: comEmail?.prefill.emissorEmail ?? null };
+}
+
+function abrirWhatsapp(telefone: string): void {
+  const digitos = telefone.replace(/[^0-9]/g, '');
+  window.open(`https://wa.me/${digitos}`, '_blank');
+}
+
+function abrirEmail(email: string): void {
+  window.open(`mailto:${email}?subject=${encodeURIComponent('Kraga — as suas cargas')}`, '_blank');
 }
 
 function FiltroEstadoButton({ filtro, onChange }: { filtro: FiltroEstado; onChange: (f: FiltroEstado) => void }): React.JSX.Element {
@@ -92,6 +128,73 @@ function FiltroEstadoButton({ filtro, onChange }: { filtro: FiltroEstado; onChan
   );
 }
 
+// Cabeçalho de um contacto — mostra o resumo (nº de cargas, valor total,
+// estado mais urgente) e funciona como o gatilho para expandir/colapsar
+// a lista de cargas desse emissor, ao estilo "lista de contactos". Os
+// ícones de WhatsApp/Email só aparecem se esse emissor tiver esse dado.
+function GrupoContactoHeader({
+  grupo,
+  cor,
+  corTexto,
+  expandido,
+  onToggle,
+}: {
+  grupo: GrupoEmissor;
+  cor: string;
+  corTexto: string;
+  expandido: boolean;
+  onToggle: () => void;
+}): React.JSX.Element {
+  const totalValor = grupo.itens.reduce((soma, i) => soma + (i.valor ?? 0), 0);
+  const estado = estadoDominante(grupo.itens);
+  const EstadoIcon = ESTADO_ICON[estado];
+  const contacto = contactoDoGrupo(grupo.itens);
+
+  return (
+    <div className="flex w-full items-center gap-2 px-4 py-3" style={{ backgroundColor: `${cor}26` }}>
+      <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <ChevronDown size={18} className={`shrink-0 transition-transform ${expandido ? 'rotate-180' : ''}`} style={{ color: corTexto }} />
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
+        <span className="min-w-0 flex-1 truncate text-[15px] font-bold" style={{ color: corTexto }}>
+          {grupo.label}
+        </span>
+        <span className="shrink-0 text-[11px] font-medium text-text-secondary">
+          {grupo.itens.length} {grupo.itens.length === 1 ? 'carga' : 'cargas'}
+        </span>
+        <EstadoIcon size={14} className={`shrink-0 ${ESTADO_CLASS[estado]}`} aria-label={ESTADO_LABEL[estado]} />
+        <span className="w-[70px] shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary">{formatMoeda(totalValor)}</span>
+      </button>
+
+      {contacto.telefone ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            abrirWhatsapp(contacto.telefone ?? '');
+          }}
+          title="Enviar WhatsApp"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-success active:bg-success/10"
+        >
+          <MessageCircle size={18} />
+        </button>
+      ) : null}
+      {contacto.email ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            abrirEmail(contacto.email ?? '');
+          }}
+          title="Enviar email"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-primary active:bg-primary/10"
+        >
+          <Mail size={18} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function CargasPage(): React.JSX.Element {
   const { abrir } = useNovaCargaOverlay();
   const { fila, removerItem, processarFila } = useFilaOffline();
@@ -99,6 +202,8 @@ export function CargasPage(): React.JSX.Element {
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<FiltroEstado>('todas');
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const seedFeita = useRef(false);
 
   useEffect(() => {
     listContentoresDisponiveis()
@@ -151,21 +256,43 @@ export function CargasPage(): React.JSX.Element {
 
   const filtradas = filtro === 'todas' ? linhas : linhas.filter((l) => l.estado === filtro);
 
-  // Agrupado por emissor — cada emissor ganha uma cor própria e estável
-  // (mesma cor em todas as cargas dele), para se distinguir dos outros
-  // grupos numa lista só de faixas coloridas à esquerda. Agrupa por nome
-  // normalizado (maiúsculas/minúsculas não devem separar o mesmo emissor
-  // em duas abas) e mostra sempre a versão em Title Case, consistente.
-  const grupos = useMemo(() => {
-    const mapa = new Map<string, { label: string; itens: LinhaCarga[] }>();
+  // Agrupado por contacto (emissor) — cada um ganha uma cor própria e
+  // estável, e funciona como uma entrada de "lista de contactos": o
+  // cabeçalho mostra o resumo, expandir revela as cargas desse contacto.
+  const grupos = useMemo<GrupoEmissor[]>(() => {
+    const mapa = new Map<string, GrupoEmissor>();
     for (const l of filtradas) {
       const chave = l.emissorNome.trim().toLowerCase();
-      const grupo = mapa.get(chave) ?? { label: tituloCase(l.emissorNome), itens: [] };
+      const grupo = mapa.get(chave) ?? { chave, label: tituloCase(l.emissorNome), itens: [] };
       grupo.itens.push(l);
       mapa.set(chave, grupo);
     }
     return [...mapa.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, [filtradas]);
+
+  // Por omissão, só os contactos com algo por resolver começam expandidos
+  // — os já sincronizados ficam recolhidos para poupar espaço. Só corre
+  // uma vez, depois disso a escolha é sempre do utilizador.
+  useEffect(() => {
+    if (seedFeita.current || loading || grupos.length === 0) return;
+    seedFeita.current = true;
+    setExpandidos(new Set(grupos.filter((g) => precisaAtencao(g.itens)).map((g) => g.chave)));
+  }, [grupos, loading]);
+
+  const todosExpandidos = grupos.length > 0 && grupos.every((g) => expandidos.has(g.chave));
+
+  function alternarTodos(): void {
+    setExpandidos(todosExpandidos ? new Set() : new Set(grupos.map((g) => g.chave)));
+  }
+
+  function alternarGrupo(chave: string): void {
+    setExpandidos((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(chave)) novo.delete(chave);
+      else novo.add(chave);
+      return novo;
+    });
+  }
 
   async function handleEditar(l: LinhaCarga): Promise<void> {
     if (l.filaId) await removerItem(l.filaId);
@@ -190,7 +317,17 @@ export function CargasPage(): React.JSX.Element {
     <div className="flex flex-col gap-3 py-4">
       <div className="flex items-center justify-between px-4">
         <h1 className="text-[20px] font-semibold text-text-primary">Cargas</h1>
-        <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={alternarTodos}
+            title={todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
+            className="flex h-9 w-9 items-center justify-center rounded-control border border-border bg-bg-surface text-text-secondary"
+          >
+            {todosExpandidos ? <FoldVertical size={16} /> : <UnfoldVertical size={16} />}
+          </button>
+          <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
+        </div>
       </div>
 
       {loading ? (
@@ -202,27 +339,16 @@ export function CargasPage(): React.JSX.Element {
           <div className="px-4">
             <CargaListHeader />
           </div>
-          {grupos.map(({ label, itens }, grupoIndex) => {
+          {grupos.map((grupo, grupoIndex) => {
             const cor = corAcento(grupoIndex);
+            const corTexto = corAcentoEscura(grupoIndex);
+            const expandido = expandidos.has(grupo.chave);
             return (
-              <div key={label} className={grupoIndex > 0 ? 'mt-4 flex flex-col' : 'flex flex-col'}>
-                <div
-                  className="flex items-center justify-between gap-2 px-4 py-1.5"
-                  style={{ backgroundColor: `${cor}26`, borderBottom: `2px solid ${cor}` }}
-                >
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
-                    <span className="truncate text-[11px] font-semibold uppercase tracking-wide" style={{ color: cor }}>
-                      {label}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-[10px] font-medium" style={{ color: cor }}>
-                    {itens.length} {itens.length === 1 ? 'carga' : 'cargas'}
-                  </span>
-                </div>
-                {itens.map((l) => (
-                  <CargaListRow key={l.id} linha={l} corGrupo={cor} acoes={acoesPara(l)} />
-                ))}
+              <div key={grupo.chave} className="flex flex-col">
+                <GrupoContactoHeader grupo={grupo} cor={cor} corTexto={corTexto} expandido={expandido} onToggle={() => alternarGrupo(grupo.chave)} />
+                {expandido
+                  ? grupo.itens.map((l) => <CargaListRow key={l.id} linha={l} corGrupo={cor} acoes={acoesPara(l)} />)
+                  : null}
               </div>
             );
           })}

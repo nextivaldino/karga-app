@@ -219,7 +219,7 @@ function GrupoContactoHeader({
 
   return (
     <div
-      className="flex w-full items-center gap-2 px-4 py-3"
+      className="relative z-10 flex w-full items-center gap-2 px-4 py-3"
       style={{ backgroundColor: `${cor}26`, borderLeft: `3px solid ${cor}` }}
     >
       <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">

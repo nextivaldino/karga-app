@@ -68,7 +68,10 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
   }, []);
 
   return (
-    <div className="relative border-b border-border bg-bg-surface py-2 pl-5 pr-4" style={{ borderLeft: `3px solid ${corGrupo}` }}>
+    <div
+      className={`relative border-b border-border bg-bg-surface py-2 pl-5 pr-4 ${menuAberto ? 'z-20' : ''}`}
+      style={{ borderLeft: `3px solid ${corGrupo}` }}
+    >
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
 

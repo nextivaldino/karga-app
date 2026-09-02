@@ -1,6 +1,6 @@
 import { Wifi, WifiOff } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useTopBarSlotContent } from '@/hooks/useTopBarSlot';
 import { GearMenu } from './GearMenu';
 import { NotificationBell } from './NotificationBell';
 
@@ -8,13 +8,16 @@ interface HeaderProps {
   onTrocarPassword: () => void;
 }
 
+// Barra dinâmica única — o lado esquerdo muda por página (título +
+// controlos próprios, publicados via useTopBarSlot); o lado direito é
+// fixo em toda a app (online, notificações, engrenagem).
 export function Header({ onTrocarPassword }: HeaderProps): React.JSX.Element {
-  const { pwaUser } = useAuth();
   const online = useOnlineStatus();
+  const conteudo = useTopBarSlotContent();
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg-header px-4 backdrop-blur-md">
-      <span className="truncate text-[16px] font-semibold text-text-primary">Olá, {pwaUser?.nome ?? '...'} 👋</span>
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-bg-header px-4 backdrop-blur-md">
+      <div className="flex min-w-0 flex-1 items-center gap-2">{conteudo}</div>
       <div className="flex shrink-0 items-center gap-2">
         <span
           className={`flex h-6 w-6 items-center justify-center rounded-pill ${online ? 'bg-success/10 text-success' : 'bg-error/10 text-error'}`}

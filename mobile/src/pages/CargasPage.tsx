@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, FoldVertical, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical, UserRound } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
+import { useTopBarSlot } from '@/hooks/useTopBarSlot';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
@@ -356,23 +357,23 @@ export function CargasPage(): React.JSX.Element {
     return [];
   }
 
+  useTopBarSlot(
+    <>
+      <span className="shrink-0 text-[16px] font-semibold text-text-primary">Cargas</span>
+      <button
+        type="button"
+        onClick={alternarTodos}
+        title={todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app"
+      >
+        {todosExpandidos ? <FoldVertical size={16} /> : <UnfoldVertical size={16} />}
+      </button>
+      <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
+    </>,
+  );
+
   return (
     <div className="flex flex-col gap-3 py-4">
-      <div className="flex items-center justify-between px-4">
-        <h1 className="text-[20px] font-semibold text-text-primary">Cargas</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={alternarTodos}
-            title={todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
-            className="flex h-9 w-9 items-center justify-center rounded-control border border-border bg-bg-surface text-text-secondary"
-          >
-            {todosExpandidos ? <FoldVertical size={16} /> : <UnfoldVertical size={16} />}
-          </button>
-          <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
-        </div>
-      </div>
-
       {loading ? (
         <p className="px-4 text-[14px] text-text-tertiary">A carregar...</p>
       ) : grupos.length === 0 ? (

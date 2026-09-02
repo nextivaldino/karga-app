@@ -3,6 +3,7 @@ import { Bell, Clock, Euro, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
+import { useTopBarSlot } from '@/hooks/useTopBarSlot';
 import { listMinhasCargasPendentes, listMensagens } from '@/lib/data';
 import { toast } from '@/components/ui/Toast';
 import type { CargaPendente, Mensagem } from '@/types';
@@ -18,6 +19,8 @@ export function HomePage(): React.JSX.Element {
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState<Mensagem[]>([]);
   const { fila } = useFilaOffline();
   const porEnviar = fila.length;
+
+  useTopBarSlot(<span className="truncate text-[16px] font-semibold text-text-primary">Olá, {pwaUser?.nome ?? '...'} 👋</span>);
 
   useEffect(() => {
     let cancelado = false;

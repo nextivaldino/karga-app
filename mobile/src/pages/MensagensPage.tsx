@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useTopBarSlot } from '@/hooks/useTopBarSlot';
 import { listMensagens, marcarMensagemLida } from '@/lib/data';
 import { toast } from '@/components/ui/Toast';
 import { formatRelativo } from '@/lib/formatRelativo';
@@ -10,6 +11,8 @@ export function MensagensPage(): React.JSX.Element {
   const { pwaUser } = useAuth();
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useTopBarSlot(<span className="text-[16px] font-semibold text-text-primary">Mensagens</span>);
 
   useEffect(() => {
     listMensagens()
@@ -30,8 +33,6 @@ export function MensagensPage(): React.JSX.Element {
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <h1 className="text-[20px] font-semibold text-text-primary">Mensagens</h1>
-
       {loading ? (
         <p className="text-[14px] text-text-tertiary">A carregar...</p>
       ) : mensagens.length === 0 ? (

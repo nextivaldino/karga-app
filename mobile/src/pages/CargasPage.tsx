@@ -1,55 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil, Send, Trash2 } from 'lucide-react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
-import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, EstadoItemFila, NovaCargaPendenteInput } from '@/types';
+import { ESTADO_LABEL } from '@/lib/cargaEstado';
+import { corAcento } from '@/lib/rowAccents';
+import { CargaListHeader, CargaListRow, type AcaoLinhaCarga, type CargaListRowData } from '@/components/CargaListRow';
+import type { CargaPendente, ContentorDisponivel, EstadoCargaPendente, NovaCargaPendenteInput } from '@/types';
 
-type EstadoListaCarga = EstadoCargaPendente | EstadoItemFila;
 type FiltroEstado = EstadoCargaPendente | 'todas';
 
-interface LinhaCarga {
-  id: string;
-  nomeCarga: string;
-  emissorNome: string;
-  recetorNome: string;
-  valor: number | null;
-  estado: EstadoListaCarga;
-  contentorId: string;
-  motivoRejeicao: string | null;
-  ultimoErro: string | null;
+interface LinhaCarga extends CargaListRowData {
   prefill: NovaCargaPendenteInput;
   filaId: string | null;
 }
 
-const ESTADO_LABEL: Record<EstadoListaCarga, string> = {
-  pendente: 'Pendente',
-  importada: 'Importada',
-  rejeitada: 'Rejeitada',
-  fila: 'Por enviar',
-  erro: 'Erro',
-};
-const ESTADO_ICONE: Record<EstadoListaCarga, string> = {
-  pendente: '⏳',
-  importada: '✅',
-  rejeitada: '⚠️',
-  fila: '⏳',
-  erro: '⚠️',
-};
-const ESTADO_CLASS: Record<EstadoListaCarga, string> = {
-  pendente: 'text-warning',
-  importada: 'text-success',
-  rejeitada: 'text-error',
-  fila: 'text-text-tertiary',
-  erro: 'text-error',
-};
-
 const OPCOES_FILTRO: FiltroEstado[] = ['todas', 'pendente', 'importada', 'rejeitada'];
 
-function formatMoeda(valor: number | null): string {
-  if (valor == null) return '—';
-  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(valor);
+function tituloCase(nome: string): string {
+  return nome
+    .trim()
+    .split(/\s+/)
+    .map((p) => (p.length > 0 ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : p))
+    .join(' ');
 }
 
 function prefillDe(c: CargaPendente): NovaCargaPendenteInput {
@@ -96,7 +70,7 @@ function FiltroEstadoButton({ filtro, onChange }: { filtro: FiltroEstado; onChan
         Estado: {label} <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open ? (
-        <div className="absolute left-0 top-11 z-30 w-40 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+        <div className="absolute right-0 top-11 z-30 w-40 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
           {OPCOES_FILTRO.map((op) => (
             <button
               key={op}
@@ -141,108 +115,114 @@ export function CargasPage(): React.JSX.Element {
   }, []);
 
   const linhas = useMemo<LinhaCarga[]>(() => {
-    const doServidor: LinhaCarga[] = cargas.map((c) => ({
-      id: c.id,
-      nomeCarga: c.nomeCarga,
-      emissorNome: c.emissorNome,
-      recetorNome: c.recetorNome,
-      valor: c.valor,
-      estado: c.estado,
-      contentorId: c.contentorId,
-      motivoRejeicao: c.motivoRejeicao,
-      ultimoErro: null,
-      prefill: prefillDe(c),
-      filaId: null,
-    }));
+    const codigoContentor = (contentorId: string): string => contentores.find((c) => c.id === contentorId)?.codigo ?? '—';
     const daFila: LinhaCarga[] = fila.map((f) => ({
       id: f.id,
+      codigo: codigoContentor(f.item.contentorId),
+      emissorNome: tituloCase(f.item.emissorNome),
+      recetorNome: tituloCase(f.item.recetorNome),
       nomeCarga: f.item.nomeCarga,
-      emissorNome: f.item.emissorNome,
-      recetorNome: f.item.recetorNome,
+      comprimentoCm: f.item.comprimentoCm,
+      larguraCm: f.item.larguraCm,
+      alturaCm: f.item.alturaCm,
       valor: f.item.valor,
       estado: f.estado,
-      contentorId: f.item.contentorId,
-      motivoRejeicao: null,
-      ultimoErro: f.ultimoErro,
+      nota: f.estado === 'erro' && f.ultimoErro ? `${f.ultimoErro} · toca em enviar para tentar novamente` : null,
       prefill: f.item,
       filaId: f.id,
     }));
+    const doServidor: LinhaCarga[] = cargas.map((c) => ({
+      id: c.id,
+      codigo: codigoContentor(c.contentorId),
+      emissorNome: tituloCase(c.emissorNome),
+      recetorNome: tituloCase(c.recetorNome),
+      nomeCarga: c.nomeCarga,
+      comprimentoCm: c.comprimentoCm,
+      larguraCm: c.larguraCm,
+      alturaCm: c.alturaCm,
+      valor: c.valor,
+      estado: c.estado,
+      nota: c.estado === 'rejeitada' && c.motivoRejeicao ? `Motivo: ${c.motivoRejeicao}` : null,
+      prefill: prefillDe(c),
+      filaId: null,
+    }));
     return [...daFila, ...doServidor];
-  }, [cargas, fila]);
+  }, [cargas, fila, contentores]);
 
   const filtradas = filtro === 'todas' ? linhas : linhas.filter((l) => l.estado === filtro);
 
+  // Agrupado por emissor — cada emissor ganha uma cor própria e estável
+  // (mesma cor em todas as cargas dele), para se distinguir dos outros
+  // grupos numa lista só de faixas coloridas à esquerda. Agrupa por nome
+  // normalizado (maiúsculas/minúsculas não devem separar o mesmo emissor
+  // em duas abas) e mostra sempre a versão em Title Case, consistente.
   const grupos = useMemo(() => {
-    const mapa = new Map<string, LinhaCarga[]>();
+    const mapa = new Map<string, { label: string; itens: LinhaCarga[] }>();
     for (const l of filtradas) {
-      const lista = mapa.get(l.emissorNome) ?? [];
-      lista.push(l);
-      mapa.set(l.emissorNome, lista);
+      const chave = l.emissorNome.trim().toLowerCase();
+      const grupo = mapa.get(chave) ?? { label: tituloCase(l.emissorNome), itens: [] };
+      grupo.itens.push(l);
+      mapa.set(chave, grupo);
     }
-    return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...mapa.values()].sort((a, b) => a.label.localeCompare(b.label));
   }, [filtradas]);
 
-  async function handleLinhaClick(l: LinhaCarga): Promise<void> {
-    if (l.estado === 'erro' && l.filaId) {
-      // Tentativa rápida de reenviar tal-e-qual antes de abrir para editar.
-      await processarFila();
-      return;
+  async function handleEditar(l: LinhaCarga): Promise<void> {
+    if (l.filaId) await removerItem(l.filaId);
+    abrir(l.prefill);
+  }
+
+  function acoesPara(l: LinhaCarga): AcaoLinhaCarga[] {
+    if (l.estado === 'fila' || l.estado === 'erro') {
+      return [
+        { label: 'Enviar', icon: Send, onClick: () => void processarFila() },
+        { label: 'Editar', icon: Pencil, onClick: () => void handleEditar(l) },
+        { label: 'Eliminar', icon: Trash2, destrutiva: true, onClick: () => l.filaId && void removerItem(l.filaId) },
+      ];
     }
-    if (l.estado === 'fila' || l.estado === 'rejeitada') {
-      if (l.filaId) await removerItem(l.filaId);
-      abrir(l.prefill);
+    if (l.estado === 'rejeitada') {
+      return [{ label: 'Editar', icon: Pencil, onClick: () => void handleEditar(l) }];
     }
+    return [];
   }
 
   return (
-    <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 py-4">
+      <div className="flex items-center justify-between px-4">
         <h1 className="text-[20px] font-semibold text-text-primary">Cargas</h1>
         <FiltroEstadoButton filtro={filtro} onChange={setFiltro} />
       </div>
 
       {loading ? (
-        <p className="text-[14px] text-text-tertiary">A carregar...</p>
+        <p className="px-4 text-[14px] text-text-tertiary">A carregar...</p>
       ) : grupos.length === 0 ? (
-        <p className="text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
+        <p className="px-4 text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
       ) : (
-        <div className="flex flex-col gap-4">
-          {grupos.map(([emissor, itens]) => (
-            <div key={emissor} className="flex flex-col">
-              <div className="flex items-center gap-2 border-b border-border pb-1.5">
-                <span className="text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">{emissor}</span>
-              </div>
-              {itens.map((l) => {
-                const contentor = contentores.find((ct) => ct.id === l.contentorId);
-                const tocavel = l.estado === 'rejeitada' || l.estado === 'fila' || l.estado === 'erro';
-                return (
-                  <button
-                    key={l.id}
-                    type="button"
-                    disabled={!tocavel}
-                    onClick={() => void handleLinhaClick(l)}
-                    className="flex min-h-touch flex-col gap-0.5 border-b border-border py-2 text-left last:border-b-0 disabled:cursor-default"
+        <div className="flex flex-col">
+          <div className="px-4">
+            <CargaListHeader />
+          </div>
+          {grupos.map(({ label, itens }, grupoIndex) => {
+            const cor = corAcento(grupoIndex);
+            return (
+              <div key={label} className={grupoIndex > 0 ? 'mt-4 flex flex-col' : 'flex flex-col'}>
+                <div className="px-4">
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-t-surface px-3 py-1.5"
+                    style={{ backgroundColor: `${cor}26`, borderBottom: `2px solid ${cor}` }}
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-[14px] text-text-primary">{l.nomeCarga}</span>
-                      <span className="shrink-0 text-[13px] tabular-nums text-text-secondary">{formatMoeda(l.valor)}</span>
-                      <span className={`shrink-0 text-[12px] font-medium ${ESTADO_CLASS[l.estado]}`}>
-                        {ESTADO_ICONE[l.estado]} {ESTADO_LABEL[l.estado]}
-                      </span>
-                    </div>
-                    {contentor ? <span className="text-[11px] text-text-tertiary">{contentor.codigo}</span> : null}
-                    {l.estado === 'rejeitada' && l.motivoRejeicao ? (
-                      <span className="text-[12px] text-error">Motivo: {l.motivoRejeicao} · toca para reenviar corrigida</span>
-                    ) : null}
-                    {l.estado === 'erro' && l.ultimoErro ? (
-                      <span className="text-[12px] text-error">{l.ultimoErro} · toca para tentar novamente</span>
-                    ) : null}
-                    {l.estado === 'fila' ? <span className="text-[12px] text-text-tertiary">Toca para editar</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: cor }} />
+                    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: cor }}>
+                      {label}
+                    </span>
+                  </span>
+                </div>
+                {itens.map((l) => (
+                  <CargaListRow key={l.id} linha={l} corGrupo={cor} acoes={acoesPara(l)} />
+                ))}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

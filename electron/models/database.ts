@@ -215,6 +215,15 @@ function runMigrations(database: Database.Database): void {
   addColumnIfMissing(database, 'users', 'pwa_habilitado', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(database, 'users', 'pwa_auth_uid', 'TEXT');
   addColumnIfMissing(database, 'cargas', 'origem_pwa_user_id', 'TEXT');
+  // Utilizador do desktop que criou a carga — para mostrar avatar/nome
+  // na coluna "Origem" mesmo quando a carga não veio da PWA. Nunca
+  // alterado depois de criado (não faz parte do UPDATE de `update()`).
+  addColumnIfMissing(database, 'cargas', 'criado_por_user_id', 'TEXT');
+  // "Lista" — um contentor a sério (mesmas cargas, mesma sequência de
+  // código) mas sinalizado como agrupamento leve em vez de expedição
+  // real; só sai deste estado pela ação explícita "Converter em
+  // Contentor" (nunca pelo UPDATE genérico de `update()`).
+  addColumnIfMissing(database, 'contentores', 'eh_lista', 'INTEGER NOT NULL DEFAULT 0');
   // Avatar (emoji ou imagem em base64) e login sem password — equipa
   // pequena e de confiança, conveniência de entrar só com um clique.
   addColumnIfMissing(database, 'users', 'avatar', 'TEXT');

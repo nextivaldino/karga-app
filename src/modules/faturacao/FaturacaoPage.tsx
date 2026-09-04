@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ContactoFormModal } from '@/modules/contactos/ContactoFormModal';
 import { useFaturacaoClientes } from './useFaturacaoClientes';
 import { ClientesLista } from './ClientesLista';
 import { ClientePainel } from './ClientePainel';
@@ -32,6 +33,7 @@ export function FaturacaoPage({ contentorId, contentoresAbertos }: FaturacaoPage
   } = useFaturacaoClientes(contentorId);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [criarClienteAberto, setCriarClienteAberto] = useState(false);
   const selected = clientes.find((c) => c.id === selectedId) ?? null;
 
   return (
@@ -51,6 +53,18 @@ export function FaturacaoPage({ contentorId, contentoresAbertos }: FaturacaoPage
         onSoComDividaChange={setSoComDivida}
         etiquetaFiltro={etiquetaFiltro}
         onEtiquetaFiltroChange={setEtiquetaFiltro}
+        onCriarCliente={() => setCriarClienteAberto(true)}
+      />
+
+      <ContactoFormModal
+        open={criarClienteAberto}
+        onClose={() => setCriarClienteAberto(false)}
+        onSaved={() => {
+          // O novo contacto só aparece nesta lista quando tiver a
+          // primeira carga associada (a lista de clientes de faturação
+          // é sempre "contactos com cargas") — nada a selecionar já.
+          setCriarClienteAberto(false);
+        }}
       />
 
       {selected ? (

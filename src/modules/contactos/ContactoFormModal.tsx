@@ -79,7 +79,14 @@ export function ContactoFormModal({
     <HeaderBarModal
       open={open}
       onClose={onClose}
-      title={isEditMode ? 'Editar Contacto' : 'Novo Contacto'}
+      title={
+        <div className="flex flex-col items-center leading-tight">
+          <span className="text-[15px] font-semibold text-white">{isEditMode ? 'Editar Contacto' : 'Novo Contacto'}</span>
+          {isEditMode && editingContacto ? <span className="truncate text-[11px] font-normal text-white/75">{editingContacto.nome}</span> : null}
+        </div>
+      }
+      headerClassName="h-14 bg-success px-4"
+      headerStyle={{ color: '#ffffff' }}
       widthClassName="max-w-[420px]"
       footer={
         <>

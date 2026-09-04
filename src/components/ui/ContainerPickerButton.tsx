@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CaretDown, Check, DownloadSimple, Lock, Stack } from '@phosphor-icons/react';
 import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
+import { LISTA_BG, LISTA_INK } from '@/modules/contentores/listaVisual';
 import type { Contentor } from '@/types';
 
 const MESES = [
@@ -169,6 +170,14 @@ export function ContainerPickerButton({
                           >
                             {c.codigo} — {c.nome}
                           </span>
+                          {c.ehLista ? (
+                            <span
+                              className="shrink-0 rounded-pill px-1.5 py-0.5 text-[10px] font-semibold"
+                              style={{ backgroundColor: LISTA_BG, color: LISTA_INK }}
+                            >
+                              Lista
+                            </span>
+                          ) : null}
                           {c.bloqueado ? <Lock size={12} weight="fill" className="shrink-0 text-error" /> : null}
                           <span className={`shrink-0 text-[11px] font-semibold ${ESTADO_CONTENTOR_COLOR_CLASS[c.estado]}`}>
                             {ESTADO_CONTENTOR_LABEL[c.estado]}

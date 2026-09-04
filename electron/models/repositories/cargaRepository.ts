@@ -24,6 +24,7 @@ interface CargaRow {
   contentor_id: string | null;
   emissor_id: string;
   origem_pwa_user_id: string | null;
+  criado_por_user_id: string | null;
   created_at: string;
   updated_at: string;
   sync_status: Carga['syncStatus'];
@@ -48,6 +49,7 @@ function fromRow(row: CargaRow): Carga {
     contentorId: row.contentor_id,
     emissorId: row.emissor_id,
     origemPwaUserId: row.origem_pwa_user_id,
+    criadoPorUserId: row.criado_por_user_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: row.sync_status,
@@ -67,7 +69,7 @@ function codigoExiste(codigo: string, excludeId?: string): boolean {
   return (row?.total ?? 0) > 0;
 }
 
-function create(input: CreateCargaInput): Carga {
+function create(input: CreateCargaInput, criadoPorUserId: string | null = null): Carga {
   if (codigoExiste(input.codigo)) {
     throw new Error(`Já existe uma carga com o código "${input.codigo}".`);
   }
@@ -102,6 +104,7 @@ function create(input: CreateCargaInput): Carga {
     contentor_id: input.contentorId ?? null,
     emissor_id: input.emissorId,
     origem_pwa_user_id: input.origemPwaUserId ?? null,
+    criado_por_user_id: criadoPorUserId,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
@@ -109,9 +112,9 @@ function create(input: CreateCargaInput): Carga {
 
   db.prepare(
     `INSERT INTO cargas (id, codigo, nome, comprimento_cm, largura_cm, altura_cm, m3, peso_kg, valor, moeda,
-       estado_pagamento, tipo_embalagem, notas, estado, contentor_id, emissor_id, origem_pwa_user_id, created_at, updated_at, sync_status)
+       estado_pagamento, tipo_embalagem, notas, estado, contentor_id, emissor_id, origem_pwa_user_id, criado_por_user_id, created_at, updated_at, sync_status)
      VALUES (@id, @codigo, @nome, @comprimento_cm, @largura_cm, @altura_cm, @m3, @peso_kg, @valor, @moeda,
-       @estado_pagamento, @tipo_embalagem, @notas, @estado, @contentor_id, @emissor_id, @origem_pwa_user_id, @created_at, @updated_at, @sync_status)`,
+       @estado_pagamento, @tipo_embalagem, @notas, @estado, @contentor_id, @emissor_id, @origem_pwa_user_id, @criado_por_user_id, @created_at, @updated_at, @sync_status)`,
   ).run(row);
 
   return fromRow(row);
@@ -312,6 +315,79 @@ function search(texto: string, limit = 8): Carga[] {
   return rows.map(fromRow);
 }
 
+// Só para a pesquisa global do cabeçalho — cruza com o emissor (procurar
+// pelo nome de um cliente traz também as cargas dele) e traz o código do
+// contentor onde cada carga está, para a coluna de Cargas já mostrar
+// "onde está" sem precisar de um segundo clique. `search()` acima fica
+// intocado para não alterar o autocomplete de cargas existente.
+interface CargaSearchResult extends Carga {
+  emissorNome: string;
+  contentorCodigo: string | null;
+}
+
+function searchGlobal(texto: string, limit = 8): CargaSearchResult[] {
+  const db = getDatabase();
+  const padrao = `%${texto}%`;
+  const rows = db
+    .prepare<
+      [string, string, string, number],
+      CargaRow & { emissor_nome: string; contentor_codigo: string | null }
+    >(
+      `SELECT cargas.*, contactos.nome as emissor_nome, contentores.codigo as contentor_codigo
+       FROM cargas
+       JOIN contactos ON contactos.id = cargas.emissor_id
+       LEFT JOIN contentores ON contentores.id = cargas.contentor_id
+       WHERE cargas.estado != 'arquivada'
+         AND (cargas.nome LIKE ? OR cargas.codigo LIKE ? OR contactos.nome LIKE ?)
+       ORDER BY cargas.created_at DESC LIMIT ?`,
+    )
+    .all(padrao, padrao, padrao, limit);
+  return rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome, contentorCodigo: row.contentor_codigo }));
+}
+
+interface SugestaoDimensoes {
+  comprimentoCm: number;
+  larguraCm: number;
+  alturaCm: number;
+  ocorrencias: number;
+}
+
+// "Aprende" com o histórico: quando o mesmo nome de carga (ex: "Bidon")
+// já apareceu antes com o mesmo conjunto de dimensões pelo menos duas
+// vezes, sugere-o de novo — nunca o peso (varia demasiado mesmo para
+// objetos parecidos) e nunca como regra obrigatória, só uma sugestão
+// que o formulário oferece e o utilizador aceita ou ignora.
+function sugerirDimensoes(nome: string): SugestaoDimensoes | null {
+  const nomeNormalizado = nome.trim();
+  if (!nomeNormalizado) return null;
+
+  const db = getDatabase();
+  const row = db
+    .prepare<
+      [string],
+      { comprimento_cm: number; largura_cm: number; altura_cm: number; ocorrencias: number }
+    >(
+      `SELECT comprimento_cm, largura_cm, altura_cm, COUNT(*) as ocorrencias
+       FROM cargas
+       WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))
+         AND comprimento_cm IS NOT NULL AND largura_cm IS NOT NULL AND altura_cm IS NOT NULL
+         AND estado != 'arquivada'
+       GROUP BY comprimento_cm, largura_cm, altura_cm
+       HAVING ocorrencias >= 2
+       ORDER BY ocorrencias DESC, MAX(created_at) DESC
+       LIMIT 1`,
+    )
+    .get(nomeNormalizado);
+
+  if (!row) return null;
+  return {
+    comprimentoCm: row.comprimento_cm,
+    larguraCm: row.largura_cm,
+    alturaCm: row.altura_cm,
+    ocorrencias: row.ocorrencias,
+  };
+}
+
 function countMesAtual(): number {
   const db = getDatabase();
   const row = db
@@ -343,12 +419,12 @@ function sumValorDevido(): number {
   return row?.total ?? 0;
 }
 
-function createBatch(items: CreateCargaBatchItem[]): Carga[] {
+function createBatch(items: CreateCargaBatchItem[], criadoPorUserId: string | null = null): Carga[] {
   const db = getDatabase();
   const runBatch = db.transaction((batch: CreateCargaBatchItem[]) => {
     return batch.map((item, index) => {
       try {
-        const carga = create(item);
+        const carga = create(item, criadoPorUserId);
         if (item.recetorId) addDestinatario(carga.id, item.recetorId);
         return carga;
       } catch (err) {
@@ -494,6 +570,8 @@ export const cargaRepository = {
   nextCodigo,
   nextCodigoAgrupado,
   search,
+  searchGlobal,
+  sugerirDimensoes,
   countMesAtual,
   countEntreguesMesAtual,
   sumValorDevido,

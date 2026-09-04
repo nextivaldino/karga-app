@@ -1,4 +1,4 @@
-import { MagnifyingGlass as Search, UserCircle } from '@phosphor-icons/react';
+import { MagnifyingGlass as Search, UserCirclePlus, UserCircle } from '@phosphor-icons/react';
 import { formatValor } from '@/lib/formatValor';
 import type { ClienteFaturacao, Etiqueta } from '@/types';
 
@@ -17,6 +17,7 @@ interface ClientesListaProps {
   onSoComDividaChange: (v: boolean) => void;
   etiquetaFiltro: string | null;
   onEtiquetaFiltroChange: (id: string | null) => void;
+  onCriarCliente: () => void;
 }
 
 export function ClientesLista({
@@ -34,18 +35,29 @@ export function ClientesLista({
   onSoComDividaChange,
   etiquetaFiltro,
   onEtiquetaFiltroChange,
+  onCriarCliente,
 }: ClientesListaProps): React.JSX.Element {
   return (
     <div className="flex h-full w-[320px] shrink-0 flex-col border-r border-border">
       <div className="flex shrink-0 flex-col gap-2 border-b border-border p-3">
-        <div className="flex h-9 items-center gap-2 rounded-control border border-border bg-bg-input px-2.5">
-          <Search size={14} className="shrink-0 text-text-tertiary" />
-          <input
-            value={texto}
-            onChange={(e) => onTextoChange(e.target.value)}
-            placeholder="Pesquisar clientes..."
-            className="h-full flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-tertiary"
-          />
+        <div className="flex items-center gap-1.5">
+          <div className="flex h-9 flex-1 items-center gap-2 rounded-control border border-border bg-bg-input px-2.5">
+            <Search size={14} className="shrink-0 text-text-tertiary" />
+            <input
+              value={texto}
+              onChange={(e) => onTextoChange(e.target.value)}
+              placeholder="Pesquisar clientes..."
+              className="h-full flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-tertiary"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onCriarCliente}
+            title="Novo Cliente"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-success text-white shadow-sm transition-colors hover:brightness-95"
+          >
+            <UserCirclePlus size={18} weight="fill" />
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5">

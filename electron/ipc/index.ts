@@ -125,6 +125,8 @@ export function registerIpcHandlers(): void {
     maintenance.exportarTudo(passwordConfirmacao),
   );
 
+  ipcMain.handle('settings:exportarContactos', () => maintenance.exportarContactos());
+
   ipcMain.handle('settings:limparDadosTeste', (_event, passwordConfirmacao: string) =>
     maintenance.limparDadosTeste(passwordConfirmacao),
   );
@@ -198,8 +200,8 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('cargas:create', (_event, input: CreateCargaInput) => {
-    requirePermissao('cargas', 'criar');
-    const carga = cargaRepository.create(input);
+    const session = requirePermissao('cargas', 'criar');
+    const carga = cargaRepository.create(input, session.id);
     registarAuditoria('criou_carga', 'carga', carga.id);
     return carga;
   });
@@ -227,8 +229,8 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('cargas:createBatch', (_event, items: Parameters<typeof cargaRepository.createBatch>[0]) => {
-    requirePermissao('cargas', 'criar');
-    const cargas = cargaRepository.createBatch(items);
+    const session = requirePermissao('cargas', 'criar');
+    const cargas = cargaRepository.createBatch(items, session.id);
     registarAuditoria('criou_cargas_lote', 'carga', null, `total=${cargas.length}`);
     return cargas;
   });
@@ -241,6 +243,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('cargas:countPorContentorParaUsuario', (_event, userId: string) => {
     requirePermissao('cargas', 'ver');
     return cargaRepository.countPorContentorParaUsuario(userId);
+  });
+
+  ipcMain.handle('cargas:sugerirDimensoes', (_event, nome: string) => {
+    requirePermissao('cargas', 'ver');
+    return cargaRepository.sugerirDimensoes(nome);
   });
 
   ipcMain.handle('cargas:archive', (_event, id: string) => {
@@ -320,6 +327,13 @@ export function registerIpcHandlers(): void {
     requirePermissao('contentores', 'editar');
     const contentor = contentorRepository.update(id, changes);
     registarAuditoria('editou_contentor', 'contentor', id);
+    return contentor;
+  });
+
+  ipcMain.handle('contentores:converterEmContentor', (_event, id: string) => {
+    requirePermissao('contentores', 'editar');
+    const contentor = contentorRepository.converterEmContentor(id);
+    registarAuditoria('converteu_lista_em_contentor', 'contentor', id);
     return contentor;
   });
 
@@ -427,13 +441,21 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('search:global', (_event, texto: string): SearchResultItem[] => {
     if (!texto.trim()) return [];
 
-    const cargas: Carga[] = cargaRepository.search(texto);
-    const contentores: Contentor[] = contentorRepository.search(texto);
-    const contactos: Contacto[] = contactoRepository.search(texto);
+    // `searchGlobal` de cada repositório cruza com as outras entidades
+    // (emissor <-> carga <-> contentor) — procurar um nome de cliente
+    // também traz as cargas dele e o contentor onde estão, e vice-versa.
+    const cargas = cargaRepository.searchGlobal(texto);
+    const contentores = contentorRepository.searchGlobal(texto);
+    const contactos = contactoRepository.searchGlobal(texto);
 
     return [
       ...cargas.map(
-        (carga): SearchResultItem => ({ type: 'carga', id: carga.id, title: carga.nome, subtitle: carga.codigo }),
+        (carga): SearchResultItem => ({
+          type: 'carga',
+          id: carga.id,
+          title: carga.nome,
+          subtitle: `${carga.codigo} · ${carga.emissorNome}${carga.contentorCodigo ? ` · ${carga.contentorCodigo}` : ''}`,
+        }),
       ),
       ...contentores.map(
         (contentor): SearchResultItem => ({

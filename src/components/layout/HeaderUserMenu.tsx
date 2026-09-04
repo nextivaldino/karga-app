@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { CaretRight, Gear, List, Moon, SignOut as LogOut, Sun } from '@phosphor-icons/react';
+import { CaretRight, Gear, Info, List, Moon, SignOut as LogOut, Sun } from '@phosphor-icons/react';
 import { useAuth } from '@/modules/auth/AuthContext';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { SobreModal } from './SobreModal';
 
 // Substitui o antigo par solto de ícones (tema + sair) por um único
 // menu de hambúrguer — agrupa tema, perfil/definições e sessão num só
@@ -13,6 +14,7 @@ export function HeaderUserMenu(): React.JSX.Element {
   const { navigate } = useNavigation();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const [sobreAberto, setSobreAberto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,6 +84,18 @@ export function HeaderUserMenu(): React.JSX.Element {
             <CaretRight size={13} className="text-text-tertiary" />
           </button>
 
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setSobreAberto(true);
+            }}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-[13px] text-text-primary transition-colors hover:bg-bg-app"
+          >
+            <Info size={16} />
+            Sobre o Karga
+          </button>
+
           <div className="h-px bg-border" />
 
           <button
@@ -94,6 +108,8 @@ export function HeaderUserMenu(): React.JSX.Element {
           </button>
         </div>
       ) : null}
+
+      <SobreModal open={sobreAberto} onClose={() => setSobreAberto(false)} />
     </div>
   );
 }

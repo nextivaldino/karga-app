@@ -39,6 +39,7 @@ import type {
   RelatorioResumoFinanceiroLinha,
   ResumoCliente,
   RevisaoCargaPendente,
+  SugestaoDimensoes,
   SearchResultItem,
   SetupInput,
   Sessao,
@@ -84,6 +85,7 @@ export const ipcService = {
       invoke<{ criados: number }>('settings:confirmarImportExcel', linhas, passwordConfirmacao),
     exportarTudo: (passwordConfirmacao: string) =>
       invoke<{ path: string } | { canceled: true }>('settings:exportarTudo', passwordConfirmacao),
+    exportarContactos: () => invoke<{ path: string } | { canceled: true }>('settings:exportarContactos'),
     limparDadosTeste: (passwordConfirmacao: string) => invoke<void>('settings:limparDadosTeste', passwordConfirmacao),
     resetTotal: (passwordConfirmacao: string) => invoke<void>('settings:resetTotal', passwordConfirmacao),
   },
@@ -136,6 +138,7 @@ export const ipcService = {
     listOrigensPwa: () => invoke<OrigemPwaLinha[]>('cargas:listOrigensPwa'),
     countPorContentorParaUsuario: (userId: string) =>
       invoke<CargasPorContentorLinha[]>('cargas:countPorContentorParaUsuario', userId),
+    sugerirDimensoes: (nome: string) => invoke<SugestaoDimensoes | null>('cargas:sugerirDimensoes', nome),
   },
   etiquetas: {
     list: () => invoke<Etiqueta[]>('etiquetas:list'),
@@ -155,6 +158,7 @@ export const ipcService = {
     create: (input: CreateContentorInput) => invoke<Contentor>('contentores:create', input),
     update: (id: string, changes: Partial<CreateContentorInput>) =>
       invoke<Contentor | null>('contentores:update', id, changes),
+    converterEmContentor: (id: string) => invoke<Contentor | null>('contentores:converterEmContentor', id),
     nextCodigo: () => invoke<string>('contentores:nextCodigo'),
     bloquear: (id: string) => invoke<Contentor | null>('contentores:bloquear', id),
     desbloquear: (id: string) => invoke<Contentor | null>('contentores:desbloquear', id),

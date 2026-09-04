@@ -8,7 +8,7 @@ import { contentorRepository } from '../models/repositories/contentorRepository'
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { maintenanceRepository } from '../models/repositories/maintenanceRepository';
 import { parseContactosExcel, type ImportPreviewResult } from '../lib/excelImport';
-import { buildExportarTudoWorkbook } from '../lib/exportarTudoService';
+import { buildContactosWorkbook, buildExportarTudoWorkbook } from '../lib/exportarTudoService';
 import { criarNotificacao } from './notifications';
 import type { CreateContactoInput } from '../../src/types';
 
@@ -135,6 +135,21 @@ export async function exportarTudo(passwordConfirmacao: string): Promise<{ path:
     contentores: contentorRepository.list({ incluirOcultos: true }),
     contactos: contactoRepository.list(true),
   });
+  await workbook.xlsx.writeFile(result.filePath);
+  return { path: result.filePath };
+}
+
+// Só os contactos — sem senha, ao contrário de `exportarTudo`: não expõe
+// cargas/contentores nem dados financeiros, é uma lista de agenda.
+export async function exportarContactos(): Promise<{ path: string } | { canceled: true }> {
+  const result = await dialog.showSaveDialog({
+    title: 'Exportar Contactos',
+    defaultPath: `kraga-contactos-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    filters: [{ name: 'Excel', extensions: ['xlsx'] }],
+  });
+  if (result.canceled || !result.filePath) return { canceled: true };
+
+  const workbook = await buildContactosWorkbook(contactoRepository.list(true));
   await workbook.xlsx.writeFile(result.filePath);
   return { path: result.filePath };
 }

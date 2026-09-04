@@ -5,7 +5,7 @@ import { Boat, Gear, House, Package, Stack, Wallet, ArrowsClockwise, DeviceMobil
 // cards de contentor na vista Ícones, Boxed List de Configurações, ícone
 // principal no ecrã de Login) sempre em peso "duotone".
 export const MODULE_ICON: Record<ModuleIconName, { icon: Icon; color: string }> = {
-  kraga: { icon: Boat, color: '#3584e4' },
+  kraga: { icon: Boat, color: '#ffb400' },
   home: { icon: House, color: '#3584e4' },
   cargas: { icon: Package, color: '#e5a50a' },
   contentores: { icon: Stack, color: '#2ec27e' },

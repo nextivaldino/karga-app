@@ -3,6 +3,7 @@ import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { CargasList } from '@/modules/cargas/CargasList';
 import { useNavigation } from '@/hooks/useNavigation';
 import { ipcService } from '@/services/ipcService';
+import type { UsuarioResumo } from '@/hooks/useUsuariosPorId';
 import type { CargaComEmissor } from '@/types';
 
 const LIMITE_MODAL = 100;
@@ -10,8 +11,7 @@ const LIMITE_MODAL = 100;
 interface UltimasSincronizadasModalProps {
   open: boolean;
   onClose: () => void;
-  nomeOrigemPwa: Map<string, string>;
-  avatarOrigemPwa: Map<string, string | null>;
+  usuariosPorId: Map<string, UsuarioResumo>;
 }
 
 // Popup "ver tudo" do widget de sincronização da Home — reaproveita a
@@ -20,8 +20,7 @@ interface UltimasSincronizadasModalProps {
 export function UltimasSincronizadasModal({
   open,
   onClose,
-  nomeOrigemPwa,
-  avatarOrigemPwa,
+  usuariosPorId,
 }: UltimasSincronizadasModalProps): React.JSX.Element {
   const { navigate } = useNavigation();
   const [cargas, setCargas] = useState<CargaComEmissor[]>([]);
@@ -65,8 +64,7 @@ export function UltimasSincronizadasModal({
             navigate('cargas', { entidadeId: carga.id });
           }}
           densidade="compacta"
-          nomeOrigemPwa={nomeOrigemPwa}
-          avatarOrigemPwa={avatarOrigemPwa}
+          usuariosPorId={usuariosPorId}
         />
       </div>
     </HeaderBarModal>

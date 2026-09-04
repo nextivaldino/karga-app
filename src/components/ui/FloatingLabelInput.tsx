@@ -43,7 +43,16 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   // A legenda só volta a aparecer, em ghost, quando a caixa está vazia
   // — e, já preenchida, fica disponível por tooltip nativa ao pairar o
   // rato, para quem tiver dúvidas sobre o campo.
-  const preenchido = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select';
+  // `type="date"` (e afins) têm sempre conteúdo próprio do sistema
+  // operativo desenhado dentro da caixa (ex: "dd/mm/aaaa" segmentado),
+  // mesmo com `value=""` — tal como o `<select>`, nunca ficam realmente
+  // vazios visualmente, por isso a legenda flutuante por cima ficava
+  // sobreposta a esse desenho nativo, ilegível.
+  const isDataNativa =
+    props.as !== 'select' &&
+    props.as !== 'textarea' &&
+    ['date', 'time', 'month', 'week', 'datetime-local'].includes((props as InputProps).type ?? '');
+  const preenchido = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select' || isDataNativa;
   const withIcon = Boolean(icon);
   const fieldPadding = withIcon ? 'pl-9' : '';
   const labelPosition = withIcon ? 'left-9' : 'left-3';
@@ -54,7 +63,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
     <div className="w-full">
       <div className="relative">
         {icon ? (
-          <span className={`pointer-events-none absolute left-3 ${iconTopClass} text-text-tertiary`}>{icon}</span>
+          <span className={`pointer-events-none absolute left-3 ${iconTopClass} text-text-secondary`}>{icon}</span>
         ) : null}
         {props.as === 'textarea' ? (
           <textarea
@@ -95,7 +104,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
         {!preenchido ? (
           <label
             htmlFor={id}
-            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[14px] text-text-tertiary`}
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[14px] text-text-secondary`}
             style={{ maxWidth: `calc(100% - ${withIcon ? 44 : 24}px)` }}
           >
             {label}

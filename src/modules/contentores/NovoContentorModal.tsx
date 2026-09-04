@@ -5,6 +5,7 @@ import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
 import { cleanIpcError } from '@/lib/cleanIpcError';
+import { LISTA_BG, LISTA_INK } from './listaVisual';
 import type { Contentor } from '@/types';
 
 interface NovoContentorModalProps {
@@ -12,9 +13,9 @@ interface NovoContentorModalProps {
   onClose: () => void;
   onSaved: (contentor: Contentor) => void;
   editingContentor?: Contentor | null;
-  // Pré-preenche o campo Categoria ao criar (ignorado em modo edição) —
-  // usado pelo atalho "Criar contêiner-lista" do card de sincronização.
-  categoriaInicial?: string;
+  // Liga o switch "Marcar como Lista" já ao abrir (ignorado em modo
+  // edição) — usado pelo atalho "Criar Lista" do card de sincronização.
+  listaInicial?: boolean;
 }
 
 type CodigoModo = 'automatico' | 'manual';
@@ -24,7 +25,7 @@ export function NovoContentorModal({
   onClose,
   onSaved,
   editingContentor = null,
-  categoriaInicial,
+  listaInicial = false,
 }: NovoContentorModalProps): React.JSX.Element | null {
   const isEditMode = editingContentor != null;
 
@@ -34,6 +35,7 @@ export function NovoContentorModal({
   const [categoria, setCategoria] = useState('');
   const [dataPartida, setDataPartida] = useState('');
   const [dataChegadaPrevista, setDataChegadaPrevista] = useState('');
+  const [ehLista, setEhLista] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,15 +50,17 @@ export function NovoContentorModal({
       setCategoria(editingContentor.categoria ?? '');
       setDataPartida(editingContentor.dataPartida ?? '');
       setDataChegadaPrevista(editingContentor.dataChegadaPrevista ?? '');
+      setEhLista(editingContentor.ehLista);
     } else {
       setNome('');
       setCodigoModo('automatico');
-      setCategoria(categoriaInicial ?? '');
+      setCategoria('');
       setDataPartida('');
       setDataChegadaPrevista('');
+      setEhLista(listaInicial);
       void ipcService.contentores.nextCodigo().then(setCodigo);
     }
-  }, [open, editingContentor, categoriaInicial]);
+  }, [open, editingContentor, listaInicial]);
 
   function handleToggleCodigoModo(manual: boolean): void {
     if (manual) {
@@ -98,6 +102,7 @@ export function NovoContentorModal({
           categoria: categoria.trim() || null,
           dataPartida: dataPartida || null,
           dataChegadaPrevista: dataChegadaPrevista || null,
+          ehLista,
         });
         toast.success(`Contentor ${created.codigo} criado.`);
         onSaved(created);
@@ -114,7 +119,18 @@ export function NovoContentorModal({
     <HeaderBarModal
       open={open}
       onClose={onClose}
-      title={isEditMode ? 'Editar Contentor' : 'Novo Contentor'}
+      title={
+        <div className="flex flex-col items-center leading-tight">
+          <span className="text-[15px] font-semibold text-white">{isEditMode ? 'Editar Contentor' : 'Novo Contentor'}</span>
+          {isEditMode && editingContentor ? (
+            <span className="truncate text-[11px] font-normal text-white/75">
+              {editingContentor.codigo} — {editingContentor.nome}
+            </span>
+          ) : null}
+        </div>
+      }
+      headerClassName="h-14 bg-primary px-4"
+      headerStyle={{ color: '#ffffff' }}
       widthClassName="max-w-[420px]"
       footer={
         <>
@@ -151,6 +167,21 @@ export function NovoContentorModal({
         </div>
 
         <FloatingLabelInput label="Categoria (opcional)" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+
+        {!isEditMode ? (
+          <div
+            className="flex items-center justify-between rounded-control px-3 py-2"
+            style={{ backgroundColor: LISTA_BG, color: LISTA_INK }}
+          >
+            <span className="text-[13px] font-medium">
+              Marcar como Lista
+              <span className="block text-[11px] font-normal opacity-75">
+                Agrupamento leve de cargas — pode ser convertido em contentor mais tarde.
+              </span>
+            </span>
+            <Switch checked={ehLista} onChange={setEhLista} />
+          </div>
+        ) : null}
 
         <FloatingLabelInput
           label="Data de Partida"

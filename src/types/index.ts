@@ -194,6 +194,9 @@ export interface Carga {
   contentorId: string | null;
   emissorId: string;
   origemPwaUserId: string | null;
+  // Utilizador do desktop que criou a carga (null quando veio da PWA,
+  // caso em que `origemPwaUserId` é que identifica a origem).
+  criadoPorUserId: string | null;
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
@@ -242,6 +245,10 @@ export interface Contentor {
   notas: string | null;
   oculto: boolean;
   bloqueado: boolean;
+  // Contentor a sério, só sinalizado como agrupamento leve — mesmas
+  // cargas, mesma sequência de código; sai deste estado só pela ação
+  // explícita "Converter em Contentor" (`converterEmContentor`).
+  ehLista: boolean;
   diasParado: number | null;
   partindoEmBreve: boolean;
   chegadaEmBreve: boolean;
@@ -258,6 +265,7 @@ export interface CreateContentorInput {
   categoria?: string | null;
   dataPartida?: string | null;
   dataChegadaPrevista?: string | null;
+  ehLista?: boolean;
 }
 
 export interface ResumoCliente {
@@ -434,6 +442,13 @@ export interface CargasPorContentorLinha {
   contentorCodigo: string;
   contentorNome: string;
   total: number;
+}
+
+export interface SugestaoDimensoes {
+  comprimentoCm: number;
+  larguraCm: number;
+  alturaCm: number;
+  ocorrencias: number;
 }
 
 export interface OrigemPwaLinha {

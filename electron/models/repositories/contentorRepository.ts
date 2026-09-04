@@ -21,6 +21,7 @@ interface ContentorRow {
   notas: string | null;
   oculto: number;
   bloqueado: number;
+  eh_lista: number;
   created_at: string;
   updated_at: string;
   sync_status: Contentor['syncStatus'];
@@ -108,6 +109,7 @@ function fromRow(row: ContentorRowComTotais, limite: number): Contentor {
     notas: row.notas,
     oculto: row.oculto === 1,
     bloqueado: row.bloqueado === 1,
+    ehLista: row.eh_lista === 1,
     diasParado: calcularDiasParado(row, limite),
     partindoEmBreve: calcularPartindoEmBreve(row),
     chegadaEmBreve: calcularChegadaEmBreve(row),
@@ -167,6 +169,7 @@ function create(input: CreateContentorInput): Contentor {
     notas: null,
     oculto: 0,
     bloqueado: 0,
+    eh_lista: input.ehLista ? 1 : 0,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
@@ -174,9 +177,9 @@ function create(input: CreateContentorInput): Contentor {
 
   db.prepare(
     `INSERT INTO contentores (id, nome, codigo, mes_referencia, categoria, data_partida, data_chegada_prevista,
-       estado, peso_total_kg, m3_total, valor_total, custo_frete, notas, oculto, bloqueado, created_at, updated_at, sync_status)
+       estado, peso_total_kg, m3_total, valor_total, custo_frete, notas, oculto, bloqueado, eh_lista, created_at, updated_at, sync_status)
      VALUES (@id, @nome, @codigo, @mes_referencia, @categoria, @data_partida, @data_chegada_prevista,
-       @estado, @peso_total_kg, @m3_total, @valor_total, @custo_frete, @notas, @oculto, @bloqueado, @created_at, @updated_at, @sync_status)`,
+       @estado, @peso_total_kg, @m3_total, @valor_total, @custo_frete, @notas, @oculto, @bloqueado, @eh_lista, @created_at, @updated_at, @sync_status)`,
   ).run(row);
 
   const contentor = fromRow(
@@ -255,6 +258,18 @@ function update(id: string, changes: Partial<CreateContentorInput>): Contentor |
   return updated;
 }
 
+// Ação explícita e irreversível (não faz parte do `update()` genérico,
+// tal como `eh_lista` também não é aceite lá) — a única forma de uma
+// Lista deixar de o ser.
+function converterEmContentor(id: string): Contentor | null {
+  const db = getDatabase();
+  const existing = findById(id);
+  if (!existing) return null;
+
+  db.prepare(`UPDATE contentores SET eh_lista = 0, updated_at = ? WHERE id = ?`).run(nowIso(), id);
+  return findById(id);
+}
+
 function nextCodigo(): string {
   const db = getDatabase();
   const prefix = settingsRepository.get('prefixo_codigo_contentor') ?? 'CONT';
@@ -270,6 +285,34 @@ function search(texto: string, limit = 8): Contentor[] {
       ContentorRowComTotais
     >(`${SELECT_COM_TOTAIS} WHERE contentores.nome LIKE ? OR contentores.codigo LIKE ? ${ORDER_POR_ESTADO} LIMIT ?`)
     .all(`%${texto}%`, `%${texto}%`, limit);
+  const limite = diasParadoLimite();
+  return rows.map((row) => fromRow(row, limite));
+}
+
+// Só para a pesquisa global do cabeçalho — além do próprio nome/código,
+// também traz o contentor quando é uma carga lá dentro (ou o emissor
+// dela) que corresponde à pesquisa, ex: procurar "Sofá" ou o nome de um
+// cliente também mostra em que contentor a carga dele está.
+function searchGlobal(texto: string, limit = 8): Contentor[] {
+  const db = getDatabase();
+  const padrao = `%${texto}%`;
+  const rows = db
+    .prepare<
+      [string, string, string, string, string, number],
+      ContentorRowComTotais
+    >(
+      `${SELECT_COM_TOTAIS}
+       WHERE contentores.nome LIKE ? OR contentores.codigo LIKE ?
+         OR EXISTS (
+           SELECT 1 FROM cargas
+           JOIN contactos ON contactos.id = cargas.emissor_id
+           WHERE cargas.contentor_id = contentores.id
+             AND cargas.estado != 'arquivada'
+             AND (cargas.nome LIKE ? OR cargas.codigo LIKE ? OR contactos.nome LIKE ?)
+         )
+       ${ORDER_POR_ESTADO} LIMIT ?`,
+    )
+    .all(padrao, padrao, padrao, padrao, padrao, limit);
   const limite = diasParadoLimite();
   return rows.map((row) => fromRow(row, limite));
 }
@@ -393,8 +436,10 @@ export const contentorRepository = {
   findById,
   list,
   update,
+  converterEmContentor,
   nextCodigo,
   search,
+  searchGlobal,
   countAbertos,
   bloquear,
   desbloquear,

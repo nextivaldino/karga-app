@@ -378,7 +378,7 @@ export function SincronizacaoCargaCard({
       <NovoContentorModal
         open={novoContentorOpen}
         onClose={() => setNovoContentorOpen(false)}
-        categoriaInicial="Lista"
+        listaInicial
         onSaved={(contentor) => void handleSincronizarEmFechando(contentor)}
       />
     </div>

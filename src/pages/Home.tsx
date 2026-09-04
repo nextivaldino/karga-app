@@ -46,6 +46,7 @@ export function Home(): React.JSX.Element {
   const currencyFormatter = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: moeda });
   const nomeOrigemPwa = new Map(origensPwa.map((o) => [o.userId, o.nome]));
   const avatarOrigemPwa = new Map(usuarios.map((u) => [u.id, u.avatar]));
+  const usuariosPorId = new Map(usuarios.map((u) => [u.id, { name: u.name, avatar: u.avatar }]));
 
   const widgets: {
     label: string;
@@ -308,8 +309,7 @@ export function Home(): React.JSX.Element {
           <UltimasSincronizadasModal
             open={sincronizadasModalOpen}
             onClose={() => setSincronizadasModalOpen(false)}
-            nomeOrigemPwa={nomeOrigemPwa}
-            avatarOrigemPwa={avatarOrigemPwa}
+            usuariosPorId={usuariosPorId}
           />
 
           <section>

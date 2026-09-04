@@ -1,7 +1,6 @@
-import { MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { MainTabs } from './MainTabs';
-import { GlobalSearch } from './GlobalSearch';
+import { HeaderSearch } from './HeaderSearch';
 import { HeaderUserMenu } from './HeaderUserMenu';
 import { MensagensBell } from './MensagensBell';
 import { NotificacoesBell } from './NotificacoesBell';
@@ -25,7 +24,6 @@ const PAGES = {
 };
 
 const IS_MAC = window.kraga.platform === 'darwin';
-const HEADER_SIDE_WIDTH = IS_MAC ? 246 : 176;
 
 export function AppShell(): React.JSX.Element {
   const { page } = useNavigation();
@@ -51,35 +49,33 @@ export function AppShell(): React.JSX.Element {
         // nenhum z-index dentro dos popovers do cabeçalho (sinos, etc.)
         // consegue escapar a essa ordem. `relative z-10` resolve de vez,
         // em vez de continuar a subir o z-index de cada popover um a um.
-        className="relative z-10 flex h-[var(--chrome-header-h)] shrink-0 items-center justify-between gap-3 bg-bg-header px-lg backdrop-blur-md"
+        // Grid em vez de flex+justify-between: com 2 colunas laterais
+        // `1fr` (iguais por definição, independentemente do que cada
+        // lado contém), a coluna do meio (`auto`, só a largura do
+        // MainTabs) fica SEMPRE matematicamente centrada no cabeçalho —
+        // já não depende de manter duas larguras fixas em pixels em
+        // sincronia (`HEADER_SIDE_WIDTH`), o que partia sempre que um
+        // dos lados ganhava mais conteúdo (ex: o campo de pesquisa).
+        className="relative z-10 grid h-[var(--chrome-header-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 bg-bg-header px-lg backdrop-blur-md"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <div
-          className="flex items-center gap-1.5"
-          style={{ width: HEADER_SIDE_WIDTH, paddingLeft: IS_MAC ? 70 : 0 }}
-        >
+        <div className="flex min-w-0 items-center gap-1.5" style={{ paddingLeft: IS_MAC ? 70 : 0 }}>
           <ModuleIcon module="kraga" size={16} className="shrink-0" />
           <span className="text-[13px] font-semibold text-text-primary">Kraga Desktop</span>
-
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-            title="Pesquisar (Cmd+K)"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            className="ml-1 flex h-[var(--chrome-icon-btn)] w-[var(--chrome-icon-btn)] shrink-0 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-bg-app"
-          >
-            <Search size={18} />
-          </button>
         </div>
 
         <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <MainTabs />
         </div>
 
-        <div
-          className="flex items-center justify-end gap-1"
-          style={{ width: HEADER_SIDE_WIDTH, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
+        <div className="flex min-w-0 items-center justify-end gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          {/* Preenche o espaço livre entre o fim das abas e os ícones,
+              centrando o campo de pesquisa nesse vão — "no meio entre a
+              aba Sync e o menu de hambúrguer". */}
+          <div className="flex min-w-0 flex-1 items-center justify-center">
+            <HeaderSearch />
+          </div>
+
           <MensagensBell />
           <NotificacoesBell />
 
@@ -94,7 +90,6 @@ export function AppShell(): React.JSX.Element {
       </main>
 
       <StatusBar />
-      <GlobalSearch />
       <ToastContainer />
       <SincronizacaoLoginModal />
     </div>

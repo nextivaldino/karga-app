@@ -7,6 +7,30 @@ interface ExportarTudoData {
   contactos: Contacto[];
 }
 
+const CONTACTOS_COLUMNS: Partial<ExcelJS.Column>[] = [
+  { header: 'Nome', key: 'nome', width: 26 },
+  { header: 'Telefone', key: 'telefone', width: 16 },
+  { header: 'Email', key: 'email', width: 26 },
+  { header: 'Morada', key: 'morada', width: 32 },
+  { header: 'NIF', key: 'nif', width: 14 },
+  { header: 'Ativo', key: 'ativo', width: 8 },
+];
+
+// Export só de contactos — mesmas colunas do separador "Contactos" da
+// exportação completa, para os dois ficheiros lerem-se da mesma forma.
+export async function buildContactosWorkbook(contactos: Contacto[]): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Kraga Desktop';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('Contactos');
+  sheet.columns = CONTACTOS_COLUMNS;
+  sheet.addRows(contactos);
+  sheet.getRow(1).font = { bold: true };
+
+  return workbook;
+}
+
 export async function buildExportarTudoWorkbook(data: ExportarTudoData): Promise<ExcelJS.Workbook> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Kraga Desktop';
@@ -43,14 +67,7 @@ export async function buildExportarTudoWorkbook(data: ExportarTudoData): Promise
   contentoresSheet.addRows(data.contentores);
 
   const contactosSheet = workbook.addWorksheet('Contactos');
-  contactosSheet.columns = [
-    { header: 'Nome', key: 'nome', width: 26 },
-    { header: 'Telefone', key: 'telefone', width: 16 },
-    { header: 'Email', key: 'email', width: 26 },
-    { header: 'Morada', key: 'morada', width: 32 },
-    { header: 'NIF', key: 'nif', width: 14 },
-    { header: 'Ativo', key: 'ativo', width: 8 },
-  ];
+  contactosSheet.columns = CONTACTOS_COLUMNS;
   contactosSheet.addRows(data.contactos);
 
   for (const sheet of workbook.worksheets) {

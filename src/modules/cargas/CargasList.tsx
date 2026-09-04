@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatValor } from '@/lib/formatValor';
 import { useCargaAcoesMenu } from './useCargaAcoesMenu';
+import type { UsuarioResumo } from '@/hooks/useUsuariosPorId';
 import type { CargaComEmissor, Contentor } from '@/types';
 
 const ROW_HEIGHT_CONFORTAVEL = 36;
@@ -49,8 +50,10 @@ interface CargasListProps {
   onSelectCarga: (carga: CargaComEmissor) => void;
   onRemove?: (carga: CargaComEmissor) => void;
   densidade?: 'confortavel' | 'compacta';
-  nomeOrigemPwa?: Map<string, string>;
-  avatarOrigemPwa?: Map<string, string | null>;
+  // Chave por `carga.origemPwaUserId ?? carga.criadoPorUserId` — cobre
+  // tanto quem inseriu via PWA como quem criou a carga no desktop, com
+  // o mesmo avatar/nome reais em vez do ícone genérico de telemóvel.
+  usuariosPorId?: Map<string, UsuarioResumo>;
   // Presença opcional — quando definidos, cada linha ganha um menu de
   // contexto (clique direito ou "⋯" ao passar o rato) com Editar, marcar
   // Pago/Devido, mover para outro contentor e Arquivar (sempre com
@@ -66,8 +69,7 @@ export function CargasList({
   onSelectCarga,
   onRemove,
   densidade = 'confortavel',
-  nomeOrigemPwa,
-  avatarOrigemPwa,
+  usuariosPorId,
   contentoresAbertos,
   onDataChanged,
 }: CargasListProps): React.JSX.Element {
@@ -177,19 +179,28 @@ export function CargasList({
                       {carga.estadoPagamento === 'pago' ? 'Pago' : 'Devido'}
                     </span>
                   </div>
-                  <div className="flex min-w-0 items-center gap-1 text-text-secondary">
-                    {carga.origemPwaUserId ? (
-                      <>
-                        {avatarOrigemPwa?.has(carga.origemPwaUserId) ? (
-                          <UserAvatar avatar={avatarOrigemPwa.get(carga.origemPwaUserId)} size={16} />
-                        ) : (
-                          <DeviceMobile size={12} className="shrink-0 text-primary" />
-                        )}
-                        <span className="truncate">{nomeOrigemPwa?.get(carga.origemPwaUserId) ?? '—'}</span>
-                      </>
-                    ) : (
-                      <span className="text-text-tertiary">—</span>
-                    )}
+                  <div className="flex min-w-0 items-center gap-1.5 text-text-secondary">
+                    {(() => {
+                      const userId = carga.origemPwaUserId ?? carga.criadoPorUserId;
+                      if (!userId) return <span className="text-text-tertiary">—</span>;
+                      const usuario = usuariosPorId?.get(userId);
+                      return (
+                        <>
+                          <span className="relative shrink-0">
+                            <UserAvatar avatar={usuario?.avatar ?? null} size={18} />
+                            {carga.origemPwaUserId ? (
+                              <span
+                                title="Inserido via PWA"
+                                className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full border border-bg-surface bg-primary text-white"
+                              >
+                                <DeviceMobile size={8} weight="bold" />
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="truncate">{usuario?.name ?? '—'}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                   {onRemove ? (
                     <button

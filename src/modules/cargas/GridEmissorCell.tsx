@@ -11,6 +11,7 @@ interface GridEmissorCellProps {
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   hasError: boolean;
   errorMessage?: string;
+  placeholder?: string;
 }
 
 export function GridEmissorCell({
@@ -22,6 +23,7 @@ export function GridEmissorCell({
   onKeyDown,
   hasError,
   errorMessage,
+  placeholder,
 }: GridEmissorCellProps): React.JSX.Element {
   const [results, setResults] = useState<Contacto[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -44,6 +46,7 @@ export function GridEmissorCell({
         data-col="emissor"
         value={value}
         title={errorMessage}
+        placeholder={placeholder}
         onChange={(e) => {
           onChange(e.target.value, null);
           setShowDropdown(true);
@@ -54,7 +57,7 @@ export function GridEmissorCell({
           onBlur();
         }}
         onKeyDown={onKeyDown}
-        className={`h-full w-full border-0 bg-transparent px-1.5 text-[12px] text-text-primary outline-none focus:bg-primary-light ${
+        className={`h-full w-full border-0 bg-transparent px-1.5 text-[12px] text-text-primary outline-none placeholder:text-text-tertiary focus:bg-primary-light ${
           hasError ? 'ring-1 ring-inset ring-error' : ''
         }`}
       />

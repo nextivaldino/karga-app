@@ -14,6 +14,7 @@ import { FaturacaoPage } from '@/modules/faturacao/FaturacaoPage';
 import { ExportarListaModal } from '@/modules/contentores/ExportarListaModal';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useStatusBarText } from '@/hooks/useStatusBarText';
+import { useUsuariosPorId } from '@/hooks/useUsuariosPorId';
 import { ipcService } from '@/services/ipcService';
 import type { CargaComEmissor, Contentor, EstadoPagamento, OrigemPwaLinha } from '@/types';
 
@@ -78,17 +79,17 @@ export function Cargas(): React.JSX.Element {
     } else if (params?.contentorId) {
       selectContentor(params.contentorId);
       setSubAba('lista');
-      setModoEditor(false);
+      setModoEditor(params?.modoEditor === '1');
     } else if (params?.novaCarga) {
       setSubAba('lista');
       setModoEditor(false);
       handleOpenNovaCarga();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, params?.entidadeId, params?.contentorId, params?.novaCarga]);
+  }, [page, params?.entidadeId, params?.contentorId, params?.novaCarga, params?.modoEditor]);
 
   const filtroAtivo = PAGAMENTO_FILTROS.find((f) => f.value === estadoPagamento);
-  const nomeOrigemPwa = new Map(origensPwa.map((o) => [o.userId, o.nome]));
+  const usuariosPorId = useUsuariosPorId();
 
   useStatusBarText(selectedContentorId ? `${cargas.length} carga${cargas.length === 1 ? '' : 's'}` : null);
 
@@ -183,8 +184,23 @@ export function Cargas(): React.JSX.Element {
             value={subAba}
             onChange={setSubAba}
             options={[
-              { value: 'lista', label: 'Lista', icon: <List size={15} />, title: 'Lista — gerir e ver cargas', badge: cargas.length },
-              { value: 'faturacao', label: 'Faturação', icon: <Wallet size={15} />, title: 'Faturação — controlar pagamentos' },
+              {
+                value: 'lista',
+                label: 'Lista',
+                icon: <List size={15} />,
+                title: 'Lista — gerir e ver cargas',
+                badge: cargas.length,
+                badgeStyle:
+                  subAba === 'lista' ? { backgroundColor: SYNC_INK, color: SYNC_HEADER_BG } : { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
+                activeStyle: { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
+              },
+              {
+                value: 'faturacao',
+                label: 'Faturação',
+                icon: <Wallet size={15} />,
+                title: 'Faturação — controlar pagamentos',
+                activeStyle: { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
+              },
             ]}
           />
         </div>
@@ -223,7 +239,7 @@ export function Cargas(): React.JSX.Element {
               selectedContentorId ? 'Nenhuma carga encontrada neste contentor.' : 'Selecione ou crie um contentor aberto.'
             }
             onSelectCarga={handleSelectCarga}
-            nomeOrigemPwa={nomeOrigemPwa}
+            usuariosPorId={usuariosPorId}
             contentoresAbertos={contentoresAbertos}
             onDataChanged={refreshCargas}
           />

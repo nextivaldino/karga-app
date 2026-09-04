@@ -228,7 +228,7 @@ export function SincronizacaoBarraPro({
       <NovoContentorModal
         open={novoContentorOpen}
         onClose={() => setNovoContentorOpen(false)}
-        categoriaInicial="Lista"
+        listaInicial
         onSaved={(contentor) => {
           onSelectContentor(contentor.id);
           void handleSincronizarEm(contentor);

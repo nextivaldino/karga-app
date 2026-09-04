@@ -102,6 +102,37 @@ function search(texto: string, limit = 10): Contacto[] {
   return rows.map(fromRow);
 }
 
+// Só para a pesquisa global do cabeçalho — além do próprio nome/telefone/
+// email/nif, também apanha contactos que são emissores de uma carga cujo
+// nome ou código correspondem (ex: procurar "Sofá" traz também o cliente
+// que enviou esse sofá). `search()` acima fica intocado — é usado no
+// autocomplete de emissor ao criar cargas, onde este cruzamento seria
+// ruído.
+function searchGlobal(texto: string, limit = 8): Contacto[] {
+  const db = getDatabase();
+  const padrao = `%${texto}%`;
+  const rows = db
+    .prepare<
+      [string, string, string, string, string, number],
+      ContactoRow
+    >(
+      `SELECT DISTINCT contactos.* FROM contactos
+       WHERE contactos.ativo = 1
+         AND (
+           contactos.nome LIKE ? OR contactos.telefone LIKE ? OR contactos.email LIKE ?
+           OR EXISTS (
+             SELECT 1 FROM cargas
+             WHERE cargas.emissor_id = contactos.id
+               AND cargas.estado != 'arquivada'
+               AND (cargas.nome LIKE ? OR cargas.codigo LIKE ?)
+           )
+         )
+       ORDER BY contactos.nome ASC LIMIT ?`,
+    )
+    .all(padrao, padrao, padrao, padrao, padrao, limit);
+  return rows.map(fromRow);
+}
+
 // Deteção de duplicados ao preencher Emissor/Recetor — nomes iguais são
 // o caso óbvio, mas dois contactos com nomes diferentes que partilham o
 // mesmo telefone ou morada também merecem aviso (podem ser o mesmo
@@ -213,6 +244,7 @@ export const contactoRepository = {
   list,
   listPorContentor,
   search,
+  searchGlobal,
   buscarSimilares,
   definirCodigoBase,
   update,

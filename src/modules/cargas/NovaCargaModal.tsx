@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CaretRight as ChevronRight, X } from '@phosphor-icons/react';
+import { useEffect, useRef, useState } from 'react';
+import { CaretDown, CaretRight as ChevronRight, X } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { Switch } from '@/components/ui/Switch';
@@ -8,8 +8,9 @@ import { toast } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { incrementCodigo } from '@/lib/incrementCodigo';
+import { SYNC_HEADER_BG, SYNC_INK } from '@/modules/sync/syncVisual';
 import { ContactoAutocomplete, EMPTY_CONTACTO_VALUE, type ContactoFormValue } from './ContactoAutocomplete';
-import type { CargaComEmissor, Contentor, CreateCargaBatchItem, CreateContactoInput } from '@/types';
+import type { CargaComEmissor, Contentor, CreateCargaBatchItem, CreateContactoInput, SugestaoDimensoes } from '@/types';
 
 interface NovaCargaModalProps {
   open: boolean;
@@ -67,6 +68,75 @@ async function resolveContacto(value: ContactoFormValue): Promise<string | null>
   return created.id;
 }
 
+// Seletor de contentor do cabeçalho — substitui o `<select>` nativo (cujo
+// popup abre para cima ou para baixo consoante o SO decide, sem controlo
+// nosso) por um menu próprio que abre sempre para baixo, e mostra o nome
+// do contentor como subtítulo por baixo do código selecionado.
+function SeletorContentorHeader({
+  contentoresAbertos,
+  contentorId,
+  onSelect,
+}: {
+  contentoresAbertos: Contentor[];
+  contentorId: string | null;
+  onSelect: (id: string) => void;
+}): React.JSX.Element {
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selecionado = contentoresAbertos.find((c) => c.id === contentorId) ?? null;
+
+  useEffect(() => {
+    if (!aberto) return;
+    function onClickOutside(e: MouseEvent): void {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    function onKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setAberto(false);
+    }
+    window.addEventListener('mousedown', onClickOutside);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [aberto]);
+
+  return (
+    <div ref={ref} className="relative flex w-full justify-center">
+      <button type="button" onClick={() => setAberto((v) => !v)} className="flex flex-col items-center" style={{ color: SYNC_INK }}>
+        <span className="flex items-center gap-1.5 text-[15px] font-semibold leading-tight">
+          Contêiner: {selecionado?.codigo ?? '—'}
+          <CaretDown size={13} className={`transition-transform ${aberto ? 'rotate-180' : ''}`} />
+        </span>
+        {selecionado ? <span className="truncate text-[11px] font-normal leading-tight opacity-70">{selecionado.nome}</span> : null}
+      </button>
+
+      {aberto ? (
+        <div className="absolute left-1/2 top-full z-50 mt-2 w-64 -translate-x-1/2 overflow-hidden rounded-control border border-border bg-bg-surface py-1 text-left shadow-lg">
+          {contentoresAbertos.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              disabled={c.bloqueado}
+              onClick={() => {
+                onSelect(c.id);
+                setAberto(false);
+              }}
+              className="flex w-full flex-col items-start px-3 py-1.5 text-left transition-colors hover:bg-bg-app disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <span className="text-[13px] font-medium text-text-primary">
+                {c.codigo}
+                {c.bloqueado ? ' 🔒 (bloqueado)' : ''}
+              </span>
+              <span className="truncate text-[11px] text-text-tertiary">{c.nome}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function NovaCargaModal({
   open,
   onClose,
@@ -95,6 +165,10 @@ export function NovaCargaModal({
   const [confirmFecharOpen, setConfirmFecharOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "Aprende" com cargas anteriores do mesmo nome (ex: "Bidon" já usado
+  // 3x com 22×22×22) — só sugere, nunca impõe, e nunca mexe no peso.
+  const [sugestaoDimensoes, setSugestaoDimensoes] = useState<SugestaoDimensoes | null>(null);
+  const [sugestaoIgnoradaPara, setSugestaoIgnoradaPara] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -142,6 +216,31 @@ export function NovaCargaModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultContentorId, editingCarga]);
+
+  // Só sugere dimensões para cargas novas (nunca ao editar uma já
+  // existente) e só enquanto C/L/A continuarem vazios — mal o
+  // utilizador preencha algum à mão, a sugestão deixa de fazer sentido
+  // e não volta a aparecer para este nome nesta sessão do formulário.
+  useEffect(() => {
+    if (!open || isEditMode) return;
+    const nomeTrim = nome.trim();
+    if (nomeTrim.length < 2 || comprimentoCm || larguraCm || alturaCm || nomeTrim === sugestaoIgnoradaPara) {
+      setSugestaoDimensoes(null);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      void ipcService.cargas.sugerirDimensoes(nomeTrim).then(setSugestaoDimensoes);
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [open, isEditMode, nome, comprimentoCm, larguraCm, alturaCm, sugestaoIgnoradaPara]);
+
+  function handleUsarSugestaoDimensoes(): void {
+    if (!sugestaoDimensoes) return;
+    setComprimentoCm(String(sugestaoDimensoes.comprimentoCm));
+    setLarguraCm(String(sugestaoDimensoes.larguraCm));
+    setAlturaCm(String(sugestaoDimensoes.alturaCm));
+    setSugestaoDimensoes(null);
+  }
 
   function handleToggleCodigoModo(manual: boolean): void {
     if (manual) {
@@ -385,20 +484,9 @@ export function NovaCargaModal({
       open={open}
       onClose={handleRequestClose}
       widthClassName={!isEditMode && pilha.length > 0 ? 'max-w-[760px]' : 'max-w-[520px]'}
-      title={
-        <select
-          value={contentorId ?? ''}
-          onChange={(e) => setContentorId(e.target.value)}
-          className="rounded-control border border-border bg-bg-input px-2 py-1 text-[13px] text-text-primary outline-none focus:border-primary"
-        >
-          {contentoresAbertos.map((contentor) => (
-            <option key={contentor.id} value={contentor.id} disabled={contentor.bloqueado}>
-              Contêiner: {contentor.codigo}
-              {contentor.bloqueado ? ' 🔒 (bloqueado)' : ''}
-            </option>
-          ))}
-        </select>
-      }
+      headerClassName="h-14 px-4"
+      headerStyle={{ backgroundColor: SYNC_HEADER_BG }}
+      title={<SeletorContentorHeader contentoresAbertos={contentoresAbertos} contentorId={contentorId} onSelect={setContentorId} />}
       footer={
         <>
           <button
@@ -534,6 +622,32 @@ export function NovaCargaModal({
           ) : null}
 
           <FloatingLabelInput label="Nome da carga" value={nome} onChange={(e) => setNome(e.target.value)} required />
+
+          {sugestaoDimensoes ? (
+            <div className="flex items-center gap-2 rounded-control border border-primary/30 bg-primary-light px-3 py-2 text-[12px] text-text-primary">
+              <span className="min-w-0 flex-1">
+                Já usámos{' '}
+                <strong>
+                  {sugestaoDimensoes.comprimentoCm}×{sugestaoDimensoes.larguraCm}×{sugestaoDimensoes.alturaCm} cm
+                </strong>{' '}
+                para "{nome.trim()}" antes ({sugestaoDimensoes.ocorrencias}x).
+              </span>
+              <button
+                type="button"
+                onClick={() => setSugestaoIgnoradaPara(nome.trim())}
+                className="shrink-0 rounded-control px-2 py-1 font-medium text-text-secondary transition-colors hover:bg-bg-surface"
+              >
+                Ignorar
+              </button>
+              <button
+                type="button"
+                onClick={handleUsarSugestaoDimensoes}
+                className="shrink-0 rounded-control bg-primary px-2.5 py-1 font-medium text-white transition-colors hover:bg-primary-hover"
+              >
+                Usar
+              </button>
+            </div>
+          ) : null}
 
           <div className="flex items-end gap-2">
             <div className="w-16">

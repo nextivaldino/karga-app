@@ -13,6 +13,7 @@ import { ContentoresListView } from '@/modules/contentores/ContentoresListView';
 import { ContentorDetalheModal } from '@/modules/contentores/ContentorDetalheModal';
 import { ContentorPreviewPanel } from '@/modules/contentores/ContentorPreviewPanel';
 import { ExportarListaModal } from '@/modules/contentores/ExportarListaModal';
+import { ListasColumn } from '@/modules/contentores/ListasColumn';
 import { NovoContentorModal } from '@/modules/contentores/NovoContentorModal';
 import { EliminarContentorDialog } from '@/modules/contentores/EliminarContentorDialog';
 import { useContentoresPage } from '@/modules/contentores/useContentoresPage';
@@ -56,6 +57,8 @@ export function Contentores(): React.JSX.Element {
   const [filtroMenuPos, setFiltroMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const filtrosAtivos = filtroEstado !== '' || filtroMes !== '' || mostrarOcultos;
+  const listas = contentores.filter((c) => c.ehLista);
+  const contentoresNormais = contentores.filter((c) => !c.ehLista);
 
   useStatusBarText(loading ? null : `${contentores.length} contentor${contentores.length === 1 ? '' : 'es'}`);
 
@@ -269,26 +272,30 @@ export function Contentores(): React.JSX.Element {
         onClose={() => setFiltroMenuPos(null)}
       />
 
-      <div className="min-h-0 flex-1">
-        {loading ? (
-          <div className="flex h-full items-center justify-center text-[13px] text-text-tertiary">A carregar...</div>
-        ) : viewMode === 'icones' ? (
-          <ContentoresIconsView
-            contentores={contentores}
-            limiteDiasParado={limiteDiasParado}
-            onPreview={handlePreview}
-            onSelect={handleSelect}
-            onContextMenu={handleContextMenu}
-          />
-        ) : (
-          <ContentoresListView
-            contentores={contentores}
-            limiteDiasParado={limiteDiasParado}
-            onPreview={handlePreview}
-            onSelect={handleSelect}
-            onContextMenu={handleContextMenu}
-          />
-        )}
+      <div className="flex min-h-0 flex-1">
+        <div className="min-w-0 flex-1">
+          {loading ? (
+            <div className="flex h-full items-center justify-center text-[13px] text-text-tertiary">A carregar...</div>
+          ) : viewMode === 'icones' ? (
+            <ContentoresIconsView
+              contentores={contentoresNormais}
+              limiteDiasParado={limiteDiasParado}
+              onPreview={handlePreview}
+              onSelect={handleSelect}
+              onContextMenu={handleContextMenu}
+            />
+          ) : (
+            <ContentoresListView
+              contentores={contentoresNormais}
+              limiteDiasParado={limiteDiasParado}
+              onPreview={handlePreview}
+              onSelect={handleSelect}
+              onContextMenu={handleContextMenu}
+            />
+          )}
+        </div>
+
+        <ListasColumn listas={listas} onOpenDetalhe={setDetalheId} onExportar={setExportando} />
       </div>
 
       <NovoContentorModal open={novoOpen} onClose={() => setNovoOpen(false)} onSaved={refresh} />

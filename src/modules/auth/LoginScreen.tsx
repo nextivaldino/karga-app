@@ -52,18 +52,43 @@ export function LoginScreen(): React.JSX.Element {
   const mostrarGrelha = quickLogin != null && quickLogin.length > 0 && !usarPassword;
 
   return (
-    <div className="flex h-full items-center justify-center bg-bg-app px-6" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-      <div className="w-full max-w-[380px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+    <div className="relative flex h-full items-center justify-center overflow-hidden px-6" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+      {/* Cenário ao estilo "ecrã de bloqueio" — a mesma identidade de cor
+          da app como pano de fundo suave (só gradientes, sem filtros de
+          blur no ecrã inteiro — pesado a mais para o compositor), com o
+          vidro fosco concentrado só no cartão de login, ao estilo Aero
+          Glass do Windows 7. */}
+      <div
+        className="pointer-events-none absolute inset-0 bg-bg-app"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--color-primary) 32%, transparent) 0%, transparent 45%),' +
+            'radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--color-purple) 26%, transparent) 0%, transparent 42%),' +
+            'radial-gradient(circle at 15% 90%, color-mix(in srgb, var(--color-success) 26%, transparent) 0%, transparent 48%),' +
+            'radial-gradient(circle at 90% 85%, color-mix(in srgb, var(--color-warning) 24%, transparent) 0%, transparent 45%)',
+        }}
+      >
+        <ModuleIcon module="kraga" size={560} className="absolute -bottom-24 -right-24 opacity-[0.05]" />
+      </div>
+
+      <div className="relative w-full max-w-[380px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="mb-lg flex flex-col items-center gap-2 text-center">
-          <ModuleIcon module="kraga" size={56} />
-          <h1 className="text-[20px] font-semibold text-text-primary">Kraga Desktop</h1>
-          <p className="text-[13px] text-text-secondary">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-white/20 shadow-lg backdrop-blur-md">
+            <ModuleIcon module="kraga" size={34} />
+          </span>
+          <div>
+            <h1 className="text-[26px] font-bold tracking-wide text-text-primary drop-shadow-sm">KARGA</h1>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">
+              Sistema de Gestão de Cargas e Logística
+            </p>
+          </div>
+          <p className="mt-1 text-[13px] text-text-secondary">
             {mostrarGrelha ? 'Quem é?' : 'Inicie sessão para continuar.'}
           </p>
         </div>
 
         {mostrarGrelha ? (
-          <div className="rounded-surface border border-border bg-bg-surface p-xl">
+          <div className="rounded-[22px] border border-white/40 bg-white/25 p-xl shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/25">
             <div className="grid grid-cols-3 gap-3">
               {quickLogin!.map((u) => (
                 <button
@@ -71,7 +96,7 @@ export function LoginScreen(): React.JSX.Element {
                   type="button"
                   disabled={entrandoComoId != null}
                   onClick={() => void handleQuickLogin(u.id)}
-                  className="flex flex-col items-center gap-1.5 rounded-control p-2 text-center transition-colors hover:bg-bg-app disabled:opacity-50"
+                  className="flex flex-col items-center gap-1.5 rounded-control p-2 text-center transition-colors hover:bg-white/30 disabled:opacity-50 dark:hover:bg-white/10"
                 >
                   <UserAvatar avatar={u.avatar} size={56} />
                   <span className="line-clamp-1 text-[12px] font-medium text-text-primary">
@@ -89,7 +114,10 @@ export function LoginScreen(): React.JSX.Element {
             </button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="rounded-surface border border-border bg-bg-surface p-xl">
+          <form
+            onSubmit={handleSubmit}
+            className="rounded-[22px] border border-white/40 bg-white/25 p-xl shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/25"
+          >
             <div className="flex flex-col gap-3">
               <FloatingLabelInput
                 label="Email"
@@ -114,7 +142,7 @@ export function LoginScreen(): React.JSX.Element {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-lg w-full rounded-control bg-primary py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+              className="mt-lg w-full rounded-control bg-primary py-2.5 text-[14px] font-medium text-white shadow-md transition-colors hover:bg-primary-hover disabled:opacity-60"
             >
               {submitting ? 'A entrar...' : 'Entrar'}
             </button>
@@ -131,6 +159,11 @@ export function LoginScreen(): React.JSX.Element {
           </form>
         )}
       </div>
+
+      <p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-[10px] text-text-tertiary">
+        <span className="opacity-70">desenvolvido pela </span>
+        <span className="font-semibold tracking-wide text-text-secondary">NEXT-LABS</span>
+      </p>
     </div>
   );
 }

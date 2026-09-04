@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CaretDoubleLeft as ChevronsLeft } from '@phosphor-icons/react';
+import { CaretLeft as ChevronsLeft } from '@phosphor-icons/react';
 import type { MainPage, ModuloPermissao } from '@/types';
 import { useNavigation } from '@/hooks/useNavigation';
 import { usePermissoes } from '@/hooks/usePermissoes';
@@ -155,8 +155,12 @@ export function MainTabs(): React.JSX.Element {
                 <ModuleIcon module={tab.iconModule} size={18} colorOverride={active && isSync ? SYNC_INK : undefined} />
                 {tab.page === 'sync' && pendentesSync > 0 ? (
                   <span
-                    style={{ borderColor: active ? tabColor : 'var(--toolbar-hover)' }}
-                    className="absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-pill border-2 bg-error px-0.5 text-[8px] font-bold text-white"
+                    style={{
+                      borderColor: active ? tabColor : 'var(--toolbar-hover)',
+                      backgroundColor: SYNC_HEADER_BG,
+                      color: SYNC_INK,
+                    }}
+                    className="absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-pill border-2 px-0.5 text-[8px] font-bold"
                   >
                     {pendentesSync > 99 ? '99+' : pendentesSync}
                   </span>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, PencilSimple as Pencil, Plus } from '@phosphor-icons/react';
+import { ArrowsClockwise, Download, PencilSimple as Pencil, Plus } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
@@ -9,6 +9,7 @@ import { ipcService } from '@/services/ipcService';
 import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 import { CargasList } from '@/modules/cargas/CargasList';
 import { NovaCargaModal } from '@/modules/cargas/NovaCargaModal';
+import { useUsuariosPorId } from '@/hooks/useUsuariosPorId';
 import { NovoContentorModal } from './NovoContentorModal';
 import { AdicionarCargaExistente } from './AdicionarCargaExistente';
 import { ExportarListaModal } from './ExportarListaModal';
@@ -35,7 +36,10 @@ export function ContentorDetalheModal({
   const [novaCargaOpen, setNovaCargaOpen] = useState(false);
   const [fecharConfirmOpen, setFecharConfirmOpen] = useState(false);
   const [fechando, setFechando] = useState(false);
+  const [converterConfirmOpen, setConverterConfirmOpen] = useState(false);
+  const [convertendo, setConvertendo] = useState(false);
   const [removendo, setRemovendo] = useState<CargaComEmissor | null>(null);
+  const usuariosPorId = useUsuariosPorId();
 
   async function carregar(): Promise<void> {
     if (!contentorId) return;
@@ -88,6 +92,21 @@ export function ContentorDetalheModal({
     }
   }
 
+  async function handleConverter(): Promise<void> {
+    if (!contentor) return;
+    setConvertendo(true);
+    try {
+      await ipcService.contentores.converterEmContentor(contentor.id);
+      toast.success(`${contentor.codigo} passou a ser um contentor normal.`);
+      setConverterConfirmOpen(false);
+      handleRefresh();
+    } catch (err) {
+      toast.error(cleanIpcError(err));
+    } finally {
+      setConvertendo(false);
+    }
+  }
+
   if (!contentorId) return null;
 
   const podeEditar = contentor ? !contentor.bloqueado && contentor.estado === 'aberto' : false;
@@ -135,6 +154,15 @@ export function ContentorDetalheModal({
             >
               <Download size={14} /> Exportar Lista
             </button>
+            {contentor?.ehLista ? (
+              <button
+                type="button"
+                onClick={() => setConverterConfirmOpen(true)}
+                className="flex items-center gap-1.5 rounded-control border border-border px-4 py-2 text-[13px] font-medium text-text-primary transition-colors hover:bg-bg-app"
+              >
+                <ArrowsClockwise size={14} /> Converter em Contentor
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={!contentor || contentor.estado !== 'aberto' || contentor.bloqueado}
@@ -192,6 +220,7 @@ export function ContentorDetalheModal({
                 emptyMessage="Nenhuma carga associada."
                 onSelectCarga={() => {}}
                 onRemove={podeGerir ? (carga) => setRemovendo(carga) : undefined}
+                usuariosPorId={usuariosPorId}
               />
             </div>
           </div>
@@ -231,6 +260,16 @@ export function ContentorDetalheModal({
         confirmLabel={fechando ? 'A fechar...' : 'Fechar Contentor'}
         onConfirm={() => void handleFechar()}
         onCancel={() => setFecharConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={converterConfirmOpen}
+        title="Converter em Contentor"
+        message={`"${contentor?.codigo}" deixa de aparecer na coluna de Listas e passa a ser tratado como um contentor normal na grelha mensal. As cargas já associadas mantêm-se.`}
+        tone="warning"
+        confirmLabel={convertendo ? 'A converter...' : 'Converter'}
+        onConfirm={() => void handleConverter()}
+        onCancel={() => setConverterConfirmOpen(false)}
       />
     </>
   );

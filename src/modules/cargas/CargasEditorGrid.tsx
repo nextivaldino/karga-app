@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowsLeftRight as ArrowRightLeft, Copy } from '@phosphor-icons/react';
+import { ArrowsLeftRight as ArrowRightLeft, ClipboardText, Copy, Eye, EyeSlash, Package, Plus } from '@phosphor-icons/react';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
@@ -63,8 +63,6 @@ const COLUMNS: { key: EditableColKey | 'm3' | 'sel' | 'acoes' | 'num'; label: st
   { key: 'notas', label: 'Observação', width: '160px' },
   { key: 'acoes', label: '', width: '32px' },
 ];
-
-const GRID_TEMPLATE = COLUMNS.map((c) => c.width).join(' ');
 
 const NAV_COLUMNS: EditableColKey[] = [
   'codigo',
@@ -153,6 +151,10 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
   const [rows, setRows] = useState<GridRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [codigoModoGlobal, setCodigoModoGlobal] = useState<'automatico' | 'manual'>('automatico');
+  // Coluna de Observação começa escondida — é o campo menos usado da
+  // grelha e ocupa espaço só por existir; revela-se com um clique
+  // quando é mesmo preciso.
+  const [notasVisivel, setNotasVisivel] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [movendoPara, setMovendoPara] = useState('');
   const [movendo, setMovendo] = useState(false);
@@ -361,7 +363,8 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
   }
 
   function getEditableColumnsForRow(): EditableColKey[] {
-    return codigoModoGlobal === 'automatico' ? NAV_COLUMNS.filter((c) => c !== 'codigo') : NAV_COLUMNS;
+    const cols = codigoModoGlobal === 'automatico' ? NAV_COLUMNS.filter((c) => c !== 'codigo') : NAV_COLUMNS;
+    return notasVisivel ? cols : cols.filter((c) => c !== 'notas');
   }
 
   async function saveField(rowIndex: number, field: EditableColKey): Promise<void> {
@@ -579,11 +582,15 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
 
   if (!contentorId) {
     return (
-      <div className="flex h-full items-center justify-center text-[13px] text-text-tertiary">
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-[13px] text-text-tertiary">
+        <Package size={32} className="opacity-50" />
         Selecione ou crie um contentor aberto.
       </div>
     );
   }
+
+  const columns = COLUMNS.filter((c) => c.key !== 'notas' || notasVisivel);
+  const gridTemplate = columns.map((c) => c.width).join(' ');
 
   return (
     <div ref={containerRef} onPaste={(e) => void handlePaste(e)} className="flex h-full flex-col rounded-none">
@@ -597,6 +604,23 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
           />
           <span className={codigoModoGlobal === 'manual' ? 'text-text-primary' : 'text-text-tertiary'}>Manual</span>
         </div>
+
+        {selecionados.size === 0 ? (
+          <div className="ml-auto flex items-center gap-3 text-[11px] text-text-tertiary">
+            <span className="flex items-center gap-1" title="Prima Enter para gravar e passar à linha seguinte">
+              <kbd className="rounded border border-border bg-bg-surface px-1 py-0.5 font-sans">↵</kbd> nova linha
+            </span>
+            <span className="flex items-center gap-1" title="Use as setas para cima/baixo para navegar entre linhas">
+              <kbd className="rounded border border-border bg-bg-surface px-1 py-0.5 font-sans">↑↓</kbd> navegar
+            </span>
+            <span
+              className="flex items-center gap-1"
+              title="Selecione uma célula e cole (Cmd/Ctrl+V) várias linhas copiadas do Excel ou Google Sheets"
+            >
+              <ClipboardText size={13} /> colar do Excel
+            </span>
+          </div>
+        ) : null}
 
         {selecionados.size > 0 ? (
           <div className="ml-auto flex items-center gap-2">
@@ -637,15 +661,29 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
         ) : null}
       </div>
 
-      <div
-        className="grid shrink-0 border-b border-border bg-bg-app text-[11px] font-semibold uppercase tracking-wide text-text-tertiary rounded-none"
-        style={{ gridTemplateColumns: GRID_TEMPLATE }}
-      >
-        {COLUMNS.map((col) => (
-          <div key={col.key} className="truncate border-r border-border px-1.5 py-1.5 last:border-r-0">
-            {col.label}
-          </div>
-        ))}
+      <div className="relative shrink-0">
+        <div
+          className="grid border-b border-border bg-bg-app text-[11px] font-semibold uppercase tracking-wide text-text-tertiary rounded-none"
+          style={{ gridTemplateColumns: gridTemplate }}
+        >
+          {columns.map((col) => (
+            <div key={col.key} className="truncate border-r border-border px-1.5 py-1.5 last:border-r-0">
+              {col.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Ícone de mostrar/esconder a coluna Observação, colocado mesmo
+            em cima da zona onde essa coluna aparece (à direita, antes
+            das Ações) — em vez de viver longe, na barra de cima. */}
+        <button
+          type="button"
+          onClick={() => setNotasVisivel((v) => !v)}
+          title={notasVisivel ? 'Esconder a coluna Observação' : 'Mostrar a coluna Observação'}
+          className="absolute right-9 top-1/2 flex -translate-y-1/2 items-center justify-center rounded-control p-1 text-text-tertiary transition-colors hover:bg-bg-surface hover:text-primary"
+        >
+          {notasVisivel ? <Eye size={13} /> : <EyeSlash size={13} />}
+        </button>
       </div>
 
       {loading ? (
@@ -659,6 +697,7 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
               const m3 = computeM3(row);
               const editableCols = getEditableColumnsForRow();
               const codigoEditable = editableCols.includes('codigo');
+              const isDraft = row.id === null;
 
               const tint = ROW_TINTS[rowIndex % ROW_TINTS.length];
 
@@ -667,18 +706,40 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
                   key={row.tempId}
                   className="group grid items-stretch text-[12px] text-text-primary rounded-none"
                   style={{
-                    gridTemplateColumns: GRID_TEMPLATE,
+                    gridTemplateColumns: gridTemplate,
                     height: virtualRow.size,
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     transform: `translateY(${virtualRow.start}px)`,
-                    backgroundColor: `color-mix(in srgb, ${tint} 5%, var(--bg-surface))`,
+                    backgroundColor: isDraft
+                      ? 'var(--bg-app)'
+                      : `color-mix(in srgb, ${tint} 5%, var(--bg-surface))`,
                   }}
                 >
-                  <div className="flex h-full items-center justify-center border-r border-border text-text-tertiary">
-                    {rowIndex + 1}
+                  <div
+                    className="relative flex h-full items-center justify-center border-r border-border text-text-tertiary"
+                    title={
+                      row.saveState === 'saving'
+                        ? 'A gravar...'
+                        : row.saveState === 'saved'
+                          ? 'Gravado'
+                          : row.saveState === 'error'
+                            ? 'Erro ao gravar — ver campo assinalado'
+                            : isDraft
+                              ? 'Nova linha — comece a escrever'
+                              : undefined
+                    }
+                  >
+                    {isDraft ? <Plus size={13} className="opacity-60" /> : rowIndex + 1}
+                    {row.saveState === 'saving' ? (
+                      <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-pill bg-text-tertiary" />
+                    ) : row.saveState === 'saved' ? (
+                      <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-pill bg-success" />
+                    ) : row.saveState === 'error' ? (
+                      <span className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-pill bg-error" />
+                    ) : null}
                   </div>
 
                   <div className="flex h-full items-center justify-center border-r border-border">
@@ -719,10 +780,11 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
                     data-col="nome"
                     value={row.nome}
                     title={row.errors.nome}
+                    placeholder={isDraft ? 'Nome da nova carga...' : undefined}
                     onChange={(e) => updateRow(rowIndex, { nome: e.target.value })}
                     onBlur={() => void saveField(rowIndex, 'nome')}
                     onKeyDown={makeNavHandler(rowIndex, 'nome')}
-                    className={`h-full border-r border-border bg-transparent px-1.5 outline-none focus:bg-primary-light ${
+                    className={`h-full border-r border-border bg-transparent px-1.5 outline-none placeholder:text-text-tertiary focus:bg-primary-light ${
                       row.errors.nome ? 'ring-1 ring-inset ring-error' : ''
                     }`}
                   />
@@ -731,6 +793,7 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
                     rowIndex={rowIndex}
                     value={row.emissorNome}
                     contactoId={row.emissorId}
+                    placeholder={isDraft ? 'Emissor...' : undefined}
                     onChange={(nome, contactoId) => {
                       updateRow(rowIndex, { emissorNome: nome, emissorId: contactoId });
                       if (contactoId) void saveField(rowIndex, 'emissor');
@@ -814,26 +877,21 @@ export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChange
                       <option value="devido">Devido</option>
                       <option value="pago">Pago</option>
                     </select>
-                    {row.saveState === 'saving' ? (
-                      <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-pill bg-text-tertiary" title="A gravar..." />
-                    ) : row.saveState === 'saved' ? (
-                      <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-pill bg-success" title="Gravado" />
-                    ) : row.saveState === 'error' ? (
-                      <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-pill bg-error" title="Erro ao gravar" />
-                    ) : null}
                   </div>
 
-                  <input
-                    data-row={rowIndex}
-                    data-col="notas"
-                    value={row.notas}
-                    title={row.notas || 'Observação (opcional)'}
-                    onChange={(e) => updateRow(rowIndex, { notas: e.target.value })}
-                    onBlur={() => void saveField(rowIndex, 'notas')}
-                    onKeyDown={makeNavHandler(rowIndex, 'notas')}
-                    placeholder="—"
-                    className="h-full border-r border-border bg-transparent px-1.5 text-text-secondary outline-none placeholder:text-text-tertiary focus:bg-primary-light focus:text-text-primary"
-                  />
+                  {notasVisivel ? (
+                    <input
+                      data-row={rowIndex}
+                      data-col="notas"
+                      value={row.notas}
+                      title={row.notas || 'Observação (opcional)'}
+                      onChange={(e) => updateRow(rowIndex, { notas: e.target.value })}
+                      onBlur={() => void saveField(rowIndex, 'notas')}
+                      onKeyDown={makeNavHandler(rowIndex, 'notas')}
+                      placeholder="—"
+                      className="h-full border-r border-border bg-transparent px-1.5 text-text-secondary outline-none placeholder:text-text-tertiary focus:bg-primary-light focus:text-text-primary"
+                    />
+                  ) : null}
 
                   <div className="flex h-full items-center justify-center">
                     <button

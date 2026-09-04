@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
-import { formatMoeda } from '@/lib/formatMoeda';
+import { formatValor } from '@/lib/formatValor';
 import { ipcService } from '@/services/ipcService';
 import { PeriodoFiltroBar } from './PeriodoFiltroBar';
 import { RelatorioTable } from './RelatorioTable';
@@ -45,7 +45,7 @@ export function CargasPorClienteReport(): React.JSX.Element {
         nome: l.nome,
         telefone: l.telefone ?? '—',
         totalCargas: l.totalCargas,
-        valorTotal: formatMoeda(l.valorTotal),
+        valorTotal: formatValor(l.valorTotal),
       }));
       const ext = formato === 'excel' ? 'xlsx' : 'pdf';
       const fileName = `Relatorio-Cargas-Por-Cliente-${Date.now()}.${ext}`;
@@ -66,7 +66,7 @@ export function CargasPorClienteReport(): React.JSX.Element {
           { key: 'nome', header: 'Cliente' },
           { key: 'telefone', header: 'Telefone', render: (v) => (v ? String(v) : '—') },
           { key: 'totalCargas', header: 'Nº Cargas' },
-          { key: 'valorTotal', header: 'Valor Total Movimentado', render: (v) => formatMoeda(Number(v)) },
+          { key: 'valorTotal', header: 'Valor Total Movimentado', render: (v) => formatValor(Number(v)) },
         ]}
         linhas={linhas as unknown as Record<string, unknown>[]}
         loading={loading}

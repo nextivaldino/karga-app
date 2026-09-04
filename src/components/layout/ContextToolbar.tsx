@@ -1,26 +1,31 @@
 import type { ReactNode } from 'react';
-import { useNavigation } from '@/hooks/useNavigation';
-import type { MainPage } from '@/types';
 
 interface ContextToolbarProps {
   children: ReactNode;
+  /**
+   * "action" (default) — barra de ferramentas cheia, com ações da página.
+   * "breadcrumb" — path bar fina e discreta ao estilo Finder, usada só
+   * para mostrar "onde estás" (ex: Definições › Contentores) por cima de
+   * uma segunda `ContextToolbar` de ações, quando a secção tem as duas.
+   */
+  variant?: 'action' | 'breadcrumb';
 }
 
-const PAGE_ACCENT: Record<MainPage, string> = {
-  home: 'var(--color-primary)',
-  cargas: 'var(--color-warning)',
-  contentores: 'var(--color-success)',
-  configuracoes: 'var(--color-purple)',
-};
-
-export function ContextToolbar({ children }: ContextToolbarProps): React.JSX.Element {
-  const { page } = useNavigation();
-
+// Cor única e padrão para todas as sub-barras — abandonámos a
+// tintagem por página (cada módulo tinha a sua cor de acento aqui);
+// agora é sempre `--toolbar-bg` simples, igual em Cargas, Contentores
+// e Definições. A identidade de módulo continua a viver só nos ícones
+// (colorido/duotone), não no fundo da barra.
+export function ContextToolbar({ children, variant = 'action' }: ContextToolbarProps): React.JSX.Element {
+  if (variant === 'breadcrumb') {
+    return (
+      <div className="relative flex h-9 shrink-0 items-center gap-3 border-b border-border bg-bg-app px-lg">
+        {children}
+      </div>
+    );
+  }
   return (
-    <div
-      className="flex h-[50px] shrink-0 items-center gap-3 border-b border-border px-lg shadow-sm"
-      style={{ backgroundColor: `color-mix(in srgb, ${PAGE_ACCENT[page]} 14%, var(--toolbar-bg))` }}
-    >
+    <div className="relative flex min-h-[var(--chrome-toolbar-h)] shrink-0 items-center gap-3 border-b border-border bg-[var(--toolbar-bg)] px-lg py-1.5 shadow-sm">
       {children}
     </div>
   );

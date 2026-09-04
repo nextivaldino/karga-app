@@ -3,8 +3,6 @@ import { sugerirContacto } from '../lib/textMatch';
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { cargaRepository } from '../models/repositories/cargaRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
-import { notificacaoRepository } from '../models/repositories/notificacaoRepository';
-import { criarNotificacao } from './notifications';
 import type { Carga, CargaPendente, ImportarCargaInput, RevisaoCargaPendente, SugestaoContacto } from '../../src/types';
 
 interface CargaPendenteRow {
@@ -18,6 +16,7 @@ interface CargaPendenteRow {
   emissor_nif: string | null;
   recetor_nome: string;
   recetor_telefone: string | null;
+  recetor_email: string | null;
   nome_carga: string;
   comprimento_cm: number | null;
   largura_cm: number | null;
@@ -51,6 +50,7 @@ function mapPendenteRow(row: CargaPendenteRow): CargaPendente {
     emissorNif: row.emissor_nif,
     recetorNome: row.recetor_nome,
     recetorTelefone: row.recetor_telefone,
+    recetorEmail: row.recetor_email,
     nomeCarga: row.nome_carga,
     comprimentoCm: row.comprimento_cm,
     larguraCm: row.largura_cm,
@@ -74,6 +74,21 @@ export async function listarPendentes(): Promise<CargaPendente[]> {
     .select('*, pwa_users(nome)')
     .eq('estado', 'pendente')
     .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as CargaPendenteRow[]).map(mapPendenteRow);
+}
+
+// Histórico — já revistas (importadas ou rejeitadas), mais recentes
+// primeiro. Não é uma tabela nova, só um filtro diferente sobre
+// cargas_pendentes (doc 19 §7).
+export async function listarHistorico(limit = 100): Promise<CargaPendente[]> {
+  const supabase = requireSupabaseClient();
+  const { data, error } = await supabase
+    .from('cargas_pendentes')
+    .select('*, pwa_users(nome)')
+    .in('estado', ['importada', 'rejeitada'])
+    .order('created_at', { ascending: false })
+    .limit(limit);
   if (error) throw new Error(error.message);
   return ((data ?? []) as CargaPendenteRow[]).map(mapPendenteRow);
 }
@@ -127,6 +142,9 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
 
   const contentor = contentorRepository.findById(input.contentorId);
   if (!contentor) throw new Error('Contentor de destino não encontrado.');
+  if (contentor.bloqueado) {
+    throw new Error(`O contentor ${contentor.codigo} está bloqueado — desbloqueie-o antes de sincronizar cargas para lá.`);
+  }
 
   let emissorId = input.emissorId ?? null;
   if (!emissorId) {
@@ -144,6 +162,7 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
     const novo = contactoRepository.create({
       nome: pendente.recetorNome,
       telefone: pendente.recetorTelefone,
+      email: pendente.recetorEmail,
     });
     recetorId = novo.id;
   }
@@ -183,48 +202,9 @@ export async function rejeitarCarga(pendenteId: string, motivo: string): Promise
   if (error) throw new Error(error.message);
 }
 
-const JANELA_DEDUPE_HORAS = 24;
-
-// Doc 16 §5 — falha em silêncio (sem net/credenciais): não é crítico, tenta
-// de novo no próximo ciclo.
-export async function verificarPendentes(): Promise<void> {
-  try {
-    const pendentes = await listarPendentes();
-    if (pendentes.length === 0) return;
-
-    const porUtilizador = new Map<string, { nome: string; total: number }>();
-    for (const p of pendentes) {
-      const atual = porUtilizador.get(p.inseridoPorUserId) ?? { nome: p.inseridoPorNome, total: 0 };
-      atual.total += 1;
-      porUtilizador.set(p.inseridoPorUserId, atual);
-    }
-
-    for (const [userId, info] of porUtilizador) {
-      const titulo = `${info.total} carga${info.total === 1 ? '' : 's'} nova${info.total === 1 ? '' : 's'} de ${info.nome} (via PWA)`;
-      if (!notificacaoRepository.existeSemelhanteRecente(titulo, userId, JANELA_DEDUPE_HORAS)) {
-        criarNotificacao({
-          tipo: 'info',
-          titulo,
-          mensagem: 'Clica para rever e importar.',
-          linkModulo: 'configuracoes',
-          linkEntidadeId: userId,
-          nativa: true,
-        });
-      }
-    }
-  } catch (err) {
-    console.warn('[sync] Falha ao verificar cargas pendentes:', err instanceof Error ? err.message : err);
-  }
-}
-
-let intervaloSync: ReturnType<typeof setInterval> | null = null;
-
-// Doc 16 §5 — intervalo próprio de 5 min, independente dos 30 min da
-// verificação de contentores em ./notifications.
-export function iniciarVerificacaoPeriodicaSync(intervaloMs = 5 * 60 * 1000): void {
-  void verificarPendentes();
-  if (intervaloSync) clearInterval(intervaloSync);
-  intervaloSync = setInterval(() => {
-    void verificarPendentes();
-  }, intervaloMs);
-}
+// O aviso de "cargas novas da PWA" já não passa pelo sino genérico de
+// notificações — vive nas superfícies dedicadas de sincronização
+// (SincronizacaoCargaCard, SincronizacaoHomeCard, SincronizacaoLoginModal,
+// SincronizacaoBell), que já fazem o seu próprio polling via
+// `listPendentesComSugestoes`. Um 5º aviso genérico aqui era ruído
+// duplicado, não informação nova.

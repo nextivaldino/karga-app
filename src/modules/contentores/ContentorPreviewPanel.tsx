@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowRight, Maximize2, Package, X } from 'lucide-react';
+import { ArrowRight, ArrowsOut as Maximize2, Package, X } from '@phosphor-icons/react';
 import { ipcService } from '@/services/ipcService';
 import { useNavigation } from '@/hooks/useNavigation';
 import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 import { getUrgenciaTier, URGENCIA_PILL_CLASS } from '@/lib/contentorUrgencia';
+import { formatData } from '@/lib/formatData';
+import { formatValor } from '@/lib/formatValor';
 import type { CargaComEmissor, Contentor } from '@/types';
 
 interface ContentorPreviewPanelProps {
@@ -13,14 +15,6 @@ interface ContentorPreviewPanelProps {
   contentorId: string | null;
   limiteDiasParado: number;
   onAbrirDetalhe: (contentorId: string) => void;
-}
-
-function formatData(iso: string | null): string {
-  return iso ? new Intl.DateTimeFormat('pt-PT').format(new Date(iso)) : '—';
-}
-
-function formatValor(valor: number): string {
-  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(valor);
 }
 
 export function ContentorPreviewPanel({

@@ -282,21 +282,6 @@ function countAbertos(): number {
   return row?.total ?? 0;
 }
 
-function listAtivos(limit = 6): Contentor[] {
-  const db = getDatabase();
-  const rows = db
-    .prepare<
-      [number],
-      ContentorRowComTotais
-    >(
-      `${SELECT_COM_TOTAIS} WHERE contentores.oculto = 0 AND contentores.estado IN ('aberto', 'em_transito')
-       ${ORDER_POR_ESTADO} LIMIT ?`,
-    )
-    .all(limit);
-  const limite = diasParadoLimite();
-  return rows.map((row) => fromRow(row, limite));
-}
-
 function setFlag(id: string, coluna: 'bloqueado' | 'oculto', valor: boolean): Contentor | null {
   const db = getDatabase();
   const existing = findById(id);
@@ -411,7 +396,6 @@ export const contentorRepository = {
   nextCodigo,
   search,
   countAbertos,
-  listAtivos,
   bloquear,
   desbloquear,
   ocultar,

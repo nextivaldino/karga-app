@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package } from 'lucide-react';
+import { Package } from '@phosphor-icons/react';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from '@/hooks/useAuth';
 

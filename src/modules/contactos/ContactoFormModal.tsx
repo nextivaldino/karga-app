@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { EnvelopeSimple, IdentificationCard, MapPin, Phone, User } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { toast } from '@/components/ui/Toast';
@@ -101,11 +102,11 @@ export function ContactoFormModal({
       }
     >
       <div className="flex flex-col gap-3">
-        <FloatingLabelInput label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} required />
-        <FloatingLabelInput label="Telefone" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
-        <FloatingLabelInput label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <FloatingLabelInput label="Morada" value={morada} onChange={(e) => setMorada(e.target.value)} />
-        <FloatingLabelInput label="NIF" value={nif} onChange={(e) => setNif(e.target.value)} />
+        <FloatingLabelInput label="Nome" icon={<User size={16} />} value={nome} onChange={(e) => setNome(e.target.value)} required />
+        <FloatingLabelInput label="Telefone" icon={<Phone size={16} />} value={telefone} onChange={(e) => setTelefone(e.target.value)} />
+        <FloatingLabelInput label="Email" icon={<EnvelopeSimple size={16} />} value={email} onChange={(e) => setEmail(e.target.value)} />
+        <FloatingLabelInput label="Morada" icon={<MapPin size={16} />} value={morada} onChange={(e) => setMorada(e.target.value)} />
+        <FloatingLabelInput label="NIF" icon={<IdentificationCard size={16} />} value={nif} onChange={(e) => setNif(e.target.value)} />
         <FloatingLabelInput label="Notas" as="textarea" value={notas} onChange={(e) => setNotas(e.target.value)} />
         {error ? <p className="text-[13px] text-error">{error}</p> : null}
       </div>

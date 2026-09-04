@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Menu, type LucideIcon } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, List as Menu, type Icon as LucideIcon } from '@phosphor-icons/react';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatDimensoes, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
 
 export interface AcaoLinhaCarga {
@@ -27,6 +27,10 @@ interface CargaListRowProps {
   linha: CargaListRowData;
   corGrupo: string;
   acoes?: AcaoLinhaCarga[];
+  // Contexto mais estreito (ex: dentro do popup Nova Carga, ~440px em vez
+  // da largura toda do ecrã) — encolhe a coluna de Contactos para dar
+  // espaço ao nome da carga, que é a informação mais importante ali.
+  compacto?: boolean;
 }
 
 // Grelha comum a esta linha e ao cabeçalho do grupo (GrupoContactoHeader,
@@ -35,13 +39,15 @@ interface CargaListRowProps {
 // para o "Valor" alinhar verticalmente entre o resumo e as suas cargas.
 export const LARGURA_VALOR = 'w-[70px]';
 export const LARGURA_ACAO = 'w-9';
+const LARGURA_CONTACTOS = 'w-[150px]';
+const LARGURA_CONTACTOS_COMPACTA = 'w-[92px]';
 
 // Cabeçalho de colunas — companion do CargaListRow.
-export function CargaListHeader(): React.JSX.Element {
+export function CargaListHeader({ compacto }: { compacto?: boolean } = {}): React.JSX.Element {
   return (
     <div className="flex items-center gap-2 py-1 pl-5 pr-4 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
       <span className="w-16 shrink-0">Código</span>
-      <span className="w-[150px] shrink-0">Contactos</span>
+      <span className={`${compacto ? LARGURA_CONTACTOS_COMPACTA : LARGURA_CONTACTOS} shrink-0`}>Contactos</span>
       <span className="min-w-0 flex-1">Carga</span>
       <span className={`${LARGURA_VALOR} shrink-0 text-right`}>Valor</span>
       <span className={`${LARGURA_ACAO} shrink-0`} />
@@ -53,7 +59,7 @@ export function CargaListHeader(): React.JSX.Element {
 // linhas) — faixa de cor à esquerda identifica o GRUPO (emissor), não a
 // linha individual; indentada (pl-5) para se ler como filha do cabeçalho
 // do grupo. Não há tap na linha: todas as ações vivem no menu "☰".
-export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): React.JSX.Element {
+export function CargaListRow({ linha, corGrupo, acoes, compacto }: CargaListRowProps): React.JSX.Element {
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const dimensoes = formatDimensoes(linha.comprimentoCm, linha.larguraCm, linha.alturaCm);
@@ -75,7 +81,7 @@ export function CargaListRow({ linha, corGrupo, acoes }: CargaListRowProps): Rea
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
 
-        <span className="flex w-[150px] shrink-0 flex-col gap-0.5 text-[12px]">
+        <span className={`flex ${compacto ? LARGURA_CONTACTOS_COMPACTA : LARGURA_CONTACTOS} shrink-0 flex-col gap-0.5 text-[12px]`}>
           <span className="flex items-center gap-1 font-medium text-text-primary">
             <ArrowUpRight size={12} className="shrink-0 text-primary" />
             <span className="truncate">{linha.emissorNome}</span>

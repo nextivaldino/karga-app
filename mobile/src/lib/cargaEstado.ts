@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock, UploadCloud, XCircle, type LucideIcon } from 'lucide-react';
+import { WarningCircle as AlertCircle, CheckCircle as CheckCircle2, Clock, CloudArrowUp as UploadCloud, XCircle, type Icon as LucideIcon } from '@phosphor-icons/react';
 import type { EstadoCargaPendente, EstadoItemFila } from '@/types';
 
 export type EstadoListaCarga = EstadoCargaPendente | EstadoItemFila;

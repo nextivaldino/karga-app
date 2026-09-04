@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, FoldVertical, LayoutGrid, List, Mail, MessageCircle, Pencil, Send, Share2, Trash2, UnfoldVertical, UserRound } from 'lucide-react';
+import { CaretDown as ChevronDown, ArrowsInLineVertical as FoldVertical, SquaresFour as LayoutGrid, List, EnvelopeSimple as Mail, ChatCircle as MessageCircle, PencilSimple as Pencil, PaperPlaneTilt as Send, ShareNetwork as Share2, Trash as Trash2, ArrowsOutLineVertical as UnfoldVertical, UserCircle as UserRound } from '@phosphor-icons/react';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTopBarSlot } from '@/hooks/useTopBarSlot';
@@ -47,6 +47,7 @@ function prefillDe(c: CargaPendente): NovaCargaPendenteInput {
     emissorNif: c.emissorNif,
     recetorNome: c.recetorNome,
     recetorTelefone: c.recetorTelefone,
+    recetorEmail: c.recetorEmail,
     nomeCarga: c.nomeCarga,
     comprimentoCm: c.comprimentoCm,
     larguraCm: c.larguraCm,

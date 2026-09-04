@@ -10,9 +10,19 @@ export interface User {
   active: boolean;
   pwaHabilitado: boolean;
   pwaAuthUid: string | null;
+  avatar: string | null;
+  loginSemPassword: boolean;
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
+}
+
+// Versão mínima usada no ecrã de login antes de haver sessão — só o
+// suficiente para desenhar a grelha de avatares, nunca dados sensíveis.
+export interface QuickLoginUser {
+  id: string;
+  name: string;
+  avatar: string | null;
 }
 
 export type PublicUser = Omit<User, 'passwordHash'>;
@@ -98,7 +108,7 @@ export interface HealthcheckResult {
   timestamp: string;
 }
 
-export type MainPage = 'home' | 'cargas' | 'contentores' | 'configuracoes';
+export type MainPage = 'home' | 'cargas' | 'contentores' | 'configuracoes' | 'sync';
 
 export interface NavigationState {
   page: MainPage;
@@ -118,6 +128,11 @@ export interface Contacto {
   nif: string | null;
   notas: string | null;
   ativo: boolean;
+  // Código-base para agrupar várias cargas deste emissor sob o mesmo
+  // código (ex: "TF010", com as cargas seguintes a ficarem "TF010-A",
+  // "TF010-B"...) — só é definido quando o toggle "Código único para
+  // este emissor" é usado pela primeira vez ao inserir uma carga.
+  codigoBase: string | null;
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
@@ -126,6 +141,20 @@ export interface Contacto {
 export interface ContactoComContagem extends Contacto {
   totalCargas: number;
   valorDevido: number;
+}
+
+export interface Etiqueta {
+  id: string;
+  nome: string;
+  cor: string;
+  createdAt: string;
+  updatedAt: string;
+  syncStatus: SyncStatus;
+}
+
+export interface CreateEtiquetaInput {
+  nome: string;
+  cor: string;
 }
 
 export type CanalContacto = 'whatsapp' | 'email' | 'manual';
@@ -172,6 +201,7 @@ export interface Carga {
 
 export interface CargaComEmissor extends Carga {
   emissorNome: string;
+  destinatarios: string[];
 }
 
 export interface CreateCargaInput {
@@ -237,6 +267,13 @@ export interface ResumoCliente {
   totalCargas: number;
   valorDevido: number;
   valorPago: number;
+}
+
+export interface ClienteFaturacao extends Contacto {
+  totalCargas: number;
+  valorDevido: number;
+  valorPago: number;
+  etiquetas: Etiqueta[];
 }
 
 export interface HomeResumo {
@@ -325,6 +362,7 @@ export interface CargaPendente {
   emissorNif: string | null;
   recetorNome: string;
   recetorTelefone: string | null;
+  recetorEmail: string | null;
   nomeCarga: string;
   comprimentoCm: number | null;
   larguraCm: number | null;
@@ -356,6 +394,21 @@ export interface RevisaoCargaPendente {
   sugestoes: SugestaoContacto[];
 }
 
+export interface Mensagem {
+  id: string;
+  deUserId: string;
+  paraUserId: string;
+  texto: string;
+  lida: boolean;
+  createdAt: string;
+}
+
+export interface ThreadMensagemNaoLida {
+  userId: string;
+  nome: string;
+  total: number;
+}
+
 export interface ImportarCargaInput {
   pendenteId: string;
   contentorId: string;
@@ -374,6 +427,13 @@ export interface HabilitarPwaResult {
   user: PublicUser;
   passwordTemporaria: string;
   pwaEmail: string;
+}
+
+export interface CargasPorContentorLinha {
+  contentorId: string;
+  contentorCodigo: string;
+  contentorNome: string;
+  total: number;
 }
 
 export interface OrigemPwaLinha {

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Download, Pencil, Plus } from 'lucide-react';
+import { Download, PencilSimple as Pencil, Plus } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
+import { formatValor } from '@/lib/formatValor';
 import { ipcService } from '@/services/ipcService';
 import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 import { CargasList } from '@/modules/cargas/CargasList';
@@ -18,10 +19,6 @@ interface ContentorDetalheModalProps {
   onClose: () => void;
   contentorId: string | null;
   onDataChanged: () => void;
-}
-
-function formatValor(valor: number, moeda = 'EUR'): string {
-  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: moeda }).format(valor);
 }
 
 export function ContentorDetalheModal({

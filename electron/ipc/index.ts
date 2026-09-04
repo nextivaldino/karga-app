@@ -4,10 +4,12 @@ import * as maintenance from '../main/maintenance';
 import * as userManagement from '../main/userManagement';
 import * as license from '../main/license';
 import * as sync from '../main/sync';
+import * as mensagens from '../lib/mensagens';
 import { settingsRepository } from '../models/repositories/settingsRepository';
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { contactoNotificadoRepository } from '../models/repositories/contactoNotificadoRepository';
 import { cargaRepository } from '../models/repositories/cargaRepository';
+import { etiquetaRepository } from '../models/repositories/etiquetaRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
 import { faturacaoRepository } from '../models/repositories/faturacaoRepository';
 import { relatoriosRepository } from '../models/repositories/relatoriosRepository';
@@ -28,6 +30,7 @@ import type {
   CreateCargaInput,
   CreateContactoInput,
   CreateContentorInput,
+  CreateEtiquetaInput,
   CreateUserInput,
   HomeResumo,
   ImportarCargaInput,
@@ -96,6 +99,10 @@ export function registerIpcHandlers(): void {
     auth.changePassword(userId, currentPassword, newPassword),
   );
 
+  ipcMain.handle('auth:listQuickLogin', () => auth.listQuickLogin());
+
+  ipcMain.handle('auth:loginSemPassword', (_event, userId: string) => auth.loginSemPassword(userId));
+
   ipcMain.handle('settings:get', (_event, chave: string) => settingsRepository.get(chave));
 
   ipcMain.handle('settings:getAll', () => settingsRepository.getAll());
@@ -153,6 +160,12 @@ export function registerIpcHandlers(): void {
     contactoRepository.search(texto, limit),
   );
 
+  ipcMain.handle(
+    'contactos:buscarSimilares',
+    (_event, input: { nome?: string; telefone?: string; morada?: string }, excludeId?: string) =>
+      contactoRepository.buscarSimilares(input, excludeId),
+  );
+
   ipcMain.handle('contactos:listPorContentor', (_event, contentorId: string) =>
     contactoRepository.listPorContentor(contentorId),
   );
@@ -204,6 +217,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('cargas:nextCodigo', () => cargaRepository.nextCodigo());
 
+  ipcMain.handle('cargas:nextCodigoAgrupado', (_event, emissorId: string, reservados?: string[]) =>
+    cargaRepository.nextCodigoAgrupado(emissorId, reservados),
+  );
+
   ipcMain.handle('cargas:addDestinatario', (_event, cargaId: string, contactoId: string) => {
     requirePermissao('cargas', 'editar');
     return cargaRepository.addDestinatario(cargaId, contactoId);
@@ -219,6 +236,67 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('cargas:listOrigensPwa', () => {
     requirePermissao('cargas', 'ver');
     return cargaRepository.listOrigensPwa();
+  });
+
+  ipcMain.handle('cargas:countPorContentorParaUsuario', (_event, userId: string) => {
+    requirePermissao('cargas', 'ver');
+    return cargaRepository.countPorContentorParaUsuario(userId);
+  });
+
+  ipcMain.handle('cargas:archive', (_event, id: string) => {
+    requirePermissao('cargas', 'eliminar');
+    const carga = cargaRepository.archive(id);
+    registarAuditoria('arquivou_carga', 'carga', id);
+    return carga;
+  });
+
+  ipcMain.handle('cargas:moverEmLote', (_event, ids: string[], contentorId: string) => {
+    requirePermissao('cargas', 'editar');
+    const cargas = cargaRepository.moverEmLote(ids, contentorId);
+    registarAuditoria('moveu_cargas_lote', 'carga', null, `total=${cargas.length};contentorId=${contentorId}`);
+    return cargas;
+  });
+
+  ipcMain.handle('etiquetas:list', () => {
+    requirePermissao('contactos', 'ver');
+    return etiquetaRepository.list();
+  });
+
+  ipcMain.handle('etiquetas:create', (_event, input: CreateEtiquetaInput) => {
+    requirePermissao('contactos', 'editar');
+    const etiqueta = etiquetaRepository.create(input);
+    registarAuditoria('criou_etiqueta', 'etiqueta', etiqueta.id);
+    return etiqueta;
+  });
+
+  ipcMain.handle('etiquetas:update', (_event, id: string, changes: Partial<CreateEtiquetaInput>) => {
+    requirePermissao('contactos', 'editar');
+    const etiqueta = etiquetaRepository.update(id, changes);
+    registarAuditoria('editou_etiqueta', 'etiqueta', id);
+    return etiqueta;
+  });
+
+  ipcMain.handle('etiquetas:delete', (_event, id: string) => {
+    requirePermissao('contactos', 'eliminar');
+    etiquetaRepository.remove(id);
+    registarAuditoria('eliminou_etiqueta', 'etiqueta', id);
+  });
+
+  ipcMain.handle('etiquetas:listPorContactos', (_event, contactoIds: string[]) => {
+    requirePermissao('contactos', 'ver');
+    return etiquetaRepository.listPorContactos(contactoIds);
+  });
+
+  ipcMain.handle('etiquetas:attach', (_event, contactoId: string, etiquetaId: string) => {
+    requirePermissao('contactos', 'editar');
+    etiquetaRepository.attach(contactoId, etiquetaId);
+    registarAuditoria('associou_etiqueta', 'contacto', contactoId, `etiquetaId=${etiquetaId}`);
+  });
+
+  ipcMain.handle('etiquetas:detach', (_event, contactoId: string, etiquetaId: string) => {
+    requirePermissao('contactos', 'editar');
+    etiquetaRepository.detach(contactoId, etiquetaId);
+    registarAuditoria('removeu_etiqueta', 'contacto', contactoId, `etiquetaId=${etiquetaId}`);
   });
 
   ipcMain.handle('contentores:list', (_event, filters?: Parameters<typeof contentorRepository.list>[0]) => {
@@ -310,6 +388,8 @@ export function registerIpcHandlers(): void {
       empresaNome: settingsRepository.get('empresa_origem_nome') ?? 'Kraga Desktop',
       empresaMorada: settingsRepository.get('empresa_origem_morada') ?? '',
       empresaContacto: settingsRepository.get('empresa_origem_contacto') ?? '',
+      empresaLogo: settingsRepository.get('empresa_origem_logo'),
+      empresaNif: settingsRepository.get('empresa_origem_nif'),
       contentorCodigo: contentor.codigo,
       contentorNome: contentor.nome,
       dataPartida: contentor.dataPartida,
@@ -342,9 +422,7 @@ export function registerIpcHandlers(): void {
     entregues: cargaRepository.countEntreguesMesAtual(),
   }));
 
-  ipcMain.handle('home:contentoresAtivos', (_event, limit?: number) => contentorRepository.listAtivos(limit));
-
-  ipcMain.handle('home:ultimasCargas', (_event, limit?: number) => cargaRepository.listUltimas(limit));
+  ipcMain.handle('home:ultimasSincronizadas', (_event, limit?: number) => cargaRepository.listUltimasSincronizadas(limit));
 
   ipcMain.handle('search:global', (_event, texto: string): SearchResultItem[] => {
     if (!texto.trim()) return [];
@@ -400,6 +478,8 @@ export function registerIpcHandlers(): void {
       empresaNome: settingsRepository.get('empresa_origem_nome') ?? 'Kraga Desktop',
       empresaMorada: settingsRepository.get('empresa_origem_morada') ?? '',
       empresaContacto: settingsRepository.get('empresa_origem_contacto') ?? '',
+      empresaLogo: settingsRepository.get('empresa_origem_logo'),
+      empresaNif: settingsRepository.get('empresa_origem_nif'),
       clienteNome: contacto.nome,
       moeda,
       cargas: cargas.map((c) => ({
@@ -507,6 +587,14 @@ export function registerIpcHandlers(): void {
     return user;
   });
 
+  ipcMain.handle('users:setAvatar', (_event, userId: string, avatar: string | null) =>
+    userManagement.setAvatar(requireSession(), userId, avatar),
+  );
+
+  ipcMain.handle('users:setLoginSemPassword', (_event, userId: string, valor: boolean) =>
+    userManagement.setLoginSemPassword(requireSession(), userId, valor),
+  );
+
   ipcMain.handle('permissoes:listPorUser', (_event, userId: string) => permissaoRepository.listPorUser(userId));
 
   ipcMain.handle('permissoes:set', (_event, userId: string, permissoes: PermissaoInput[]) => {
@@ -550,5 +638,36 @@ export function registerIpcHandlers(): void {
     requirePermissao('configuracoes', 'editar');
     await sync.rejeitarCarga(pendenteId, motivo);
     registarAuditoria('rejeitou_carga_pwa', 'carga_pendente', pendenteId, motivo);
+  });
+
+  ipcMain.handle('sync:listarHistorico', (_event, limit?: number) => {
+    requirePermissao('configuracoes', 'ver');
+    return sync.listarHistorico(limit);
+  });
+
+  ipcMain.handle('mensagens:listarConversa', (_event, pwaUserId: string) => {
+    requirePermissao('configuracoes', 'ver');
+    return mensagens.listarConversa(pwaUserId);
+  });
+
+  ipcMain.handle('mensagens:enviar', async (_event, paraUserId: string, texto: string) => {
+    requirePermissao('configuracoes', 'editar');
+    await mensagens.enviarComoEmpresa(paraUserId, texto);
+    registarAuditoria('enviou_mensagem', 'user', paraUserId);
+  });
+
+  ipcMain.handle('mensagens:contarNaoLidas', () => {
+    requirePermissao('configuracoes', 'ver');
+    return mensagens.contarNaoLidas();
+  });
+
+  ipcMain.handle('mensagens:marcarLidas', async (_event, pwaUserId: string) => {
+    requirePermissao('configuracoes', 'editar');
+    await mensagens.marcarLidas(pwaUserId);
+  });
+
+  ipcMain.handle('mensagens:listarThreadsComNaoLidas', () => {
+    requirePermissao('configuracoes', 'ver');
+    return mensagens.listarThreadsComNaoLidas();
   });
 }

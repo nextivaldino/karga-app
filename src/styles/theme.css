@@ -84,6 +84,78 @@
   --radius-control: 8px;
   --radius-surface: 12px;
   --radius-pill: 999px;
+
+  /* Métricas de "chrome" (header/toolbar/ícones de topo) — uma única régua
+     vertical para todo o cabeçalho, em vez de números soltos por
+     componente. Toolbar mais fina que o header (42px vs 48px), tal como
+     no Finder a barra de ferramentas é mais baixa que a title bar. */
+  --chrome-header-h: 48px;
+  --chrome-toolbar-h: 42px;
+  --chrome-icon-btn: 32px;
+}
+
+/* Popover que se quer sempre no tema oposto ao da app (ex: menu de
+   contêiner estilo Windows) — em vez de reimplementar cores à mão,
+   redefine-se o mesmo conjunto de tokens com os valores do tema
+   contrário, dentro deste scope. Qualquer classe Tailwind já baseada em
+   `var(--...)` (bg-bg-surface, text-text-primary, border, etc.) inverte
+   sozinha, sem precisar de variantes dark:/light: espalhadas pelo JSX. */
+:root[data-theme='light'] .theme-invert {
+  color-scheme: dark;
+  --color-primary: #78aeed;
+  --color-primary-hover: #97c4f2;
+  --color-primary-light: rgba(120, 174, 237, 0.15);
+  --color-success: #57e389;
+  --color-error: #ff7b63;
+  --color-warning: #f8e45c;
+  --color-purple: #c061cb;
+
+  --color-primary-rgb: 120 174 237;
+  --color-success-rgb: 87 227 137;
+  --color-error-rgb: 255 123 99;
+  --color-warning-rgb: 248 228 92;
+  --color-purple-rgb: 192 97 203;
+
+  --bg-app: #1e1e1e;
+  --bg-surface: #2d2d2d;
+  --bg-input: #363636;
+
+  --text-primary: #ffffff;
+  --text-secondary: #c0bfbc;
+  --text-tertiary: #77767b;
+  --border: rgba(255, 255, 255, 0.1);
+
+  --toolbar-bg: #1a1a1a;
+  --toolbar-hover: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme='dark'] .theme-invert {
+  color-scheme: light;
+  --color-primary: #3584e4;
+  --color-primary-hover: #1c71d8;
+  --color-primary-light: #eaf2fc;
+  --color-success: #2ec27e;
+  --color-error: #e01b24;
+  --color-warning: #e5a50a;
+  --color-purple: #9141ac;
+
+  --color-primary-rgb: 53 132 228;
+  --color-success-rgb: 46 194 126;
+  --color-error-rgb: 224 27 36;
+  --color-warning-rgb: 229 165 10;
+  --color-purple-rgb: 145 65 172;
+
+  --bg-app: #f6f5f4;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+
+  --text-primary: #241f31;
+  --text-secondary: #5e5c64;
+  --text-tertiary: #9a9996;
+  --border: #deddda;
+
+  --toolbar-bg: #e7e9ee;
+  --toolbar-hover: rgba(0, 0, 0, 0.06);
 }
 
 html,
@@ -101,4 +173,33 @@ body {
 
 * {
   border-color: var(--border);
+}
+
+/* Aviso de sincronização (card na barra de Cargas/Home/Contentores) —
+   um tremor curto e discreto, disparado de vez em quando por JS (não
+   contínuo), só para chamar a atenção quando há cargas por sincronizar
+   sem ser algo constante/irritante como um pulse permanente. */
+@keyframes karga-tremor {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-2px); }
+  40% { transform: translateX(2px); }
+  60% { transform: translateX(-1.5px); }
+  80% { transform: translateX(1px); }
+}
+
+.animate-karga-tremor {
+  animation: karga-tremor 0.4s ease-in-out;
+}
+
+/* Texto rotativo do card de sincronização (ex: alterna entre "N cargas
+   de Fulano" quando há vários utilizadores a contribuir) — um fade+leve
+   deslize a cada troca, montado via mudança de `key` no React para
+   reiniciar a animação sempre que o texto muda. */
+@keyframes karga-fade-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-karga-fade {
+  animation: karga-fade-in 0.35s ease-out;
 }

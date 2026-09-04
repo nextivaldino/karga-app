@@ -1,6 +1,6 @@
-import { Container, Package, Search, User } from 'lucide-react';
+import { Stack as Container, Package, MagnifyingGlass as Search, User } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { ipcService } from '@/services/ipcService';
 import { useNavigation } from '@/hooks/useNavigation';
 import type { MainPage, SearchResultItem, SearchResultType } from '@/types';
@@ -27,8 +27,6 @@ export function GlobalSearch(): React.JSX.Element {
       if (isCmdK) {
         e.preventDefault();
         setOpen((prev) => !prev);
-      } else if (e.key === 'Escape') {
-        setOpen(false);
       }
     }
     window.addEventListener('keydown', onKeyDown);
@@ -39,7 +37,6 @@ export function GlobalSearch(): React.JSX.Element {
     if (!open) {
       setQuery('');
       setResults([]);
-      return;
     }
   }, [open]);
 
@@ -58,8 +55,6 @@ export function GlobalSearch(): React.JSX.Element {
     return () => clearTimeout(timeout);
   }, [query]);
 
-  if (!open) return <></>;
-
   function handleSelect(item: SearchResultItem): void {
     navigate(TYPE_META[item.type].page, { entidadeId: item.id });
     setOpen(false);
@@ -69,68 +64,64 @@ export function GlobalSearch(): React.JSX.Element {
     .map((type) => ({ type, items: results.filter((r) => r.type === type) }))
     .filter((group) => group.items.length > 0);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 pt-[15vh]"
-      onClick={() => setOpen(false)}
-    >
-      <div
-        className="flex max-h-[60vh] w-full max-w-[560px] flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
-          <Search size={18} className="text-text-tertiary" />
+  return (
+    <HeaderBarModal
+      open={open}
+      onClose={() => setOpen(false)}
+      widthClassName="max-w-[560px]"
+      title={
+        <div className="flex items-center gap-2">
+          <Search size={16} className="shrink-0 text-text-tertiary" />
           <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Pesquisar em Cargas, Contentores e Contactos..."
-            className="flex-1 bg-transparent text-[14px] text-text-primary outline-none placeholder:text-text-tertiary"
+            className="min-w-0 flex-1 bg-transparent text-left text-[13px] text-text-primary outline-none placeholder:text-text-tertiary"
           />
-          <kbd className="rounded-control bg-bg-input px-1.5 py-0.5 text-[11px] text-text-tertiary">Esc</kbd>
         </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {!query.trim() ? (
-            <div className="p-lg text-center text-[13px] text-text-tertiary">
-              Escreva para pesquisar em Cargas, Contentores e Contactos.
-            </div>
-          ) : loading ? (
-            <div className="p-lg text-center text-[13px] text-text-tertiary">A pesquisar...</div>
-          ) : grouped.length === 0 ? (
-            <div className="p-lg text-center text-[13px] text-text-tertiary">Sem resultados para "{query}".</div>
-          ) : (
-            grouped.map((group) => {
-              const meta = TYPE_META[group.type];
-              const Icon = meta.icon;
-              return (
-                <div key={group.type} className="border-b border-border last:border-b-0">
-                  <div className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
-                    {meta.label}
-                  </div>
-                  {group.items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleSelect(item)}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-bg-app"
-                    >
-                      <Icon size={16} className={`shrink-0 ${meta.colorClass}`} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] text-text-primary">{item.title}</span>
-                        {item.subtitle ? (
-                          <span className="block truncate text-[12px] text-text-tertiary">{item.subtitle}</span>
-                        ) : null}
-                      </span>
-                    </button>
-                  ))}
+      }
+      headerRight={<kbd className="rounded-control bg-bg-input px-1.5 py-0.5 text-[11px] text-text-tertiary">Esc</kbd>}
+    >
+      <div className="-m-lg max-h-[50vh] overflow-y-auto">
+        {!query.trim() ? (
+          <div className="p-lg text-center text-[13px] text-text-tertiary">
+            Escreva para pesquisar em Cargas, Contentores e Contactos.
+          </div>
+        ) : loading ? (
+          <div className="p-lg text-center text-[13px] text-text-tertiary">A pesquisar...</div>
+        ) : grouped.length === 0 ? (
+          <div className="p-lg text-center text-[13px] text-text-tertiary">Sem resultados para "{query}".</div>
+        ) : (
+          grouped.map((group) => {
+            const meta = TYPE_META[group.type];
+            const Icon = meta.icon;
+            return (
+              <div key={group.type} className="border-b border-border last:border-b-0">
+                <div className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-text-tertiary">
+                  {meta.label}
                 </div>
-              );
-            })
-          )}
-        </div>
+                {group.items.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelect(item)}
+                    className="flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-bg-app"
+                  >
+                    <Icon size={16} className={`shrink-0 ${meta.colorClass}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] text-text-primary">{item.title}</span>
+                      {item.subtitle ? (
+                        <span className="block truncate text-[12px] text-text-tertiary">{item.subtitle}</span>
+                      ) : null}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            );
+          })
+        )}
       </div>
-    </div>,
-    document.body,
+    </HeaderBarModal>
   );
 }

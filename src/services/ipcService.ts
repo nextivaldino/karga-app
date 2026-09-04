@@ -14,19 +14,24 @@ import type {
   CreateContactoInput,
   CreateContentorInput,
   CargaPendente,
+  CargasPorContentorLinha,
+  CreateEtiquetaInput,
   CreateUserInput,
   EstadoContentor,
   EstadoPagamento,
+  Etiqueta,
   HabilitarPwaResult,
   HealthcheckResult,
   HomeResumo,
   ImportarCargaInput,
+  Mensagem,
   Notificacao,
   OrigemPwaLinha,
   Permissao,
   PermissaoInput,
   PeriodoFiltro,
   PublicUser,
+  QuickLoginUser,
   RelatorioCargaPendenteLinha,
   RelatorioCargasPorClienteLinha,
   RelatorioCargasPorContentorLinha,
@@ -37,6 +42,7 @@ import type {
   SearchResultItem,
   SetupInput,
   Sessao,
+  ThreadMensagemNaoLida,
   UsuarioComSessao,
 } from '@/types';
 
@@ -59,6 +65,8 @@ export const ipcService = {
       invoke<PublicUser>('auth:updateProfile', userId, changes),
     changePassword: (userId: string, currentPassword: string, newPassword: string) =>
       invoke<void>('auth:changePassword', userId, currentPassword, newPassword),
+    listQuickLogin: () => invoke<QuickLoginUser[]>('auth:listQuickLogin'),
+    loginSemPassword: (userId: string) => invoke<PublicUser>('auth:loginSemPassword', userId),
   },
   settings: {
     get: (chave: string) => invoke<string | null>('settings:get', chave),
@@ -92,6 +100,8 @@ export const ipcService = {
     update: (id: string, changes: Partial<CreateContactoInput>) =>
       invoke<Contacto | null>('contactos:update', id, changes),
     search: (texto: string, limit?: number) => invoke<Contacto[]>('contactos:search', texto, limit),
+    buscarSimilares: (input: { nome?: string; telefone?: string; morada?: string }, excludeId?: string) =>
+      invoke<Contacto[]>('contactos:buscarSimilares', input, excludeId),
     listPorContentor: (contentorId: string) =>
       invoke<ContactoComContagem[]>('contactos:listPorContentor', contentorId),
     archive: (id: string) => invoke<Contacto | null>('contactos:archive', id),
@@ -111,14 +121,32 @@ export const ipcService = {
       texto?: string;
       estadoPagamento?: EstadoPagamento;
       origemPwaUserId?: string;
+      incluirArquivadas?: boolean;
     }) => invoke<CargaComEmissor[]>('cargas:list', filters),
     create: (input: CreateCargaInput) => invoke<Carga>('cargas:create', input),
     update: (id: string, changes: Partial<CreateCargaInput>) => invoke<Carga | null>('cargas:update', id, changes),
+    archive: (id: string) => invoke<Carga | null>('cargas:archive', id),
+    moverEmLote: (ids: string[], contentorId: string) => invoke<Carga[]>('cargas:moverEmLote', ids, contentorId),
     nextCodigo: () => invoke<string>('cargas:nextCodigo'),
+    nextCodigoAgrupado: (emissorId: string, reservados?: string[]) =>
+      invoke<string>('cargas:nextCodigoAgrupado', emissorId, reservados),
     addDestinatario: (cargaId: string, contactoId: string) =>
       invoke<void>('cargas:addDestinatario', cargaId, contactoId),
     createBatch: (items: CreateCargaBatchItem[]) => invoke<Carga[]>('cargas:createBatch', items),
     listOrigensPwa: () => invoke<OrigemPwaLinha[]>('cargas:listOrigensPwa'),
+    countPorContentorParaUsuario: (userId: string) =>
+      invoke<CargasPorContentorLinha[]>('cargas:countPorContentorParaUsuario', userId),
+  },
+  etiquetas: {
+    list: () => invoke<Etiqueta[]>('etiquetas:list'),
+    create: (input: CreateEtiquetaInput) => invoke<Etiqueta>('etiquetas:create', input),
+    update: (id: string, changes: Partial<CreateEtiquetaInput>) =>
+      invoke<Etiqueta | null>('etiquetas:update', id, changes),
+    delete: (id: string) => invoke<void>('etiquetas:delete', id),
+    listPorContactos: (contactoIds: string[]) =>
+      invoke<Record<string, Etiqueta[]>>('etiquetas:listPorContactos', contactoIds),
+    attach: (contactoId: string, etiquetaId: string) => invoke<void>('etiquetas:attach', contactoId, etiquetaId),
+    detach: (contactoId: string, etiquetaId: string) => invoke<void>('etiquetas:detach', contactoId, etiquetaId),
   },
   contentores: {
     list: (filters?: { estado?: EstadoContentor; mesReferencia?: string; incluirOcultos?: boolean }) =>
@@ -141,8 +169,7 @@ export const ipcService = {
   },
   home: {
     resumo: () => invoke<HomeResumo>('home:resumo'),
-    contentoresAtivos: (limit?: number) => invoke<Contentor[]>('home:contentoresAtivos', limit),
-    ultimasCargas: (limit?: number) => invoke<CargaComEmissor[]>('home:ultimasCargas', limit),
+    ultimasSincronizadas: (limit?: number) => invoke<CargaComEmissor[]>('home:ultimasSincronizadas', limit),
   },
   search: {
     global: (texto: string) => invoke<SearchResultItem[]>('search:global', texto),
@@ -189,6 +216,9 @@ export const ipcService = {
     listAdmins: () => invoke<PublicUser[]>('users:listAdmins'),
     habilitarPwa: (userId: string) => invoke<HabilitarPwaResult>('users:habilitarPwa', userId),
     desabilitarPwa: (userId: string) => invoke<PublicUser>('users:desabilitarPwa', userId),
+    setAvatar: (userId: string, avatar: string | null) => invoke<PublicUser>('users:setAvatar', userId, avatar),
+    setLoginSemPassword: (userId: string, valor: boolean) =>
+      invoke<PublicUser>('users:setLoginSemPassword', userId, valor),
   },
   permissoes: {
     listPorUser: (userId: string) => invoke<Permissao[]>('permissoes:listPorUser', userId),
@@ -211,5 +241,13 @@ export const ipcService = {
     revisarCarga: (pendenteId: string) => invoke<RevisaoCargaPendente>('sync:revisarCarga', pendenteId),
     importarCarga: (input: ImportarCargaInput) => invoke<Carga>('sync:importarCarga', input),
     rejeitarCarga: (pendenteId: string, motivo: string) => invoke<void>('sync:rejeitarCarga', pendenteId, motivo),
+    listarHistorico: (limit?: number) => invoke<CargaPendente[]>('sync:listarHistorico', limit),
+  },
+  mensagens: {
+    listarConversa: (pwaUserId: string) => invoke<Mensagem[]>('mensagens:listarConversa', pwaUserId),
+    enviar: (paraUserId: string, texto: string) => invoke<void>('mensagens:enviar', paraUserId, texto),
+    contarNaoLidas: () => invoke<number>('mensagens:contarNaoLidas'),
+    marcarLidas: (pwaUserId: string) => invoke<void>('mensagens:marcarLidas', pwaUserId),
+    listarThreadsComNaoLidas: () => invoke<ThreadMensagemNaoLida[]>('mensagens:listarThreadsComNaoLidas'),
   },
 };

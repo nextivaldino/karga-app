@@ -4,6 +4,10 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTML
 interface BaseProps {
   label: string;
   error?: string;
+  // Ícone à esquerda, dentro da caixa — opcional, sem ele o campo fica
+  // exatamente igual a antes. Usado com moderação (ver 08-DESIGN-SYSTEM.md),
+  // não em todos os campos.
+  icon?: ReactNode;
 }
 
 type InputProps = BaseProps &
@@ -18,42 +22,59 @@ type SelectProps = BaseProps &
 type FloatingLabelInputProps = InputProps | TextareaProps | SelectProps;
 
 const fieldClasses =
-  'peer w-full rounded-control border border-border bg-bg-input px-3 pb-2 pt-5 text-[14px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
-
-const labelClasses =
-  'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary transition-all peer-focus:top-3 peer-focus:text-[11px] peer-focus:text-primary';
-
-const labelFloatedClasses = 'top-3 text-[11px]';
+  'w-full rounded-control border border-border bg-bg-input px-3 py-2.5 text-[14px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
 
 export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.Element {
   const generatedId = useId();
   const id = props.id ?? generatedId;
-  const [hasValue, setHasValue] = useState(Boolean(props.value ?? props.defaultValue));
+  // Campos controlados (com `value`) recalculam a cada render — o
+  // `value` já reflete o estado atual do pai, incluindo quando este o
+  // preenche de forma assíncrona depois da montagem (ex: texto gerado
+  // só chega depois de uma chamada IPC). Só os não controlados
+  // (`defaultValue`) precisam de estado próprio, atualizado no
+  // `onChange`, porque aí não há prop viva a seguir depois do 1º render.
+  const isControlled = props.value !== undefined;
+  const [hasValueNaoControlado, setHasValueNaoControlado] = useState(Boolean(props.defaultValue));
 
-  const { label, error, className, ...rest } = props;
-  const floated = hasValue || rest.as === 'select';
+  const { label, error, icon, className, ...rest } = props;
+  // "Preenchido" — quando true, os dados reais ficam sozinhos na caixa,
+  // sem legenda nenhuma a competir com eles (o antigo padrão de legenda
+  // flutuante por cima do texto atrapalhava a leitura do valor real).
+  // A legenda só volta a aparecer, em ghost, quando a caixa está vazia
+  // — e, já preenchida, fica disponível por tooltip nativa ao pairar o
+  // rato, para quem tiver dúvidas sobre o campo.
+  const preenchido = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select';
+  const withIcon = Boolean(icon);
+  const fieldPadding = withIcon ? 'pl-9' : '';
+  const labelPosition = withIcon ? 'left-9' : 'left-3';
+  const iconTopClass = props.as === 'textarea' ? 'top-3' : 'top-1/2 -translate-y-1/2';
+  const tooltip = preenchido ? label : undefined;
 
   return (
     <div className="w-full">
       <div className="relative">
+        {icon ? (
+          <span className={`pointer-events-none absolute left-3 ${iconTopClass} text-text-tertiary`}>{icon}</span>
+        ) : null}
         {props.as === 'textarea' ? (
           <textarea
             {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
             id={id}
-            className={`${fieldClasses} min-h-[80px] resize-y ${className ?? ''}`}
+            title={tooltip}
+            className={`${fieldClasses} ${fieldPadding} min-h-[80px] resize-y ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as TextareaProps).onChange?.(e);
             }}
-            placeholder=" "
           />
         ) : props.as === 'select' ? (
           <select
             {...(rest as SelectHTMLAttributes<HTMLSelectElement>)}
             id={id}
-            className={`${fieldClasses} appearance-none ${className ?? ''}`}
+            title={tooltip}
+            className={`${fieldClasses} ${fieldPadding} appearance-none ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as SelectProps).onChange?.(e);
             }}
           >
@@ -63,17 +84,23 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
           <input
             {...(rest as InputHTMLAttributes<HTMLInputElement>)}
             id={id}
-            className={`${fieldClasses} ${className ?? ''}`}
+            title={tooltip}
+            className={`${fieldClasses} ${fieldPadding} ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as InputProps).onChange?.(e);
             }}
-            placeholder=" "
           />
         )}
-        <label htmlFor={id} className={`${labelClasses} ${floated ? labelFloatedClasses : ''} bg-bg-input px-1 -ml-1`}>
-          {label}
-        </label>
+        {!preenchido ? (
+          <label
+            htmlFor={id}
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[14px] text-text-tertiary`}
+            style={{ maxWidth: `calc(100% - ${withIcon ? 44 : 24}px)` }}
+          >
+            {label}
+          </label>
+        ) : null}
       </div>
       {error ? <p className="mt-1 text-[12px] text-error">{error}</p> : null}
     </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Copy } from 'lucide-react';
+import { ArrowsLeftRight as ArrowRightLeft, Copy } from '@phosphor-icons/react';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
@@ -8,7 +8,7 @@ import { cleanIpcError } from '@/lib/cleanIpcError';
 import { incrementCodigo } from '@/lib/incrementCodigo';
 import { resolveContactoByNome } from '@/lib/resolveContactoByNome';
 import { GridEmissorCell } from './GridEmissorCell';
-import type { CreateCargaInput, EstadoPagamento } from '@/types';
+import type { Contentor, CreateCargaInput, EstadoPagamento } from '@/types';
 
 interface GridRow {
   tempId: string;
@@ -21,6 +21,7 @@ interface GridRow {
   pesoKg: string;
   valor: string;
   estadoPagamento: EstadoPagamento;
+  notas: string;
   emissorNome: string;
   emissorId: string | null;
   saveState: 'idle' | 'saving' | 'saved' | 'error';
@@ -36,11 +37,19 @@ type EditableColKey =
   | 'alturaCm'
   | 'pesoKg'
   | 'valor'
-  | 'estadoPagamento';
+  | 'estadoPagamento'
+  | 'notas';
 
 const ROW_HEIGHT = 34;
 
-const COLUMNS: { key: EditableColKey | 'm3' | 'acoes'; label: string; width: string }[] = [
+// Mesma paleta pastel e a mesma lógica de numeração da lista normal
+// (CargasList) — o pedido foi que as duas vistas tenham a formatação
+// igual.
+const ROW_TINTS = ['var(--color-primary)', 'var(--color-success)', 'var(--color-warning)', 'var(--color-purple)'];
+
+const COLUMNS: { key: EditableColKey | 'm3' | 'sel' | 'acoes' | 'num'; label: string; width: string }[] = [
+  { key: 'num', label: '#', width: '32px' },
+  { key: 'sel', label: '', width: '28px' },
   { key: 'codigo', label: 'Código', width: '90px' },
   { key: 'nome', label: 'Nome', width: '150px' },
   { key: 'emissor', label: 'Emissor', width: '150px' },
@@ -51,6 +60,7 @@ const COLUMNS: { key: EditableColKey | 'm3' | 'acoes'; label: string; width: str
   { key: 'pesoKg', label: 'Peso', width: '64px' },
   { key: 'valor', label: 'Valor', width: '80px' },
   { key: 'estadoPagamento', label: 'Pagamento', width: '90px' },
+  { key: 'notas', label: 'Observação', width: '160px' },
   { key: 'acoes', label: '', width: '32px' },
 ];
 
@@ -66,6 +76,7 @@ const NAV_COLUMNS: EditableColKey[] = [
   'pesoKg',
   'valor',
   'estadoPagamento',
+  'notas',
 ];
 
 const NUMERIC_FIELDS = ['comprimentoCm', 'larguraCm', 'alturaCm', 'pesoKg', 'valor'] as const;
@@ -79,6 +90,7 @@ const PASTE_COLUMN_TEMPLATE: EditableColKey[] = [
   'pesoKg',
   'valor',
   'estadoPagamento',
+  'notas',
 ];
 
 function parseNum(value: string): number | null {
@@ -133,13 +145,17 @@ function computeM3(row: GridRow): number | null {
 
 interface CargasEditorGridProps {
   contentorId: string | null;
+  contentoresAbertos: Contentor[];
   onDataChanged: () => void;
 }
 
-export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGridProps): React.JSX.Element {
+export function CargasEditorGrid({ contentorId, contentoresAbertos, onDataChanged }: CargasEditorGridProps): React.JSX.Element {
   const [rows, setRows] = useState<GridRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [codigoModoGlobal, setCodigoModoGlobal] = useState<'automatico' | 'manual'>('automatico');
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [movendoPara, setMovendoPara] = useState('');
+  const [movendo, setMovendo] = useState(false);
   const rowsRef = useRef<GridRow[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -161,6 +177,7 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
       pesoKg: '',
       valor: '',
       estadoPagamento: 'devido',
+      notas: '',
       emissorNome: '',
       emissorId: null,
       saveState: 'idle',
@@ -189,6 +206,7 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
         pesoKg: c.pesoKg != null ? String(c.pesoKg) : '',
         valor: c.valor != null ? String(c.valor) : '',
         estadoPagamento: c.estadoPagamento,
+        notas: c.notas ?? '',
         emissorNome: c.emissorNome,
         emissorId: c.emissorId,
         saveState: 'idle',
@@ -265,6 +283,53 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
     setRows((prev) => [...prev.slice(0, insertAt), duplicado, ...prev.slice(insertAt)]);
   }
 
+  // Só linhas já gravadas (com id) podem ser selecionadas — uma linha em
+  // rascunho ainda não existe como carga real, não faz sentido "mover".
+  function toggleSelecionado(id: string): void {
+    setSelecionados((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleMoverSelecionadas(): Promise<void> {
+    if (!movendoPara || selecionados.size === 0) return;
+    const idsAlvo = new Set(selecionados);
+    setMovendo(true);
+    let sucesso = 0;
+    const falhas: string[] = [];
+    for (const row of rowsRef.current) {
+      if (!row.id || !idsAlvo.has(row.id)) continue;
+      try {
+        await ipcService.cargas.update(row.id, { contentorId: movendoPara });
+        sucesso += 1;
+      } catch (err) {
+        falhas.push(`${row.codigo}: ${cleanIpcError(err)}`);
+      }
+    }
+    setMovendo(false);
+    // Só remove da grelha (deste contentor) as que realmente moveram — as
+    // que falharam ficam visíveis e continuam selecionadas, para tentar de novo.
+    const idsMovidas = new Set(idsAlvo);
+    for (const falha of falhas) {
+      const codigoFalhado = falha.split(':')[0];
+      const linhaFalhada = rowsRef.current.find((r) => r.codigo === codigoFalhado);
+      if (linhaFalhada?.id) idsMovidas.delete(linhaFalhada.id);
+    }
+    setRows((prev) => prev.filter((r) => !(r.id && idsMovidas.has(r.id))));
+    setSelecionados((prev) => new Set([...prev].filter((id) => !idsMovidas.has(id))));
+    setMovendoPara('');
+
+    if (falhas.length === 0) {
+      toast.success(`${sucesso} carga${sucesso === 1 ? '' : 's'} movida${sucesso === 1 ? '' : 's'} de contentor.`);
+    } else {
+      toast.warning(`${sucesso} movida${sucesso === 1 ? '' : 's'}, ${falhas.length} falharam — tenta de novo.`);
+    }
+    onDataChanged();
+  }
+
   function handleEnter(rowIndex: number, col: EditableColKey): void {
     const isLastRow = rowIndex === rowsRef.current.length - 1;
     if (isLastRow) {
@@ -334,6 +399,7 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
       pesoKg: parseNum(row.pesoKg),
       valor: parseNum(row.valor),
       estadoPagamento: row.estadoPagamento,
+      notas: row.notas.trim() || null,
       emissorId: row.emissorId ?? '',
       contentorId,
     };
@@ -476,6 +542,7 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
         pesoKg: parseNum(row.pesoKg),
         valor: parseNum(row.valor),
         estadoPagamento: row.estadoPagamento,
+        notas: row.notas.trim() || null,
         emissorId: row.emissorId ?? '',
         contentorId,
       };
@@ -530,6 +597,44 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
           />
           <span className={codigoModoGlobal === 'manual' ? 'text-text-primary' : 'text-text-tertiary'}>Manual</span>
         </div>
+
+        {selecionados.size > 0 ? (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[12px] font-medium text-text-primary">
+              {selecionados.size} selecionada{selecionados.size === 1 ? '' : 's'}
+            </span>
+            <ArrowRightLeft size={14} className="text-text-tertiary" />
+            <select
+              value={movendoPara}
+              onChange={(e) => setMovendoPara(e.target.value)}
+              className="h-7 rounded-control border border-border bg-bg-input px-2 text-[12px] text-text-primary outline-none focus:border-primary"
+            >
+              <option value="">Mover para contentor...</option>
+              {contentoresAbertos
+                .filter((c) => c.id !== contentorId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.codigo} — {c.nome}
+                  </option>
+                ))}
+            </select>
+            <button
+              type="button"
+              disabled={!movendoPara || movendo}
+              onClick={() => void handleMoverSelecionadas()}
+              className="rounded-control bg-primary px-3 py-1 text-[12px] font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {movendo ? 'A mover...' : 'Mover'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelecionados(new Set())}
+              className="rounded-control px-2 py-1 text-[12px] font-medium text-text-secondary transition-colors hover:bg-bg-app"
+            >
+              Limpar
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div
@@ -555,10 +660,12 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
               const editableCols = getEditableColumnsForRow();
               const codigoEditable = editableCols.includes('codigo');
 
+              const tint = ROW_TINTS[rowIndex % ROW_TINTS.length];
+
               return (
                 <div
                   key={row.tempId}
-                  className="group grid items-stretch border-b border-border text-[12px] text-text-primary rounded-none"
+                  className="group grid items-stretch text-[12px] text-text-primary rounded-none"
                   style={{
                     gridTemplateColumns: GRID_TEMPLATE,
                     height: virtualRow.size,
@@ -567,8 +674,24 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
                     left: 0,
                     right: 0,
                     transform: `translateY(${virtualRow.start}px)`,
+                    backgroundColor: `color-mix(in srgb, ${tint} 5%, var(--bg-surface))`,
                   }}
                 >
+                  <div className="flex h-full items-center justify-center border-r border-border text-text-tertiary">
+                    {rowIndex + 1}
+                  </div>
+
+                  <div className="flex h-full items-center justify-center border-r border-border">
+                    <input
+                      type="checkbox"
+                      checked={row.id != null && selecionados.has(row.id)}
+                      disabled={row.id == null}
+                      title={row.id == null ? 'Grava a linha antes de a mover' : 'Selecionar para mover'}
+                      onChange={() => row.id && toggleSelecionado(row.id)}
+                      className="disabled:opacity-30"
+                    />
+                  </div>
+
                   {codigoEditable ? (
                     <input
                       data-row={rowIndex}
@@ -670,7 +793,7 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
                     }`}
                   />
 
-                  <div className="relative flex h-full items-center">
+                  <div className="relative flex h-full items-center border-r border-border">
                     <select
                       data-row={rowIndex}
                       data-col="estadoPagamento"
@@ -699,6 +822,18 @@ export function CargasEditorGrid({ contentorId, onDataChanged }: CargasEditorGri
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-pill bg-error" title="Erro ao gravar" />
                     ) : null}
                   </div>
+
+                  <input
+                    data-row={rowIndex}
+                    data-col="notas"
+                    value={row.notas}
+                    title={row.notas || 'Observação (opcional)'}
+                    onChange={(e) => updateRow(rowIndex, { notas: e.target.value })}
+                    onBlur={() => void saveField(rowIndex, 'notas')}
+                    onKeyDown={makeNavHandler(rowIndex, 'notas')}
+                    placeholder="—"
+                    className="h-full border-r border-border bg-transparent px-1.5 text-text-secondary outline-none placeholder:text-text-tertiary focus:bg-primary-light focus:text-text-primary"
+                  />
 
                   <div className="flex h-full items-center justify-center">
                     <button

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { userRepository } from '../models/repositories/userRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
-import type { PublicUser, SetupInput, User } from '../../src/types';
+import type { PublicUser, QuickLoginUser, SetupInput, User } from '../../src/types';
 
 const SALT_ROUNDS = 10;
 
@@ -61,6 +61,24 @@ export async function login(email: string, password: string): Promise<PublicUser
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     throw new Error('Credenciais inválidas.');
+  }
+
+  currentUser = toPublicUser(user);
+  currentSessaoId = sessaoRepository.iniciar(user.id).id;
+  return currentUser;
+}
+
+export function listQuickLogin(): QuickLoginUser[] {
+  return userRepository.listQuickLogin();
+}
+
+// Sem password — só entra quem o Admin (ou o próprio, na sua sessão)
+// marcou explicitamente como "login sem password". Continua a exigir que
+// o utilizador esteja ativo, exatamente como o login normal.
+export async function loginSemPassword(userId: string): Promise<PublicUser> {
+  const user = userRepository.findById(userId);
+  if (!user || !user.active || !user.loginSemPassword) {
+    throw new Error('Este utilizador não tem login sem password ativado.');
   }
 
   currentUser = toPublicUser(user);

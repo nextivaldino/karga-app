@@ -52,6 +52,7 @@ export async function backup(passwordConfirmacao: string): Promise<{ path: strin
       titulo: 'Backup concluído com sucesso',
       mensagem: result.filePath,
       nativa: true,
+      categoria: 'manutencao',
     });
     return { path: result.filePath };
   } catch (err) {
@@ -60,6 +61,7 @@ export async function backup(passwordConfirmacao: string): Promise<{ path: strin
       titulo: 'Falha ao fazer backup',
       mensagem: err instanceof Error ? err.message : 'Erro desconhecido.',
       nativa: true,
+      categoria: 'manutencao',
     });
     throw err;
   }
@@ -113,6 +115,7 @@ export async function confirmarImportExcel(
     tipo: 'info',
     titulo: `${linhas.length} contacto(s) importado(s) do Excel`,
     linkModulo: 'configuracoes',
+    categoria: 'manutencao',
   });
   return { criados: linhas.length };
 }

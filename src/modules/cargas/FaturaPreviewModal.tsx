@@ -3,26 +3,22 @@ import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { toast } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
 import { cleanIpcError } from '@/lib/cleanIpcError';
-import { buildWhatsAppUrl } from '@/lib/whatsapp';
-import type { CargaComEmissor, ResumoCliente } from '@/types';
+import { formatValor } from '@/lib/formatValor';
+import { EnviarResumoModal, type ContactoParaRecibo } from '@/modules/cargas/EnviarResumoModal';
+import type { CargaComEmissor } from '@/types';
 
 interface FaturaPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  cliente: ResumoCliente | null;
+  cliente: ContactoParaRecibo;
   cargas: CargaComEmissor[];
   contentorId?: string;
 }
 
-function formatValor(valor: number | null, moeda: string): string {
-  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: moeda }).format(valor ?? 0);
-}
-
-export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId }: FaturaPreviewModalProps): React.JSX.Element | null {
+export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId }: FaturaPreviewModalProps): React.JSX.Element {
   const [exporting, setExporting] = useState(false);
-  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
-
-  if (!cliente) return null;
+  const [preparandoWhatsapp, setPreparandoWhatsapp] = useState(false);
+  const [enviarAberto, setEnviarAberto] = useState(false);
 
   const moeda = cargas[0]?.moeda ?? 'EUR';
   const totalGeral = cargas.reduce((sum, c) => sum + (c.valor ?? 0), 0);
@@ -32,7 +28,7 @@ export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId
   async function handleExportar(): Promise<string | null> {
     setExporting(true);
     try {
-      const result = await ipcService.faturacao.gerarFatura(cliente!.contactoId, contentorId);
+      const result = await ipcService.faturacao.gerarFatura(cliente!.id, contentorId);
       toast.success(`Fatura guardada em: ${result.path}`);
       return result.path;
     } catch (err) {
@@ -48,21 +44,21 @@ export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId
       toast.error('Este contacto não tem telefone registado.');
       return;
     }
-    setSendingWhatsapp(true);
+    setPreparandoWhatsapp(true);
     try {
       const path = await handleExportar();
       if (!path) return;
-      const mensagem = `Olá ${cliente!.nome}, segue o resumo das suas cargas.`;
-      await ipcService.shell.openExternal(buildWhatsAppUrl(cliente!.telefone, mensagem));
-      toast.info(`PDF guardado em: ${path}. Anexe-o na conversa que vai abrir.`);
+      toast.info(`PDF guardado em: ${path}. Pode anexá-lo na conversa que vai abrir.`);
+      setEnviarAberto(true);
     } catch (err) {
       toast.error(cleanIpcError(err));
     } finally {
-      setSendingWhatsapp(false);
+      setPreparandoWhatsapp(false);
     }
   }
 
   return (
+    <>
     <HeaderBarModal
       open={open}
       onClose={onClose}
@@ -79,11 +75,11 @@ export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId
           </button>
           <button
             type="button"
-            disabled={sendingWhatsapp}
+            disabled={preparandoWhatsapp}
             onClick={() => void handleWhatsapp()}
             className="rounded-control border border-border px-4 py-2 text-[13px] font-medium text-text-primary transition-colors hover:bg-bg-app disabled:opacity-60"
           >
-            {sendingWhatsapp ? 'A preparar...' : 'Enviar por WhatsApp'}
+            {preparandoWhatsapp ? 'A preparar...' : 'Enviar por WhatsApp'}
           </button>
           <button
             type="button"
@@ -140,5 +136,15 @@ export function FaturaPreviewModal({ open, onClose, cliente, cargas, contentorId
         </div>
       </div>
     </HeaderBarModal>
+
+    <EnviarResumoModal
+      open={enviarAberto}
+      onClose={() => setEnviarAberto(false)}
+      contacto={cliente}
+      contentorId={contentorId ?? null}
+      cargas={cargas}
+      onSent={() => setEnviarAberto(false)}
+    />
+    </>
   );
 }

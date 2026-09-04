@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell, Inbox } from 'lucide-react';
+import { Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Tray as Inbox, ChatCircle as MessageCircle, XCircle, type Icon as LucideIcon } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
+import { useTheme } from '@/hooks/useTheme';
+import { estiloTema } from '@/lib/themeTokens';
 import { listMinhasCargasPendentes, listMensagens, marcarMensagemLida } from '@/lib/data';
 import { cargaNotificacaoVista, marcarCargaNotificacaoVista } from '@/lib/notificacoesVistas';
 import { formatRelativo } from '@/lib/formatRelativo';
@@ -17,12 +19,30 @@ interface NotificacaoItem {
   createdAt: string;
 }
 
+const ICONE_TIPO: Record<TipoNotificacao, LucideIcon> = {
+  carga_importada: CheckCircle2,
+  carga_rejeitada: XCircle,
+  mensagem: MessageCircle,
+  fila_erro: AlertTriangle,
+};
+
+const COR_TIPO: Record<TipoNotificacao, string> = {
+  carga_importada: 'text-success',
+  carga_rejeitada: 'text-error',
+  mensagem: 'text-primary',
+  fila_erro: 'text-warning',
+};
+
 const POLL_MS = 60_000;
 
 export function NotificationBell(): React.JSX.Element {
   const { pwaUser } = useAuth();
   const { navigate } = useNavigation();
   const { fila } = useFilaOffline();
+  // Mesmo padrão de inversão de tema do popup Nova Carga e da dock — o
+  // menu destaca-se sempre do fundo da app, em qualquer tema.
+  const { theme } = useTheme();
+  const temaInvertido = theme === 'dark' ? 'light' : 'dark';
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [open, setOpen] = useState(false);
@@ -101,7 +121,7 @@ export function NotificationBell(): React.JSX.Element {
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative z-40">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -117,25 +137,53 @@ export function NotificationBell(): React.JSX.Element {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-11 z-50 max-h-96 w-72 overflow-y-auto rounded-surface border border-border bg-bg-surface shadow-lg">
-          {itens.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-              <Inbox size={24} className="text-text-tertiary" />
-              <p className="text-[13px] text-text-tertiary">Sem notificações novas.</p>
-            </div>
-          ) : (
-            itens.map((item) => (
-              <button
-                key={`${item.tipo}-${item.id}`}
-                type="button"
-                onClick={() => handleTap(item)}
-                className="flex w-full flex-col items-start gap-0.5 border-b border-border px-4 py-3 text-left last:border-b-0 active:bg-bg-app"
-              >
-                <span className="text-[13px] text-text-primary">{item.texto}</span>
-                <span className="text-[11px] text-text-tertiary">{formatRelativo(item.createdAt)}</span>
-              </button>
-            ))
-          )}
+        <div
+          data-theme={temaInvertido}
+          style={estiloTema(temaInvertido)}
+          className="absolute right-0 top-11 z-50 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl"
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-3.5 py-2.5">
+            <span className="text-[13px] font-semibold text-text-primary">Notificações</span>
+            {total > 0 ? <span className="text-[11px] text-text-tertiary">{total} por ver</span> : null}
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            {itens.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                <Inbox size={22} className="text-text-tertiary" />
+                <p className="text-[13px] text-text-tertiary">Sem notificações novas.</p>
+              </div>
+            ) : (
+              itens.map((item) => {
+                const Icone = ICONE_TIPO[item.tipo];
+                return (
+                  <button
+                    key={`${item.tipo}-${item.id}`}
+                    type="button"
+                    onClick={() => handleTap(item)}
+                    className="flex w-full items-start gap-2.5 border-b border-border px-3.5 py-2.5 text-left last:border-b-0 active:bg-bg-app"
+                  >
+                    <Icone size={16} className={`mt-0.5 shrink-0 ${COR_TIPO[item.tipo]}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] text-text-primary">{item.texto}</span>
+                      <span className="text-[11px] text-text-tertiary">{formatRelativo(item.createdAt)}</span>
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate('mensagens');
+            }}
+            className="flex min-h-touch shrink-0 items-center justify-center gap-1.5 border-t border-border text-[13px] font-medium text-primary active:bg-bg-app"
+          >
+            <MessageCircle size={15} /> Ver todas as mensagens
+          </button>
         </div>
       ) : null}
     </div>

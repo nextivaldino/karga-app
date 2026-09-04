@@ -1,4 +1,4 @@
-import { Smartphone } from 'lucide-react';
+import { DeviceMobile as Smartphone } from '@phosphor-icons/react';
 
 export function PwaDevicesStub(): React.JSX.Element {
   return (

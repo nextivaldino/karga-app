@@ -1,4 +1,4 @@
-import { House, Package, Plus } from 'lucide-react';
+import { House, Package, Plus } from '@phosphor-icons/react';
 import { useNavigation, type MobilePage } from '@/hooks/useNavigation';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useTheme } from '@/hooks/useTheme';

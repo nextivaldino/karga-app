@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
-import { formatMoeda } from '@/lib/formatMoeda';
+import { formatValor } from '@/lib/formatValor';
 import { ipcService } from '@/services/ipcService';
 import { PeriodoFiltroBar } from './PeriodoFiltroBar';
 import { RelatorioTable } from './RelatorioTable';
@@ -50,9 +50,9 @@ export function CargasPorPeriodoReport(): React.JSX.Element {
         totalCargas: l.totalCargas,
         pesoTotal: l.pesoTotal,
         m3Total: l.m3Total,
-        valorTotal: formatMoeda(l.valorTotal),
-        valorPago: formatMoeda(l.valorPago),
-        valorDevido: formatMoeda(l.valorDevido),
+        valorTotal: formatValor(l.valorTotal),
+        valorPago: formatValor(l.valorPago),
+        valorDevido: formatValor(l.valorDevido),
       }));
       const ext = formato === 'excel' ? 'xlsx' : 'pdf';
       const fileName = `Relatorio-Cargas-Por-Periodo-${Date.now()}.${ext}`;
@@ -81,9 +81,9 @@ export function CargasPorPeriodoReport(): React.JSX.Element {
           { key: 'totalCargas', header: 'Nº Cargas' },
           { key: 'pesoTotal', header: 'Peso (kg)', render: (v) => Number(v).toFixed(1) },
           { key: 'm3Total', header: 'm³', render: (v) => Number(v).toFixed(3) },
-          { key: 'valorTotal', header: 'Valor Total', render: (v) => formatMoeda(Number(v)) },
-          { key: 'valorPago', header: 'Pago', render: (v) => formatMoeda(Number(v)) },
-          { key: 'valorDevido', header: 'Devido', render: (v) => formatMoeda(Number(v)) },
+          { key: 'valorTotal', header: 'Valor Total', render: (v) => formatValor(Number(v)) },
+          { key: 'valorPago', header: 'Pago', render: (v) => formatValor(Number(v)) },
+          { key: 'valorDevido', header: 'Devido', render: (v) => formatValor(Number(v)) },
         ]}
         linhas={linhas as unknown as Record<string, unknown>[]}
         loading={loading}

@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Check, Filter, Plus, Search, Users } from 'lucide-react';
+import { Check, CheckCircle, Clock, DeviceMobile, List, Plus, Wallet } from '@phosphor-icons/react';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
-import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu';
+import { ContainerPickerButton } from '@/components/ui/ContainerPickerButton';
 import { Switch } from '@/components/ui/Switch';
+import { ViewSwitcher } from '@/components/ui/ViewSwitcher';
 import { CargasEditorGrid } from '@/modules/cargas/CargasEditorGrid';
 import { CargasList } from '@/modules/cargas/CargasList';
-import { ContactosDoContentorPanel } from '@/modules/cargas/ContactosDoContentorPanel';
-import { FaturacaoView } from '@/modules/cargas/FaturacaoView';
 import { NovaCargaModal } from '@/modules/cargas/NovaCargaModal';
+import { SincronizacaoCargaCard } from '@/modules/cargas/SincronizacaoCargaCard';
 import { useCargasPage } from '@/modules/cargas/useCargasPage';
+import { SYNC_HEADER_BG, SYNC_INK } from '@/modules/sync/syncVisual';
+import { FaturacaoPage } from '@/modules/faturacao/FaturacaoPage';
+import { ExportarListaModal } from '@/modules/contentores/ExportarListaModal';
 import { useNavigation } from '@/hooks/useNavigation';
-import { openGlobalSearch } from '@/lib/openGlobalSearch';
+import { useStatusBarText } from '@/hooks/useStatusBarText';
 import { ipcService } from '@/services/ipcService';
-import type { CargaComEmissor, EstadoPagamento, OrigemPwaLinha } from '@/types';
+import type { CargaComEmissor, Contentor, EstadoPagamento, OrigemPwaLinha } from '@/types';
 
 type SubAba = 'lista' | 'faturacao';
 
@@ -41,11 +44,10 @@ export function Cargas(): React.JSX.Element {
 
   const [novaCargaOpen, setNovaCargaOpen] = useState(false);
   const [editingCarga, setEditingCarga] = useState<CargaComEmissor | null>(null);
-  const [contactosPanelOpen, setContactosPanelOpen] = useState(false);
   const [modoEditor, setModoEditor] = useState(false);
   const [subAba, setSubAba] = useState<SubAba>('lista');
-  const [filtroMenuPos, setFiltroMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [origensPwa, setOrigensPwa] = useState<OrigemPwaLinha[]>([]);
+  const [exportando, setExportando] = useState<Contentor | null>(null);
 
   useEffect(() => {
     void ipcService.cargas.listOrigensPwa().then(setOrigensPwa);
@@ -77,170 +79,142 @@ export function Cargas(): React.JSX.Element {
       selectContentor(params.contentorId);
       setSubAba('lista');
       setModoEditor(false);
+    } else if (params?.novaCarga) {
+      setSubAba('lista');
+      setModoEditor(false);
+      handleOpenNovaCarga();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, params?.entidadeId, params?.contentorId]);
+  }, [page, params?.entidadeId, params?.contentorId, params?.novaCarga]);
 
   const filtroAtivo = PAGAMENTO_FILTROS.find((f) => f.value === estadoPagamento);
+  const nomeOrigemPwa = new Map(origensPwa.map((o) => [o.userId, o.nome]));
 
-  const filtroMenuItems: ContextMenuItem[] = [
-    ...PAGAMENTO_FILTROS.map((filtro) => ({
-      key: filtro.label,
-      label: filtro.label,
-      icon:
-        estadoPagamento === filtro.value ? (
-          <Check size={14} className="text-primary" />
-        ) : (
-          <span className="inline-block w-[14px]" />
-        ),
-      onClick: () => setEstadoPagamento(filtro.value),
-    })),
-    ...(origensPwa.length > 0
-      ? [
-          { key: 'divider-pwa', divider: true },
-          { key: 'header-pwa', header: 'Utilizador PWA' },
-          {
-            key: 'pwa-todas',
-            label: 'Todas as origens',
-            icon:
-              origemPwaUserId === undefined ? (
-                <Check size={14} className="text-primary" />
-              ) : (
-                <span className="inline-block w-[14px]" />
-              ),
-            onClick: () => setOrigemPwaUserId(undefined),
-          },
-          ...origensPwa.map((origem) => ({
-            key: origem.userId,
-            label: `${origem.nome} (${origem.total})`,
-            icon:
-              origemPwaUserId === origem.userId ? (
-                <Check size={14} className="text-primary" />
-              ) : (
-                <span className="inline-block w-[14px]" />
-              ),
-            onClick: () => setOrigemPwaUserId(origem.userId),
-          })),
-        ]
-      : []),
-  ];
+  useStatusBarText(selectedContentorId ? `${cargas.length} carga${cargas.length === 1 ? '' : 's'}` : null);
+
+  const mostrarFiltro = subAba === 'lista' && !modoEditor;
+
+  function checkOuEspaco(ativo: boolean): React.JSX.Element {
+    return ativo ? (
+      <Check size={14} weight="bold" className="shrink-0 text-primary" />
+    ) : (
+      <span className="inline-block w-[14px] shrink-0" />
+    );
+  }
+
+  const filtroSection = (
+    <div className="py-1.5">
+      <div className="px-3.5 pb-1.5 pt-2.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+        Pagamento
+      </div>
+      {PAGAMENTO_FILTROS.map((filtro) => (
+        <button
+          key={filtro.label}
+          type="button"
+          onClick={() => setEstadoPagamento(filtro.value)}
+          className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left text-[13px] text-text-primary transition-colors hover:bg-[var(--toolbar-hover)]"
+        >
+          {checkOuEspaco(estadoPagamento === filtro.value)}
+          <span className="min-w-0 flex-1 truncate">{filtro.label}</span>
+          {filtro.value === 'devido' ? <Clock size={14} weight="fill" className="shrink-0 text-warning" /> : null}
+          {filtro.value === 'pago' ? <CheckCircle size={14} weight="fill" className="shrink-0 text-success" /> : null}
+        </button>
+      ))}
+
+      {origensPwa.length > 0 ? (
+        <>
+          <div className="my-1.5 h-px bg-border" />
+          <div className="px-3.5 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+            Origem PWA
+          </div>
+          <button
+            type="button"
+            onClick={() => setOrigemPwaUserId(undefined)}
+            className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left text-[13px] text-text-primary transition-colors hover:bg-[var(--toolbar-hover)]"
+          >
+            {checkOuEspaco(origemPwaUserId === undefined)}
+            <span className="min-w-0 flex-1 truncate">Todas as origens</span>
+          </button>
+          {origensPwa.map((origem) => (
+            <button
+              key={origem.userId}
+              type="button"
+              onClick={() => setOrigemPwaUserId(origem.userId)}
+              className="flex w-full items-center gap-2 px-3.5 py-1.5 text-left text-[13px] text-text-primary transition-colors hover:bg-[var(--toolbar-hover)]"
+            >
+              {checkOuEspaco(origemPwaUserId === origem.userId)}
+              <DeviceMobile size={14} className="shrink-0 text-primary" />
+              <span className="min-w-0 flex-1 truncate">{origem.nome}</span>
+              <span className="shrink-0 text-[11px] text-text-tertiary">{origem.total}</span>
+            </button>
+          ))}
+        </>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="flex h-full flex-col">
       <ContextToolbar>
-        {loadingContentores ? (
-          <span className="text-[13px] text-text-tertiary">A carregar contentores...</span>
-        ) : contentoresAbertos.length === 0 ? (
-          <span className="text-[13px] text-text-tertiary">Nenhum contentor aberto</span>
-        ) : (
-          <label className="flex h-9 items-center gap-2 text-[13px] text-text-secondary">
-            Contêiner:
-            <select
-              value={selectedContentorId ?? ''}
-              onChange={(e) => selectContentor(e.target.value)}
-              className="h-9 rounded-control border border-border bg-bg-input px-2 text-[13px] text-text-primary outline-none focus:border-primary"
-            >
-              {contentoresAbertos.map((contentor) => (
-                <option key={contentor.id} value={contentor.id}>
-                  {contentor.codigo} — {contentor.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <ContainerPickerButton
+          contentores={contentoresAbertos}
+          selectedId={selectedContentorId}
+          onSelect={selectContentor}
+          loading={loadingContentores}
+          indicatorDotClass={mostrarFiltro ? filtroAtivo?.dotClass : undefined}
+          extraSection={mostrarFiltro ? filtroSection : undefined}
+          onExport={setExportando}
+        />
 
-        <div className="h-6 w-px shrink-0 bg-border" />
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={!selectedContentorId}
-            onClick={() => setContactosPanelOpen(true)}
-            title={!selectedContentorId ? 'Sem contentor selecionado' : 'Contactos deste contentor'}
-            className="flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Users size={19} />
-          </button>
+        {/* Centrado verticalmente como os outros elementos da barra (top-1/2
+            + margin-top fixo de metade da altura fechada, 36px), em vez de
+            -translate-y-1/2 — esse recalcularia o centro com a altura atual
+            do cartão e fá-lo-ia crescer para cima E para baixo ao abrir. */}
+        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+          <SincronizacaoCargaCard
+            contentoresAbertos={contentoresAbertos}
+            selectedContentorId={selectedContentorId}
+            onImported={refreshCargas}
+          />
         </div>
 
-        <div className="h-6 w-px shrink-0 bg-border" />
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openGlobalSearch}
-            title="Pesquisar (⌘K)"
-            className="flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
-          >
-            <Search size={19} />
-          </button>
-
-          {subAba === 'lista' && !modoEditor ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setFiltroMenuPos({ x: rect.left, y: rect.bottom + 4 });
-              }}
-              title={`Filtro de pagamento: ${filtroAtivo?.label ?? 'Todos'}`}
-              className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
-            >
-              <Filter size={19} />
-              {filtroAtivo?.dotClass ? (
-                <span className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill ${filtroAtivo.dotClass}`} />
-              ) : null}
-            </button>
-          ) : null}
+        <div className="ml-4">
+          <ViewSwitcher
+            value={subAba}
+            onChange={setSubAba}
+            options={[
+              { value: 'lista', label: 'Lista', icon: <List size={15} />, title: 'Lista — gerir e ver cargas', badge: cargas.length },
+              { value: 'faturacao', label: 'Faturação', icon: <Wallet size={15} />, title: 'Faturação — controlar pagamentos' },
+            ]}
+          />
         </div>
-
-        {subAba === 'lista' ? (
-          <>
-            <div className="h-6 w-px shrink-0 bg-border" />
-            <div className="flex h-9 items-center gap-2">
-              <Switch checked={modoEditor} onChange={setModoEditor} label="Modo Editor" />
-            </div>
-          </>
-        ) : null}
 
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             disabled={contentoresAbertos.length === 0}
             onClick={handleOpenNovaCarga}
-            title={contentoresAbertos.length === 0 ? 'Sem contentores abertos' : undefined}
-            className="flex h-9 items-center gap-1.5 rounded-pill bg-primary px-4 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            title={contentoresAbertos.length === 0 ? 'Sem contentores abertos' : 'Nova Carga'}
+            className="flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-pill px-0 text-[13px] font-semibold shadow-sm transition-colors hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto lg:px-4"
+            style={{ backgroundColor: SYNC_HEADER_BG, color: SYNC_INK }}
           >
-            <Plus size={18} /> Nova Carga
+            <Plus size={18} weight="bold" className="shrink-0" />
+            <span className="hidden lg:inline">Nova Carga</span>
           </button>
 
-          <div className="inline-flex h-9 items-center gap-0.5 rounded-control bg-bg-input p-0.5">
-            <button
-              type="button"
-              onClick={() => setSubAba('lista')}
-              className={`rounded-[6px] px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                subAba === 'lista' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Lista
-            </button>
-            <button
-              type="button"
-              onClick={() => setSubAba('faturacao')}
-              className={`rounded-[6px] px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                subAba === 'faturacao' ? 'bg-primary/10 text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
-              }`}
-            >
-              Faturação
-            </button>
-          </div>
+          {subAba === 'lista' ? (
+            <div className="flex h-9 shrink-0 items-center">
+              <Switch checked={modoEditor} onChange={setModoEditor} label="Modo Editor" />
+            </div>
+          ) : null}
         </div>
       </ContextToolbar>
 
       <div className="min-h-0 flex-1">
         {subAba === 'faturacao' ? (
-          <FaturacaoView contentorId={selectedContentorId} />
+          <FaturacaoPage contentorId={selectedContentorId} contentoresAbertos={contentoresAbertos} />
         ) : modoEditor ? (
-          <CargasEditorGrid contentorId={selectedContentorId} onDataChanged={refreshCargas} />
+          <CargasEditorGrid contentorId={selectedContentorId} contentoresAbertos={contentoresAbertos} onDataChanged={refreshCargas} />
         ) : (
           <CargasList
             cargas={cargas}
@@ -249,6 +223,9 @@ export function Cargas(): React.JSX.Element {
               selectedContentorId ? 'Nenhuma carga encontrada neste contentor.' : 'Selecione ou crie um contentor aberto.'
             }
             onSelectCarga={handleSelectCarga}
+            nomeOrigemPwa={nomeOrigemPwa}
+            contentoresAbertos={contentoresAbertos}
+            onDataChanged={refreshCargas}
           />
         )}
       </div>
@@ -262,19 +239,7 @@ export function Cargas(): React.JSX.Element {
         onSaved={refreshCargas}
       />
 
-      <ContactosDoContentorPanel
-        open={contactosPanelOpen}
-        onClose={() => setContactosPanelOpen(false)}
-        contentorId={selectedContentorId}
-      />
-
-      <ContextMenu
-        open={filtroMenuPos != null}
-        x={filtroMenuPos?.x ?? 0}
-        y={filtroMenuPos?.y ?? 0}
-        items={filtroMenuItems}
-        onClose={() => setFiltroMenuPos(null)}
-      />
+      <ExportarListaModal open={exportando != null} onClose={() => setExportando(null)} contentor={exportando} />
     </div>
   );
 }

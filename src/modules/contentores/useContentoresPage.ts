@@ -11,7 +11,6 @@ export function useContentoresPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('icones');
   const [mostrarOcultos, setMostrarOcultos] = useState(false);
-  const [texto, setTexto] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<EstadoContentor | ''>('');
   const [filtroMes, setFiltroMes] = useState('');
   const [version, setVersion] = useState(0);
@@ -47,12 +46,8 @@ export function useContentoresPage() {
     let lista = contentores;
     if (filtroEstado) lista = lista.filter((c) => c.estado === filtroEstado);
     if (filtroMes) lista = lista.filter((c) => c.mesReferencia === filtroMes);
-    if (texto.trim()) {
-      const t = texto.trim().toLowerCase();
-      lista = lista.filter((c) => c.nome.toLowerCase().includes(t) || c.codigo.toLowerCase().includes(t));
-    }
     return lista;
-  }, [contentores, filtroEstado, filtroMes, texto]);
+  }, [contentores, filtroEstado, filtroMes]);
 
   return {
     contentores: filtrados,
@@ -62,8 +57,6 @@ export function useContentoresPage() {
     setViewMode,
     mostrarOcultos,
     setMostrarOcultos,
-    texto,
-    setTexto,
     filtroEstado,
     setFiltroEstado,
     filtroMes,

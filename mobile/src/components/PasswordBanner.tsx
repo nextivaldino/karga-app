@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound, X } from 'lucide-react';
+import { Key as KeyRound, X } from '@phosphor-icons/react';
 
 const STORAGE_KEY = 'kraga_mobile_banner_password_dispensado';
 

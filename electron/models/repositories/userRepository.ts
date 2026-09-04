@@ -11,6 +11,8 @@ interface UserRow {
   active: number;
   pwa_habilitado: number;
   pwa_auth_uid: string | null;
+  avatar: string | null;
+  login_sem_password: number;
   created_at: string;
   updated_at: string;
   sync_status: User['syncStatus'];
@@ -26,6 +28,8 @@ function fromRow(row: UserRow): User {
     active: row.active === 1,
     pwaHabilitado: row.pwa_habilitado === 1,
     pwaAuthUid: row.pwa_auth_uid,
+    avatar: row.avatar,
+    loginSemPassword: row.login_sem_password === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: row.sync_status,
@@ -51,14 +55,16 @@ function create(input: CreateUserInput): User {
     active: 1,
     pwa_habilitado: 0,
     pwa_auth_uid: null,
+    avatar: null,
+    login_sem_password: 0,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
   };
 
   db.prepare(
-    `INSERT INTO users (id, name, email, password_hash, role, active, pwa_habilitado, pwa_auth_uid, created_at, updated_at, sync_status)
-     VALUES (@id, @name, @email, @password_hash, @role, @active, @pwa_habilitado, @pwa_auth_uid, @created_at, @updated_at, @sync_status)`,
+    `INSERT INTO users (id, name, email, password_hash, role, active, pwa_habilitado, pwa_auth_uid, avatar, login_sem_password, created_at, updated_at, sync_status)
+     VALUES (@id, @name, @email, @password_hash, @role, @active, @pwa_habilitado, @pwa_auth_uid, @avatar, @login_sem_password, @created_at, @updated_at, @sync_status)`,
   ).run(row);
 
   return fromRow(row);
@@ -129,4 +135,41 @@ function setPwaStatus(id: string, habilitado: boolean, authUid: string | null): 
   return findById(id);
 }
 
-export const userRepository = { create, findByEmail, findById, list, count, update, setPwaStatus };
+function setAvatar(id: string, avatar: string | null): User | null {
+  const db = getDatabase();
+  if (!findById(id)) return null;
+  db.prepare(`UPDATE users SET avatar = ?, updated_at = ? WHERE id = ?`).run(avatar, nowIso(), id);
+  return findById(id);
+}
+
+function setLoginSemPassword(id: string, valor: boolean): User | null {
+  const db = getDatabase();
+  if (!findById(id)) return null;
+  db.prepare(`UPDATE users SET login_sem_password = ?, updated_at = ? WHERE id = ?`).run(valor ? 1 : 0, nowIso(), id);
+  return findById(id);
+}
+
+// Só o essencial (id/nome/avatar) para desenhar a grelha do ecrã de
+// login, ANTES de haver sessão — nunca expor email/role/password aqui.
+function listQuickLogin(): { id: string; name: string; avatar: string | null }[] {
+  const db = getDatabase();
+  const rows = db
+    .prepare<[], { id: string; name: string; avatar: string | null }>(
+      `SELECT id, name, avatar FROM users WHERE active = 1 AND login_sem_password = 1 ORDER BY name ASC`,
+    )
+    .all();
+  return rows;
+}
+
+export const userRepository = {
+  create,
+  findByEmail,
+  findById,
+  list,
+  count,
+  update,
+  setPwaStatus,
+  setAvatar,
+  setLoginSemPassword,
+  listQuickLogin,
+};

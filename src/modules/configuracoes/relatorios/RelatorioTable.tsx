@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download } from '@phosphor-icons/react';
 
 export interface RelatorioColuna {
   key: string;

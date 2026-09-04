@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, Menu } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, List as Menu } from '@phosphor-icons/react';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda } from '@/lib/cargaEstado';
 import type { AcaoLinhaCarga, CargaListRowData } from '@/components/CargaListRow';
 
@@ -26,7 +26,10 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
   }, []);
 
   return (
-    <div className="relative flex flex-col gap-2 rounded-surface border border-border bg-bg-surface p-3" style={{ borderTop: `3px solid ${cor}` }}>
+    <div
+      className={`relative flex flex-col gap-2 rounded-surface border border-border bg-bg-surface p-3 ${menuAberto ? 'z-20' : ''}`}
+      style={{ borderTop: `3px solid ${cor}` }}
+    >
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0 flex-1">
           <span className="text-[10px] font-bold uppercase tracking-wide text-text-secondary">{linha.codigo}</span>

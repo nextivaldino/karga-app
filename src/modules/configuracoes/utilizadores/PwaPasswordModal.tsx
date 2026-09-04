@@ -21,7 +21,7 @@ export function PwaPasswordModal({ open, onClose, target, pwaEmail, passwordTemp
     <HeaderBarModal
       open={open}
       onClose={onClose}
-      title={target ? `Acesso PWA ativado — ${target.name}` : 'Acesso PWA ativado'}
+      title={target ? `Credenciais de acesso PWA — ${target.name}` : 'Credenciais de acesso PWA'}
       widthClassName="max-w-[420px]"
       footer={
         <button
@@ -35,8 +35,8 @@ export function PwaPasswordModal({ open, onClose, target, pwaEmail, passwordTemp
     >
       <div className="flex flex-col gap-3">
         <p className="text-[13px] text-text-secondary">
-          Esta password temporária só é mostrada uma vez. Envia-a a {target?.name ?? 'este utilizador'} por um canal
-          seguro — ele deve alterá-la no primeiro acesso à PWA.
+          A password de acesso à PWA de {target?.name ?? 'este utilizador'} foi reposta para este valor. Envia-a
+          por um canal seguro — ele deve poder entrar já com ela na PWA.
         </p>
         <div className="flex items-center justify-between gap-3 rounded-control border border-border bg-bg-app px-3 py-2">
           <span className="select-all font-mono text-[15px] text-text-primary">{passwordTemporaria}</span>

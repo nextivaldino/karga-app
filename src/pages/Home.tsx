@@ -1,56 +1,85 @@
-import { CheckCircle2, Container, Package, Plus, Search, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUpRight, CheckCircle as CheckCircle2, Package, Plus, MagnifyingGlass as Search } from '@phosphor-icons/react';
+import { ModuleIcon, type ModuleIconName } from '@/components/icons/ModuleIcon';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
+import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { ContainerPickerButton } from '@/components/ui/ContainerPickerButton';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useHomeData } from '@/modules/home/useHomeData';
+import { ROW_TINTS } from '@/modules/cargas/CargasList';
+import { SincronizacaoCargaCard } from '@/modules/cargas/SincronizacaoCargaCard';
+import { SYNC_HEADER_BG, SYNC_INK } from '@/modules/sync/syncVisual';
+import { UsersAvatarBar } from '@/modules/home/UsersAvatarBar';
+import { UltimasSincronizadasModal } from '@/modules/home/UltimasSincronizadasModal';
+import { useAuth } from '@/modules/auth/AuthContext';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useContentorAtivo } from '@/hooks/useContentorAtivo';
+import { formatValor } from '@/lib/formatValor';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { openGlobalSearch } from '@/lib/openGlobalSearch';
-import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 
-const ESTADO_PASTEL_BG: Record<string, string> = {
-  aberto: 'bg-success/10',
-  fechado: 'bg-text-tertiary/10',
-  em_transito: 'bg-primary/10',
-  entregue: 'bg-success/10',
-  bloqueado: 'bg-error/10',
-};
+const SYNC_LIST_COLUMNS = [
+  { key: 'codigo', label: 'Código', width: '90px' },
+  { key: 'nome', label: 'Nome', width: '1fr' },
+  { key: 'emissor', label: 'Emissor', width: '1fr' },
+  { key: 'user', label: 'Enviado por', width: '180px' },
+  { key: 'valor', label: 'Valor', width: '90px' },
+  { key: 'pagamento', label: 'Pagamento', width: '96px' },
+  { key: 'quando', label: '', width: '84px' },
+] as const;
+const SYNC_LIST_GRID = SYNC_LIST_COLUMNS.map((c) => c.width).join(' ');
+
+function saudacao(): string {
+  const hora = new Date().getHours();
+  if (hora < 12) return 'Bom dia';
+  if (hora < 20) return 'Boa tarde';
+  return 'Boa noite';
+}
 
 export function Home(): React.JSX.Element {
-  const { loading, resumo, contentoresAtivos, ultimasCargas, moeda } = useHomeData();
+  const { loading, resumo, ultimasSincronizadas, origensPwa, usuarios, moeda, refresh } = useHomeData();
+  const { user } = useAuth();
   const { navigate } = useNavigation();
+  const { contentoresAbertos, selectedContentorId, selectContentor, loadingContentores } = useContentorAtivo();
+  const [sincronizadasModalOpen, setSincronizadasModalOpen] = useState(false);
 
   const currencyFormatter = new Intl.NumberFormat('pt-PT', { style: 'currency', currency: moeda });
+  const nomeOrigemPwa = new Map(origensPwa.map((o) => [o.userId, o.nome]));
+  const avatarOrigemPwa = new Map(usuarios.map((u) => [u.id, u.avatar]));
 
-  const widgets = [
+  const widgets: {
+    label: string;
+    value: string | number;
+    iconModule: ModuleIconName | null;
+    pastelBg: string;
+    onClick: () => void;
+  }[] = [
     {
       label: 'Cargas (mês)',
       value: resumo?.totalCargasMes ?? 0,
-      icon: Package,
-      colorClass: 'text-warning',
-      pastelBg: 'bg-warning/10',
+      iconModule: 'cargas',
+      pastelBg: 'bg-primary/10',
       onClick: () => navigate('cargas'),
     },
     {
       label: 'Contentores Abertos',
       value: resumo?.contentoresAbertos ?? 0,
-      icon: Container,
-      colorClass: 'text-success',
+      iconModule: 'contentores',
       pastelBg: 'bg-success/10',
       onClick: () => navigate('contentores'),
     },
     {
       label: 'Valor Devido',
       value: currencyFormatter.format(resumo?.valorDevido ?? 0),
-      icon: Wallet,
-      colorClass: 'text-warning',
+      iconModule: 'faturacao',
       pastelBg: 'bg-warning/10',
       onClick: () => navigate('cargas'),
     },
     {
       label: 'Entregues (mês)',
       value: resumo?.entregues ?? 0,
-      icon: CheckCircle2,
-      colorClass: 'text-success',
-      pastelBg: 'bg-success/10',
+      iconModule: null,
+      pastelBg: 'bg-purple/10',
       onClick: () => navigate('cargas'),
     },
   ];
@@ -58,11 +87,55 @@ export function Home(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <ContextToolbar>
-        <span className="text-[13px] font-medium text-text-secondary">Home</span>
+        <ContainerPickerButton
+          contentores={contentoresAbertos}
+          selectedId={selectedContentorId}
+          onSelect={selectContentor}
+          loading={loadingContentores}
+        />
+        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+          <SincronizacaoCargaCard contentoresAbertos={contentoresAbertos} selectedContentorId={selectedContentorId} onImported={refresh} />
+        </div>
+        <div className="ml-auto mr-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('cargas', { novaCarga: '1' })}
+            className="flex h-9 items-center gap-1.5 rounded-pill px-4 text-[13px] font-semibold shadow-sm transition-colors hover:brightness-95"
+            style={{ backgroundColor: SYNC_HEADER_BG, color: SYNC_INK }}
+          >
+            <Plus size={16} weight="bold" /> Nova Carga
+          </button>
+          <UsersAvatarBar />
+        </div>
       </ContextToolbar>
 
-      <div className="flex-1 overflow-y-auto p-xl">
+      <div className="relative flex-1 overflow-hidden">
+      {/* Fundo radial leve + brilhos suaves — mesma linguagem decorativa da
+          Home do Kraga Mobile, adaptada à escala do desktop. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--color-primary) 10%, transparent) 0%, transparent 45%), radial-gradient(circle at 100% 25%, color-mix(in srgb, var(--color-success) 8%, transparent) 0%, transparent 40%)',
+        }}
+      />
+      <div className="pointer-events-none absolute -left-24 top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-16 top-[420px] h-64 w-64 rounded-full bg-success/10 blur-3xl" />
+
+      <div className="relative h-full overflow-y-auto p-xl">
         <div className="mx-auto flex max-w-[860px] flex-col gap-xl">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
+              <ModuleIcon module="kraga" size={22} />
+            </span>
+            <div>
+              <h1 className="text-[17px] font-semibold text-text-primary">
+                {saudacao()}{user ? `, ${user.name.split(' ')[0]}` : ''}
+              </h1>
+              <p className="text-[12px] text-text-tertiary">Tudo o que precisas de saber agora, num só sítio.</p>
+            </div>
+          </div>
+
           <button
             type="button"
             onClick={openGlobalSearch}
@@ -72,101 +145,195 @@ export function Home(): React.JSX.Element {
             Pesquisar em tudo...
           </button>
 
-          <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
-            {widgets.map((widget) => {
-              const Icon = widget.icon;
-              return (
+          <CollapsibleSection
+            title="Resumo do Sistema"
+            storageKey="resumo"
+            summary={
+              <div className="flex flex-wrap items-center gap-2">
+                {widgets.map((widget) => (
+                  <button
+                    key={widget.label}
+                    type="button"
+                    onClick={widget.onClick}
+                    className={`flex items-center gap-2 rounded-pill px-3 py-1.5 text-[12px] transition-transform hover:scale-[1.03] ${widget.pastelBg}`}
+                  >
+                    {widget.iconModule ? (
+                      <ModuleIcon module={widget.iconModule} size={14} />
+                    ) : (
+                      <CheckCircle2 size={14} weight="fill" className="text-purple" />
+                    )}
+                    <span key={widget.value} className="animate-karga-fade font-semibold text-text-primary">
+                      {loading ? '—' : widget.value}
+                    </span>
+                    <span className="text-text-secondary">{widget.label}</span>
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
+              {widgets.map((widget) => (
                 <button
                   key={widget.label}
                   type="button"
                   onClick={widget.onClick}
                   className={`flex flex-col items-start gap-2 rounded-surface p-lg text-left transition-transform hover:scale-[1.02] ${widget.pastelBg}`}
                 >
-                  <Icon size={22} className={widget.colorClass} />
-                  <span className="text-[22px] font-semibold text-text-primary">{loading ? '—' : widget.value}</span>
+                  {widget.iconModule ? <ModuleIcon module={widget.iconModule} size={22} /> : <CheckCircle2 size={22} weight="fill" className="text-purple" />}
+                  <span key={widget.value} className="animate-karga-fade text-[22px] font-semibold text-text-primary">
+                    {loading ? '—' : widget.value}
+                  </span>
                   <span className="text-[12px] text-text-secondary">{widget.label}</span>
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </CollapsibleSection>
 
-          <section>
-            <div className="mb-sm flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold text-text-primary">Contentores Ativos</h2>
+          <CollapsibleSection
+            title="Últimas Cargas Sincronizadas"
+            storageKey="sincronizadas"
+            actions={
               <button
                 type="button"
-                onClick={() => navigate('contentores')}
+                onClick={() => setSincronizadasModalOpen(true)}
                 className="text-[12px] font-medium text-primary"
               >
-                Ver todos ›
+                Ver tudo ›
               </button>
-            </div>
-            {contentoresAtivos.length === 0 ? (
-              <p className="text-[13px] text-text-tertiary">Nenhum contentor aberto ou em trânsito.</p>
+            }
+            summary={
+              ultimasSincronizadas.length === 0 ? (
+                <div className="flex items-center gap-2 rounded-control border border-dashed border-border bg-bg-app/40 p-md text-[13px] text-text-tertiary">
+                  <Package size={16} className="shrink-0 opacity-60" />
+                  Ainda não há cargas sincronizadas via PWA.
+                </div>
+              ) : (
+                (() => {
+                  const maisRecente = ultimasSincronizadas[0]!;
+                  const nomePwa = maisRecente.origemPwaUserId ? nomeOrigemPwa.get(maisRecente.origemPwaUserId) : null;
+                  const avatarPwa = maisRecente.origemPwaUserId ? avatarOrigemPwa.get(maisRecente.origemPwaUserId) : null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setSincronizadasModalOpen(true)}
+                      className="flex w-full items-center gap-3 rounded-control bg-primary/[0.06] px-4 py-2.5 text-left text-[13px] transition-colors hover:bg-primary/10"
+                    >
+                      <Package size={16} className="shrink-0 text-primary" />
+                      <span key={ultimasSincronizadas.length} className="animate-karga-fade font-medium text-text-primary">
+                        {ultimasSincronizadas.length} carga{ultimasSincronizadas.length === 1 ? '' : 's'} sincronizada
+                        {ultimasSincronizadas.length === 1 ? '' : 's'}
+                      </span>
+                      {nomePwa ? (
+                        <span className="flex min-w-0 shrink-0 items-center gap-1.5 text-text-secondary">
+                          <span className="text-text-tertiary">·</span>
+                          <UserAvatar avatar={avatarPwa} size={16} />
+                          <span className="truncate">{nomePwa}</span>
+                        </span>
+                      ) : null}
+                      <span className="ml-auto shrink-0 text-text-tertiary">{formatRelativeTime(maisRecente.createdAt)}</span>
+                    </button>
+                  );
+                })()
+              )
+            }
+          >
+            {ultimasSincronizadas.length === 0 ? (
+              <div className="flex items-center gap-2 rounded-control border border-dashed border-border p-md text-[13px] text-text-tertiary">
+                <Package size={16} className="shrink-0 opacity-60" />
+                Ainda não há cargas sincronizadas via PWA.
+              </div>
             ) : (
-              <div className="grid grid-cols-2 gap-sm sm:grid-cols-3 md:grid-cols-4">
-                {contentoresAtivos.map((contentor) => (
-                  <button
-                    key={contentor.id}
-                    type="button"
-                    onClick={() => navigate('contentores', { id: contentor.id })}
-                    className={`flex flex-col items-start gap-1 rounded-control p-md text-left transition-transform hover:scale-[1.02] ${
-                      ESTADO_PASTEL_BG[contentor.estado] ?? 'bg-bg-app'
-                    }`}
-                  >
-                    <span className="text-[13px] font-medium text-text-primary">{contentor.codigo}</span>
-                    <span className={`text-[12px] ${ESTADO_CONTENTOR_COLOR_CLASS[contentor.estado]}`}>
-                      {ESTADO_CONTENTOR_LABEL[contentor.estado]}
-                    </span>
-                  </button>
-                ))}
+              <div className="overflow-hidden rounded-control border border-border">
+                <div
+                  className="grid border-b border-border bg-bg-surface px-md text-[11px] font-semibold uppercase tracking-wide text-text-tertiary"
+                  style={{ gridTemplateColumns: SYNC_LIST_GRID }}
+                >
+                  {SYNC_LIST_COLUMNS.map((col) => (
+                    <div key={col.key} className="truncate py-2">
+                      {col.label}
+                    </div>
+                  ))}
+                </div>
+                {ultimasSincronizadas.map((carga, i) => {
+                  const nomePwa = carga.origemPwaUserId ? nomeOrigemPwa.get(carga.origemPwaUserId) : null;
+                  const avatarPwa = carga.origemPwaUserId ? avatarOrigemPwa.get(carga.origemPwaUserId) : null;
+                  const tint = ROW_TINTS[i % ROW_TINTS.length];
+                  return (
+                    <button
+                      key={carga.id}
+                      type="button"
+                      onClick={() => navigate('cargas', { entidadeId: carga.id })}
+                      className="grid w-full cursor-pointer items-center px-md py-2 text-left text-[13px] text-text-primary transition-[filter] hover:brightness-95"
+                      style={{
+                        gridTemplateColumns: SYNC_LIST_GRID,
+                        backgroundColor: `color-mix(in srgb, ${tint} 5%, var(--bg-surface))`,
+                      }}
+                    >
+                      <span className="truncate font-medium">{carga.codigo}</span>
+                      <span className="min-w-0 truncate">{carga.nome}</span>
+                      <span className="flex min-w-0 items-center gap-1 text-text-secondary">
+                        <ArrowUpRight size={12} className="shrink-0 text-primary" />
+                        <span className="truncate">{carga.emissorNome}</span>
+                      </span>
+                      <span className="flex min-w-0 items-center gap-1.5 text-text-secondary">
+                        {nomePwa ? (
+                          <>
+                            <UserAvatar avatar={avatarPwa} size={18} />
+                            <span className="truncate">{nomePwa}</span>
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </span>
+                      <span className="truncate text-text-secondary">{formatValor(carga.valor, carga.moeda)}</span>
+                      <span>
+                        <span
+                          className={`rounded-pill px-2 py-0.5 text-[11px] font-medium ${
+                            carga.estadoPagamento === 'pago' ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
+                          }`}
+                        >
+                          {carga.estadoPagamento === 'pago' ? 'Pago' : 'Devido'}
+                        </span>
+                      </span>
+                      <span className="truncate text-right text-[11px] text-text-tertiary">
+                        {formatRelativeTime(carga.createdAt)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
-          </section>
+          </CollapsibleSection>
 
-          <section>
-            <div className="mb-sm flex items-center justify-between">
-              <h2 className="text-[14px] font-semibold text-text-primary">Últimas Cargas Inseridas</h2>
-              <button type="button" onClick={() => navigate('cargas')} className="text-[12px] font-medium text-primary">
-                Ver todas ›
-              </button>
-            </div>
-            {ultimasCargas.length === 0 ? (
-              <p className="text-[13px] text-text-tertiary">Ainda não há cargas registadas.</p>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {ultimasCargas.map((carga) => (
-                  <div key={carga.id} className="flex items-center gap-3 px-1 py-2.5 text-[13px]">
-                    <span className="font-medium text-text-primary">{carga.codigo}</span>
-                    <span className="text-text-secondary">{carga.nome}</span>
-                    <span className="text-text-tertiary">{carga.emissorNome}</span>
-                    <span className="ml-auto shrink-0 text-text-tertiary">{formatRelativeTime(carga.createdAt)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <UltimasSincronizadasModal
+            open={sincronizadasModalOpen}
+            onClose={() => setSincronizadasModalOpen(false)}
+            nomeOrigemPwa={nomeOrigemPwa}
+            avatarOrigemPwa={avatarOrigemPwa}
+          />
 
           <section>
             <h2 className="mb-sm text-[14px] font-semibold text-text-primary">Atalhos Rápidos</h2>
             <div className="flex gap-sm">
               <button
                 type="button"
-                onClick={() => navigate('cargas')}
-                className="flex items-center gap-1.5 rounded-control bg-primary px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+                onClick={() => navigate('cargas', { novaCarga: '1' })}
+                className="flex items-center gap-1.5 rounded-pill px-4 py-2 text-[13px] font-semibold shadow-sm transition-colors hover:brightness-95"
+                style={{ backgroundColor: SYNC_HEADER_BG, color: SYNC_INK }}
               >
-                <Plus size={16} /> Nova Carga
+                <Plus size={16} weight="bold" /> Nova Carga
               </button>
               <button
                 type="button"
                 onClick={() => navigate('contentores')}
-                className="flex items-center gap-1.5 rounded-control border border-border bg-bg-surface px-4 py-2 text-[13px] font-medium text-text-primary transition-colors hover:bg-bg-app"
+                className="flex items-center gap-1.5 rounded-pill bg-primary px-4 py-2 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-primary-hover"
               >
                 <Plus size={16} /> Novo Contentor
               </button>
             </div>
           </section>
         </div>
+      </div>
       </div>
     </div>
   );

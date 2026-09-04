@@ -1,27 +1,13 @@
 import { useState } from 'react';
-import {
-  Check,
-  CheckCircle2,
-  Download,
-  Eye,
-  EyeOff,
-  Filter,
-  LayoutGrid,
-  List,
-  Lock,
-  Pencil,
-  Plus,
-  Search,
-  Ship,
-  Trash2,
-  Unlock,
-} from 'lucide-react';
+import { Check, CheckCircle as CheckCircle2, Download, Eye, EyeSlash as EyeOff, Funnel as Filter, SquaresFour as LayoutGrid, List, Lock, PencilSimple as Pencil, Plus, Boat as Ship, Trash as Trash2, LockOpen as Unlock } from '@phosphor-icons/react';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
+import { ContainerPickerButton } from '@/components/ui/ContainerPickerButton';
 import { ViewSwitcher } from '@/components/ui/ViewSwitcher';
 import { ContextMenu, type ContextMenuItem } from '@/components/ui/ContextMenu';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';
+import { SincronizacaoCargaCard } from '@/modules/cargas/SincronizacaoCargaCard';
 import { ContentoresIconsView } from '@/modules/contentores/ContentoresIconsView';
 import { ContentoresListView } from '@/modules/contentores/ContentoresListView';
 import { ContentorDetalheModal } from '@/modules/contentores/ContentorDetalheModal';
@@ -30,6 +16,8 @@ import { ExportarListaModal } from '@/modules/contentores/ExportarListaModal';
 import { NovoContentorModal } from '@/modules/contentores/NovoContentorModal';
 import { EliminarContentorDialog } from '@/modules/contentores/EliminarContentorDialog';
 import { useContentoresPage } from '@/modules/contentores/useContentoresPage';
+import { useContentorAtivo } from '@/hooks/useContentorAtivo';
+import { useStatusBarText } from '@/hooks/useStatusBarText';
 import { ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 import type { Contentor, EstadoContentor } from '@/types';
 
@@ -50,8 +38,6 @@ export function Contentores(): React.JSX.Element {
     setViewMode,
     mostrarOcultos,
     setMostrarOcultos,
-    texto,
-    setTexto,
     filtroEstado,
     setFiltroEstado,
     filtroMes,
@@ -59,6 +45,7 @@ export function Contentores(): React.JSX.Element {
     limiteDiasParado,
     refresh,
   } = useContentoresPage();
+  const { contentoresAbertos, selectedContentorId, selectContentor, loadingContentores } = useContentorAtivo();
   const [novoOpen, setNovoOpen] = useState(false);
   const [editingContentor, setEditingContentor] = useState<Contentor | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -69,6 +56,8 @@ export function Contentores(): React.JSX.Element {
   const [filtroMenuPos, setFiltroMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const filtrosAtivos = filtroEstado !== '' || filtroMes !== '' || mostrarOcultos;
+
+  useStatusBarText(loading ? null : `${contentores.length} contentor${contentores.length === 1 ? '' : 'es'}`);
 
   function checkIcon(active: boolean): React.ReactNode {
     return active ? <Check size={14} className="text-primary" /> : <span className="inline-block w-[14px]" />;
@@ -225,16 +214,37 @@ export function Contentores(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col">
       <ContextToolbar>
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder="Filtrar..."
-              className="h-9 w-48 rounded-control border border-border bg-bg-input pl-8 pr-3 text-[13px] text-text-primary outline-none focus:border-primary"
-            />
-          </div>
+        <ContainerPickerButton
+          contentores={contentoresAbertos}
+          selectedId={selectedContentorId}
+          onSelect={selectContentor}
+          loading={loadingContentores}
+          onExport={setExportando}
+        />
+
+        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+          <SincronizacaoCargaCard contentoresAbertos={contentoresAbertos} selectedContentorId={selectedContentorId} onImported={refresh} />
+        </div>
+
+        <div className="ml-auto flex items-center gap-3">
+          <ViewSwitcher
+            value={viewMode}
+            onChange={setViewMode}
+            options={[
+              { value: 'icones', label: 'Ícones', icon: <LayoutGrid size={15} /> },
+              { value: 'lista', label: 'Lista', icon: <List size={15} /> },
+            ]}
+          />
+
+          <button
+            type="button"
+            onClick={() => setNovoOpen(true)}
+            title="Novo Contentor"
+            className="flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-pill bg-primary px-0 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-primary-hover lg:w-auto lg:px-4"
+          >
+            <Plus size={18} className="shrink-0" />
+            <span className="hidden lg:inline">Novo Contentor</span>
+          </button>
 
           <button
             type="button"
@@ -243,30 +253,11 @@ export function Contentores(): React.JSX.Element {
               setFiltroMenuPos({ x: rect.left, y: rect.bottom + 4 });
             }}
             title="Filtros"
-            className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
+            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
           >
             <Filter size={19} />
             {filtrosAtivos ? <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-pill bg-primary" /> : null}
           </button>
-        </div>
-
-        <div className="ml-auto flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setNovoOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-pill bg-primary px-4 text-[13px] font-medium text-white shadow-sm transition-colors hover:bg-primary-hover"
-          >
-            <Plus size={18} /> Novo Contentor
-          </button>
-
-          <ViewSwitcher
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              { value: 'icones', label: 'Ícones', icon: <LayoutGrid size={18} /> },
-              { value: 'lista', label: 'Lista', icon: <List size={18} /> },
-            ]}
-          />
         </div>
       </ContextToolbar>
 

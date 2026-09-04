@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, X } from 'lucide-react';
+import { CaretRight as ChevronRight, X } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { Switch } from '@/components/ui/Switch';
@@ -80,6 +80,7 @@ export function NovaCargaModal({
   const [contentorId, setContentorId] = useState<string | null>(defaultContentorId);
   const [codigo, setCodigo] = useState('');
   const [codigoModo, setCodigoModo] = useState<CodigoModo>('automatico');
+  const [codigoUnicoEmissor, setCodigoUnicoEmissor] = useState(false);
   const [emissor, setEmissor] = useState<ContactoFormValue>(EMPTY_CONTACTO_VALUE);
   const [recetor, setRecetor] = useState<ContactoFormValue>(EMPTY_CONTACTO_VALUE);
   const [mostrarMaisCampos, setMostrarMaisCampos] = useState(false);
@@ -100,6 +101,7 @@ export function NovaCargaModal({
     setPilha([]);
     setError(null);
     setMostrarMaisCampos(false);
+    setCodigoUnicoEmissor(false);
 
     if (editingCarga) {
       setContentorId(editingCarga.contentorId ?? defaultContentorId);
@@ -122,7 +124,10 @@ export function NovaCargaModal({
       setValor(editingCarga.valor != null ? String(editingCarga.valor) : '');
       setEstadoPagamento(editingCarga.estadoPagamento);
     } else {
-      setContentorId(defaultContentorId);
+      // Se o contentor ativo estiver entretanto bloqueado, não o propomos
+      // como destino por definição — cai para o primeiro aberto disponível.
+      const defaultBloqueado = contentoresAbertos.find((c) => c.id === defaultContentorId)?.bloqueado;
+      setContentorId(defaultBloqueado ? contentoresAbertos.find((c) => !c.bloqueado)?.id ?? defaultContentorId : defaultContentorId);
       setCodigoModo('automatico');
       setEmissor(EMPTY_CONTACTO_VALUE);
       setRecetor(EMPTY_CONTACTO_VALUE);
@@ -135,6 +140,7 @@ export function NovaCargaModal({
       setEstadoPagamento('devido');
       void ipcService.cargas.nextCodigo().then(setCodigo);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultContentorId, editingCarga]);
 
   function handleToggleCodigoModo(manual: boolean): void {
@@ -146,6 +152,38 @@ export function NovaCargaModal({
       void ipcService.cargas.nextCodigo().then(setCodigo);
     }
   }
+
+  // "Código único para este emissor" — agrupa várias cargas do mesmo
+  // emissor sob um único código-base ("TF010", "TF010-A", "TF010-B"...).
+  // Só faz sentido com um emissor já existente e concreto (contactoId
+  // definido), porque o código-base fica gravado nesse contacto.
+  //
+  // `reservados` cobre os códigos já atribuídos a cargas empilhadas
+  // nesta sessão mas ainda não gravadas — sem isto, duas cargas
+  // empilhadas seguidas do mesmo emissor receberiam a mesma sugestão.
+  function codigosReservadosNaPilha(emissorId: string): string[] {
+    return pilha.filter((p) => p.input.emissorId === emissorId).map((p) => p.input.codigo);
+  }
+
+  async function handleToggleCodigoUnico(ativo: boolean): Promise<void> {
+    setCodigoUnicoEmissor(ativo);
+    if (ativo && emissor.contactoId) {
+      const proximo = await ipcService.cargas.nextCodigoAgrupado(emissor.contactoId, codigosReservadosNaPilha(emissor.contactoId));
+      setCodigo(proximo);
+    } else if (!ativo) {
+      setCodigoModo('automatico');
+      void ipcService.cargas.nextCodigo().then(setCodigo);
+    }
+  }
+
+  useEffect(() => {
+    if (codigoUnicoEmissor && emissor.contactoId) {
+      void ipcService.cargas
+        .nextCodigoAgrupado(emissor.contactoId, codigosReservadosNaPilha(emissor.contactoId))
+        .then(setCodigo);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codigoUnicoEmissor, emissor.contactoId]);
 
   const m3Preview = (() => {
     const c = parseNum(comprimentoCm);
@@ -231,7 +269,15 @@ export function NovaCargaModal({
 
       setPilha((prev) => [...prev, { tempId: crypto.randomUUID(), input: item, m3: m3Preview }]);
       clearCargaFields();
-      setCodigo(codigoModo === 'automatico' ? incrementCodigo(item.codigo) : '');
+      if (codigoUnicoEmissor) {
+        // `pilha` no closure ainda não inclui o item que acabou de ser
+        // empilhado (setState é assíncrono) — junta-o manualmente à
+        // lista de reservados para não sugerir o mesmo código outra vez.
+        const reservados = [...codigosReservadosNaPilha(emissorId), item.codigo];
+        void ipcService.cargas.nextCodigoAgrupado(emissorId, reservados).then(setCodigo);
+      } else {
+        setCodigo(codigoModo === 'automatico' ? incrementCodigo(item.codigo) : '');
+      }
     } catch (err) {
       setError(err instanceof Error ? cleanIpcError(err) : 'Erro ao empilhar carga.');
     } finally {
@@ -346,8 +392,9 @@ export function NovaCargaModal({
           className="rounded-control border border-border bg-bg-input px-2 py-1 text-[13px] text-text-primary outline-none focus:border-primary"
         >
           {contentoresAbertos.map((contentor) => (
-            <option key={contentor.id} value={contentor.id}>
+            <option key={contentor.id} value={contentor.id} disabled={contentor.bloqueado}>
               Contêiner: {contentor.codigo}
+              {contentor.bloqueado ? ' 🔒 (bloqueado)' : ''}
             </option>
           ))}
         </select>
@@ -386,11 +433,16 @@ export function NovaCargaModal({
         <div className="flex flex-1 flex-col gap-md">
           <div className="flex items-center gap-3">
             <div className="w-32 shrink-0">
-              <FloatingLabelInput label="Código" value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+              <FloatingLabelInput
+                label="Código"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                disabled={codigoUnicoEmissor}
+              />
             </div>
-            <div className="flex items-center gap-2 text-[13px]">
+            <div className={`flex items-center gap-2 text-[13px] ${codigoUnicoEmissor ? 'opacity-40' : ''}`}>
               <span className={codigoModo === 'automatico' ? 'text-text-primary' : 'text-text-tertiary'}>Automático</span>
-              <Switch checked={codigoModo === 'manual'} onChange={handleToggleCodigoModo} />
+              <Switch checked={codigoModo === 'manual'} onChange={handleToggleCodigoModo} disabled={codigoUnicoEmissor} />
               <span className={codigoModo === 'manual' ? 'text-text-primary' : 'text-text-tertiary'}>Manual</span>
             </div>
           </div>
@@ -398,6 +450,23 @@ export function NovaCargaModal({
           <div className="grid grid-cols-2 gap-md">
             <ContactoAutocomplete label="Emissor" value={emissor} onChange={setEmissor} required />
             <ContactoAutocomplete label="Recetor" value={recetor} onChange={setRecetor} />
+          </div>
+
+          <div
+            className="flex items-center justify-between gap-3 rounded-control border border-border bg-bg-app px-3 py-2.5"
+            title={!emissor.contactoId ? 'Escolhe um emissor já existente para poder agrupar as cargas dele sob um código único.' : undefined}
+          >
+            <div>
+              <p className="text-[13px] font-medium text-text-primary">Código único para este emissor</p>
+              <p className="text-[11px] text-text-tertiary">
+                Agrupa as cargas deste emissor sob o mesmo código-base (ex: "TF010", "TF010-A", "TF010-B"...).
+              </p>
+            </div>
+            <Switch
+              checked={codigoUnicoEmissor}
+              disabled={!emissor.contactoId}
+              onChange={(v) => void handleToggleCodigoUnico(v)}
+            />
           </div>
 
           <button

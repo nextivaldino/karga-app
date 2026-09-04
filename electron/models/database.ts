@@ -114,6 +114,34 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_carga_destinatarios_carga ON carga_destinatarios(carga_id);
   `);
 
+  // Etiquetas — rotular/agrupar clientes (many-to-many), usadas para
+  // filtrar a lista de clientes na Faturação e para ações em lote.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS etiquetas (
+      id TEXT PRIMARY KEY,
+      nome TEXT NOT NULL UNIQUE,
+      cor TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      sync_status TEXT NOT NULL DEFAULT 'local'
+    );
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS contacto_etiquetas (
+      id TEXT PRIMARY KEY,
+      contacto_id TEXT NOT NULL REFERENCES contactos(id),
+      etiqueta_id TEXT NOT NULL REFERENCES etiquetas(id),
+      created_at TEXT NOT NULL,
+      UNIQUE(contacto_id, etiqueta_id)
+    );
+  `);
+
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_contacto_etiquetas_contacto ON contacto_etiquetas(contacto_id);
+    CREATE INDEX IF NOT EXISTS idx_contacto_etiquetas_etiqueta ON contacto_etiquetas(etiqueta_id);
+  `);
+
   database.exec(`
     CREATE TABLE IF NOT EXISTS permissoes (
       id TEXT PRIMARY KEY,
@@ -187,6 +215,13 @@ function runMigrations(database: Database.Database): void {
   addColumnIfMissing(database, 'users', 'pwa_habilitado', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(database, 'users', 'pwa_auth_uid', 'TEXT');
   addColumnIfMissing(database, 'cargas', 'origem_pwa_user_id', 'TEXT');
+  // Avatar (emoji ou imagem em base64) e login sem password — equipa
+  // pequena e de confiança, conveniência de entrar só com um clique.
+  addColumnIfMissing(database, 'users', 'avatar', 'TEXT');
+  addColumnIfMissing(database, 'users', 'login_sem_password', 'INTEGER NOT NULL DEFAULT 0');
+  // Código-base opcional por contacto — permite agrupar várias cargas do
+  // mesmo emissor sob um único código (ex: "TF010", "TF010-A", "TF010-B").
+  addColumnIfMissing(database, 'contactos', 'codigo_base', 'TEXT');
 }
 
 function addColumnIfMissing(database: Database.Database, table: string, column: string, definition: string): void {

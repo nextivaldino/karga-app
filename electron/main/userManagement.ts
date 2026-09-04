@@ -191,6 +191,35 @@ export async function desabilitarPwa(requestedByRole: UserRole, userId: string):
   return toPublicUser(updated);
 }
 
+// Self-service OU Admin sobre um "user" — nunca um Admin a mexer noutro
+// Admin, nem um "user" a mexer em outra conta que não a sua própria.
+function podeGerirConta(actor: { id: string; role: UserRole }, targetUserId: string, target: { role: UserRole }): boolean {
+  if (actor.id === targetUserId) return true;
+  return actor.role === 'admin' && target.role === 'user';
+}
+
+export function setAvatar(actor: { id: string; role: UserRole }, targetUserId: string, avatar: string | null): PublicUser {
+  const existing = userRepository.findById(targetUserId);
+  if (!existing) throw new Error('Utilizador não encontrado.');
+  if (!podeGerirConta(actor, targetUserId, existing)) {
+    throw new Error('Não tens permissão para alterar o avatar deste utilizador.');
+  }
+  const updated = userRepository.setAvatar(targetUserId, avatar);
+  if (!updated) throw new Error('Utilizador não encontrado.');
+  return toPublicUser(updated);
+}
+
+export function setLoginSemPassword(actor: { id: string; role: UserRole }, targetUserId: string, valor: boolean): PublicUser {
+  const existing = userRepository.findById(targetUserId);
+  if (!existing) throw new Error('Utilizador não encontrado.');
+  if (!podeGerirConta(actor, targetUserId, existing)) {
+    throw new Error('Não tens permissão para alterar esta definição deste utilizador.');
+  }
+  const updated = userRepository.setLoginSemPassword(targetUserId, valor);
+  if (!updated) throw new Error('Utilizador não encontrado.');
+  return toPublicUser(updated);
+}
+
 export function listAdmins(): PublicUser[] {
   return userRepository
     .list()

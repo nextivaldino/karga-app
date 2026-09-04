@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Info, KeyRound, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { Info, Key as KeyRound, SignOut as LogOut, Moon, Gear as Settings, Sun } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, KeyRound } from 'lucide-react';
+import { ArrowLeft, Key as KeyRound } from '@phosphor-icons/react';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from '@/hooks/useAuth';
 

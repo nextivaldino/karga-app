@@ -1,20 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, CheckCircle, Info, Warning, XCircle } from '@phosphor-icons/react';
 import { ipcService } from '@/services/ipcService';
 import { useNavigation } from '@/hooks/useNavigation';
-import { formatRelativo } from '@/lib/formatRelativo';
+import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import type { MainPage, Notificacao } from '@/types';
 
-const TIPO_COR: Record<Notificacao['tipo'], string> = {
-  info: 'bg-primary',
-  sucesso: 'bg-success',
-  aviso: 'bg-warning',
-  erro: 'bg-error',
+// Um ícone + cor por tipo, num círculo pastel (mesma linguagem "tint"
+// já usada em CargasList/ContentoresIconsView) — em vez do pontinho
+// genérico anterior, para diferenciar de relance sistema/sucesso/aviso/erro.
+const TIPO_VISUAL: Record<Notificacao['tipo'], { Icon: typeof Info; bg: string; fg: string }> = {
+  info: { Icon: Info, bg: 'bg-primary/15', fg: 'text-primary' },
+  sucesso: { Icon: CheckCircle, bg: 'bg-success/15', fg: 'text-success' },
+  aviso: { Icon: Warning, bg: 'bg-warning/15', fg: 'text-warning' },
+  erro: { Icon: XCircle, bg: 'bg-error/15', fg: 'text-error' },
 };
 
-const PAGINAS_VALIDAS: MainPage[] = ['home', 'cargas', 'contentores', 'configuracoes'];
+const PAGINAS_VALIDAS: MainPage[] = ['home', 'cargas', 'contentores', 'configuracoes', 'sync'];
 
-export function NotificacoesBell(): React.JSX.Element {
+// Só ocupa espaço no cabeçalho quando há notificações de sistema por
+// ler (contentor parado/a partir, backup, manutenção) — os avisos de
+// cargas PWA já não passam por aqui, vivem nas superfícies dedicadas de
+// Sincronização. Quando tudo está lido, desaparece e devolve o espaço.
+export function NotificacoesBell(): React.JSX.Element | null {
   const { navigate } = useNavigation();
   const [open, setOpen] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
@@ -68,25 +75,27 @@ export function NotificacoesBell(): React.JSX.Element {
 
   const naoLidas = notificacoes.filter((n) => !n.lida).length;
 
+  if (naoLidas === 0) return null;
+
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative z-[90]">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title="Notificações"
+        title={`${naoLidas} notificaç${naoLidas === 1 ? 'ão' : 'ões'} por ler`}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className="relative flex h-8 w-8 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-bg-app"
+        className={`flex h-9 items-center gap-1.5 rounded-pill px-2.5 transition-transform hover:scale-105 ${
+          open ? 'bg-text-primary/15' : 'bg-text-primary/10'
+        }`}
       >
-        <Bell size={18} />
-        {naoLidas > 0 ? (
-          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-[9px] font-semibold text-white">
-            {naoLidas > 9 ? '9+' : naoLidas}
-          </span>
-        ) : null}
+        <Bell size={16} weight="bold" className="text-text-primary" />
+        <span className="whitespace-nowrap text-[11px] font-bold text-text-primary">
+          {naoLidas > 99 ? '99+' : naoLidas} notificaç{naoLidas === 1 ? 'ão' : 'ões'}
+        </span>
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-10 z-50 w-80 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg">
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-80 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-[13px] font-semibold text-text-primary">Notificações</span>
             <button
@@ -101,23 +110,28 @@ export function NotificacoesBell(): React.JSX.Element {
             {notificacoes.length === 0 ? (
               <p className="px-3 py-6 text-center text-[13px] text-text-tertiary">Nenhuma notificação.</p>
             ) : (
-              notificacoes.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => void handleClickNotificacao(n)}
-                  className={`flex w-full items-start gap-2 border-b border-border px-3 py-2.5 text-left last:border-b-0 transition-colors hover:bg-bg-app ${
-                    n.lida ? 'opacity-60' : ''
-                  }`}
-                >
-                  <span className={`mt-1 h-2 w-2 shrink-0 rounded-pill ${TIPO_COR[n.tipo]}`} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] text-text-primary">{n.titulo}</span>
-                    {n.mensagem ? <span className="block truncate text-[11px] text-text-tertiary">{n.mensagem}</span> : null}
-                    <span className="block text-[10px] text-text-tertiary">{formatRelativo(n.createdAt)}</span>
-                  </span>
-                </button>
-              ))
+              notificacoes.map((n) => {
+                const visual = TIPO_VISUAL[n.tipo];
+                return (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => void handleClickNotificacao(n)}
+                    className={`flex w-full items-start gap-2.5 border-b border-border px-3 py-2.5 text-left last:border-b-0 transition-colors hover:bg-bg-app ${
+                      n.lida ? 'opacity-60' : ''
+                    }`}
+                  >
+                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${visual.bg}`}>
+                      <visual.Icon size={15} weight="fill" className={visual.fg} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] text-text-primary">{n.titulo}</span>
+                      {n.mensagem ? <span className="block truncate text-[11px] text-text-tertiary">{n.mensagem}</span> : null}
+                      <span className="block text-[10px] text-text-tertiary">{formatRelativeTime(n.createdAt)}</span>
+                    </span>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>

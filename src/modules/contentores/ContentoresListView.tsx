@@ -1,6 +1,7 @@
-import { MoreHorizontal } from 'lucide-react';
+import { DotsThree as MoreHorizontal, Stack } from '@phosphor-icons/react';
 import { ESTADO_CONTENTOR_COLOR_CLASS, ESTADO_CONTENTOR_LABEL } from '@/constants/labels';
 import { getUrgenciaTier, URGENCIA_TEXT_CLASS } from '@/lib/contentorUrgencia';
+import { formatData } from '@/lib/formatData';
 import type { Contentor } from '@/types';
 
 const COLUMNS = [
@@ -19,10 +20,6 @@ const COLUMNS = [
 
 const GRID_TEMPLATE = COLUMNS.map((c) => c.width).join(' ');
 
-function formatData(iso: string | null): string {
-  return iso ? new Intl.DateTimeFormat('pt-PT').format(new Date(iso)) : '—';
-}
-
 interface ContentoresListViewProps {
   contentores: Contentor[];
   limiteDiasParado: number;
@@ -40,7 +37,8 @@ export function ContentoresListView({
 }: ContentoresListViewProps): React.JSX.Element {
   if (contentores.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-[13px] text-text-tertiary">
+      <div className="flex h-full flex-col items-center justify-center gap-2 text-[13px] text-text-tertiary">
+        <Stack size={32} className="opacity-50" />
         Nenhum contentor encontrado.
       </div>
     );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
-import { formatMoeda } from '@/lib/formatMoeda';
+import { formatValor } from '@/lib/formatValor';
 import { ipcService } from '@/services/ipcService';
 import { PeriodoFiltroBar } from './PeriodoFiltroBar';
 import { RelatorioTable } from './RelatorioTable';
@@ -46,9 +46,9 @@ export function ResumoFinanceiroReport(): React.JSX.Element {
     try {
       const linhasFormatadas = linhas.map((l) => ({
         periodo: l.periodo,
-        valorTotal: formatMoeda(l.valorTotal),
-        valorPago: formatMoeda(l.valorPago),
-        valorDevido: formatMoeda(l.valorDevido),
+        valorTotal: formatValor(l.valorTotal),
+        valorPago: formatValor(l.valorPago),
+        valorDevido: formatValor(l.valorDevido),
       }));
       const ext = formato === 'excel' ? 'xlsx' : 'pdf';
       const fileName = `Relatorio-Resumo-Financeiro-${Date.now()}.${ext}`;
@@ -67,15 +67,15 @@ export function ResumoFinanceiroReport(): React.JSX.Element {
 
       <div className="grid grid-cols-3 gap-md">
         <div className="rounded-control border border-border bg-bg-app p-md text-center">
-          <div className="text-[18px] font-semibold text-text-primary">{formatMoeda(totalGeral)}</div>
+          <div className="text-[18px] font-semibold text-text-primary">{formatValor(totalGeral)}</div>
           <div className="text-[11px] text-text-tertiary">Total Geral</div>
         </div>
         <div className="rounded-control border border-border bg-bg-app p-md text-center">
-          <div className="text-[18px] font-semibold text-success">{formatMoeda(totalPago)}</div>
+          <div className="text-[18px] font-semibold text-success">{formatValor(totalPago)}</div>
           <div className="text-[11px] text-text-tertiary">Total Pago</div>
         </div>
         <div className="rounded-control border border-border bg-bg-app p-md text-center">
-          <div className="text-[18px] font-semibold text-warning">{formatMoeda(totalDevido)}</div>
+          <div className="text-[18px] font-semibold text-warning">{formatValor(totalDevido)}</div>
           <div className="text-[11px] text-text-tertiary">Total Devido</div>
         </div>
       </div>
@@ -83,9 +83,9 @@ export function ResumoFinanceiroReport(): React.JSX.Element {
       <RelatorioTable
         colunas={[
           { key: 'periodo', header: 'Mês' },
-          { key: 'valorTotal', header: 'Valor Total', render: (v) => formatMoeda(Number(v)) },
-          { key: 'valorPago', header: 'Pago', render: (v) => formatMoeda(Number(v)) },
-          { key: 'valorDevido', header: 'Devido', render: (v) => formatMoeda(Number(v)) },
+          { key: 'valorTotal', header: 'Valor Total', render: (v) => formatValor(Number(v)) },
+          { key: 'valorPago', header: 'Pago', render: (v) => formatValor(Number(v)) },
+          { key: 'valorDevido', header: 'Devido', render: (v) => formatValor(Number(v)) },
         ]}
         linhas={linhas as unknown as Record<string, unknown>[]}
         loading={loading}

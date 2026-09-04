@@ -22,13 +22,13 @@
     "license:generate": "node scripts/generate-license.mjs"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-virtual": "^3.11.2",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.7.0",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
-    "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "ws": "^8.21.3"

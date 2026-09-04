@@ -44,6 +44,7 @@ interface CargaPendenteRow {
   emissor_nif: string | null;
   recetor_nome: string;
   recetor_telefone: string | null;
+  recetor_email: string | null;
   nome_carga: string;
   comprimento_cm: number | null;
   largura_cm: number | null;
@@ -70,6 +71,7 @@ function mapCargaPendente(row: CargaPendenteRow): CargaPendente {
     emissorNif: row.emissor_nif,
     recetorNome: row.recetor_nome,
     recetorTelefone: row.recetor_telefone,
+    recetorEmail: row.recetor_email,
     nomeCarga: row.nome_carga,
     comprimentoCm: row.comprimento_cm,
     larguraCm: row.largura_cm,
@@ -119,6 +121,7 @@ export async function enviarCargasPendentes(userId: string, items: NovaCargaPend
     emissor_nif: vazioParaNull(item.emissorNif),
     recetor_nome: item.recetorNome.trim(),
     recetor_telefone: vazioParaNull(item.recetorTelefone),
+    recetor_email: vazioParaNull(item.recetorEmail),
     nome_carga: item.nomeCarga.trim(),
     comprimento_cm: item.comprimentoCm,
     largura_cm: item.larguraCm,
@@ -150,6 +153,11 @@ export async function listMensagens(): Promise<Mensagem[]> {
   const { data, error } = await supabase.from('mensagens').select('*').order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map(mapMensagem);
+}
+
+export async function enviarMensagem(deUserId: string, paraUserId: string, texto: string): Promise<void> {
+  const { error } = await supabase.from('mensagens').insert({ de_user_id: deUserId, para_user_id: paraUserId, texto: texto.trim() });
+  if (error) throw new Error(error.message);
 }
 
 export async function marcarMensagemLida(id: string): Promise<void> {

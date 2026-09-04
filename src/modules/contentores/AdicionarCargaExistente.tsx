@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';

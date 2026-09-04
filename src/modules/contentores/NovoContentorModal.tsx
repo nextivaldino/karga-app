@@ -10,8 +10,11 @@ import type { Contentor } from '@/types';
 interface NovoContentorModalProps {
   open: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (contentor: Contentor) => void;
   editingContentor?: Contentor | null;
+  // Pré-preenche o campo Categoria ao criar (ignorado em modo edição) —
+  // usado pelo atalho "Criar contêiner-lista" do card de sincronização.
+  categoriaInicial?: string;
 }
 
 type CodigoModo = 'automatico' | 'manual';
@@ -21,6 +24,7 @@ export function NovoContentorModal({
   onClose,
   onSaved,
   editingContentor = null,
+  categoriaInicial,
 }: NovoContentorModalProps): React.JSX.Element | null {
   const isEditMode = editingContentor != null;
 
@@ -47,12 +51,12 @@ export function NovoContentorModal({
     } else {
       setNome('');
       setCodigoModo('automatico');
-      setCategoria('');
+      setCategoria(categoriaInicial ?? '');
       setDataPartida('');
       setDataChegadaPrevista('');
       void ipcService.contentores.nextCodigo().then(setCodigo);
     }
-  }, [open, editingContentor]);
+  }, [open, editingContentor, categoriaInicial]);
 
   function handleToggleCodigoModo(manual: boolean): void {
     if (manual) {
@@ -78,7 +82,7 @@ export function NovoContentorModal({
     setSaving(true);
     try {
       if (isEditMode && editingContentor) {
-        await ipcService.contentores.update(editingContentor.id, {
+        const updated = await ipcService.contentores.update(editingContentor.id, {
           nome: nome.trim(),
           codigo: codigo.trim(),
           categoria: categoria.trim() || null,
@@ -86,6 +90,7 @@ export function NovoContentorModal({
           dataChegadaPrevista: dataChegadaPrevista || null,
         });
         toast.success(`Contentor ${codigo.trim()} atualizado.`);
+        onSaved(updated ?? editingContentor);
       } else {
         const created = await ipcService.contentores.create({
           nome: nome.trim(),
@@ -95,8 +100,8 @@ export function NovoContentorModal({
           dataChegadaPrevista: dataChegadaPrevista || null,
         });
         toast.success(`Contentor ${created.codigo} criado.`);
+        onSaved(created);
       }
-      onSaved();
       onClose();
     } catch (err) {
       setError(cleanIpcError(err));

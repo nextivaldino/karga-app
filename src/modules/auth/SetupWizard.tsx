@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Ship } from 'lucide-react';
+import { EnvelopeSimple, Lock, User } from '@phosphor-icons/react';
+import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from './AuthContext';
 
@@ -48,8 +49,8 @@ export function SetupWizard(): React.JSX.Element {
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <div className="mb-lg flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-surface bg-primary-light text-primary">
-            <Ship size={24} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-surface bg-primary-light">
+            <ModuleIcon module="kraga" size={24} />
           </div>
           <h1 className="text-[20px] font-semibold text-text-primary">Bem-vindo ao Kraga Desktop</h1>
           <p className="text-[13px] text-text-secondary">
@@ -63,10 +64,17 @@ export function SetupWizard(): React.JSX.Element {
               Conta Root (técnica)
             </h2>
             <div className="flex flex-col gap-3">
-              <FloatingLabelInput label="Nome" value={rootName} onChange={(e) => setRootName(e.target.value)} required />
+              <FloatingLabelInput
+                label="Nome"
+                icon={<User size={16} />}
+                value={rootName}
+                onChange={(e) => setRootName(e.target.value)}
+                required
+              />
               <FloatingLabelInput
                 label="Email"
                 type="email"
+                icon={<EnvelopeSimple size={16} />}
                 value={rootEmail}
                 onChange={(e) => setRootEmail(e.target.value)}
                 required
@@ -74,6 +82,7 @@ export function SetupWizard(): React.JSX.Element {
               <FloatingLabelInput
                 label="Password"
                 type="password"
+                icon={<Lock size={16} />}
                 value={rootPassword}
                 onChange={(e) => setRootPassword(e.target.value)}
                 required
@@ -87,10 +96,17 @@ export function SetupWizard(): React.JSX.Element {
               Conta Admin (operação)
             </h2>
             <div className="flex flex-col gap-3">
-              <FloatingLabelInput label="Nome" value={adminName} onChange={(e) => setAdminName(e.target.value)} required />
+              <FloatingLabelInput
+                label="Nome"
+                icon={<User size={16} />}
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+                required
+              />
               <FloatingLabelInput
                 label="Email"
                 type="email"
+                icon={<EnvelopeSimple size={16} />}
                 value={adminEmail}
                 onChange={(e) => setAdminEmail(e.target.value)}
                 required
@@ -98,6 +114,7 @@ export function SetupWizard(): React.JSX.Element {
               <FloatingLabelInput
                 label="Password"
                 type="password"
+                icon={<Lock size={16} />}
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 required
@@ -106,6 +123,7 @@ export function SetupWizard(): React.JSX.Element {
               <FloatingLabelInput
                 label="Confirmar Password"
                 type="password"
+                icon={<Lock size={16} />}
                 value={adminConfirmPassword}
                 onChange={(e) => setAdminConfirmPassword(e.target.value)}
                 required

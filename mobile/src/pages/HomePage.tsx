@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, Clock, Euro, Package, Ship } from 'lucide-react';
+import { Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Boat as Ship } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
@@ -18,7 +18,8 @@ export function HomePage(): React.JSX.Element {
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [mensagensNaoLidas, setMensagensNaoLidas] = useState<Mensagem[]>([]);
   const { fila } = useFilaOffline();
-  const porEnviar = fila.length;
+  const naFila = fila.filter((f) => f.estado === 'fila').length;
+  const comErro = fila.filter((f) => f.estado === 'erro').length;
 
   useTopBarSlot(<span className="truncate text-[16px] font-semibold text-text-primary">Olá, {pwaUser?.nome ?? '...'} 👋</span>);
 
@@ -97,7 +98,7 @@ export function HomePage(): React.JSX.Element {
           </button>
         ) : null}
 
-        {porEnviar > 0 ? (
+        {naFila > 0 ? (
           <button
             type="button"
             onClick={() => navigate('cargas')}
@@ -107,9 +108,31 @@ export function HomePage(): React.JSX.Element {
               <Clock size={15} />
             </span>
             <span className="text-[13px] text-text-primary">
-              {porEnviar} carga{porEnviar === 1 ? '' : 's'} por enviar
+              {naFila} carga{naFila === 1 ? '' : 's'} por enviar — vai{naFila === 1 ? '' : 'ão'} quando ficares online
             </span>
           </button>
+        ) : null}
+
+        {comErro > 0 ? (
+          <button
+            type="button"
+            onClick={() => navigate('cargas')}
+            className="flex min-h-touch items-center gap-3 rounded-surface border border-error/30 bg-error/10 px-4 py-2.5 text-left"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-error/20 text-error">
+              <AlertTriangle size={15} />
+            </span>
+            <span className="text-[13px] text-text-primary">
+              {comErro} carga{comErro === 1 ? '' : 's'} com falha ao enviar — toca para tentar de novo
+            </span>
+          </button>
+        ) : null}
+
+        {naFila === 0 && comErro === 0 ? (
+          <div className="flex min-h-touch items-center justify-center gap-2 rounded-surface border border-success/20 bg-success/[0.06] px-4 py-2.5">
+            <CheckCircle2 size={15} className="shrink-0 text-success" />
+            <span className="text-[12px] font-medium text-success">Tudo sincronizado — as tuas cargas já estão no sistema</span>
+          </div>
         ) : null}
       </div>
     </div>

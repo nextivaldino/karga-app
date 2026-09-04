@@ -17,6 +17,8 @@ interface BuildContentorListaHtmlParams {
   empresaNome: string;
   empresaMorada: string;
   empresaContacto: string;
+  empresaLogo?: string | null;
+  empresaNif?: string | null;
   contentorCodigo: string;
   contentorNome: string;
   dataPartida: string | null;
@@ -145,6 +147,8 @@ export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): 
   * { box-sizing: border-box; }
   body { font-family: -apple-system, 'Inter', Helvetica, Arial, sans-serif; color: #241f31; padding: 40px; }
   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #3584e4; padding-bottom: 16px; margin-bottom: 24px; }
+  .header-empresa { display: flex; gap: 12px; align-items: flex-start; }
+  .header-empresa img { max-height: 48px; max-width: 140px; object-fit: contain; }
   .header h1 { font-size: 20px; margin: 0 0 4px; }
   .header p { font-size: 12px; color: #5e5c64; margin: 0; }
   .title { text-align: right; }
@@ -163,10 +167,14 @@ export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): 
 </head>
 <body>
   <div class="header">
-    <div>
-      <h1>${escapeHtml(params.empresaNome)}</h1>
-      <p>${escapeHtml(params.empresaMorada)}</p>
-      <p>${escapeHtml(params.empresaContacto)}</p>
+    <div class="header-empresa">
+      ${params.empresaLogo ? `<img src="${params.empresaLogo}" alt="" />` : ''}
+      <div>
+        <h1>${escapeHtml(params.empresaNome)}</h1>
+        <p>${escapeHtml(params.empresaMorada)}</p>
+        <p>${escapeHtml(params.empresaContacto)}</p>
+        ${params.empresaNif ? `<p>NIF: ${escapeHtml(params.empresaNif)}</p>` : ''}
+      </div>
     </div>
     <div class="title">
       <h2>${t.titulo}</h2>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import { Key as KeyRound } from '@phosphor-icons/react';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { ipcService } from '@/services/ipcService';
 

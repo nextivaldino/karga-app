@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Warning as AlertTriangle, CheckCircle as CheckCircle2, ChatCircle as MessageCircle, ShieldCheck, XCircle } from '@phosphor-icons/react';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
-import { ProgressBar } from '@/components/ui/ProgressBar';
 import { toast } from '@/components/ui/Toast';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';
+import { useAvatarPorUsuario } from '@/hooks/useAvatarPorUsuario';
+import { ROW_TINTS } from '@/modules/cargas/CargasList';
 import { RevisarCargaPendenteModal } from './RevisarCargaPendenteModal';
-import type { RevisaoCargaPendente } from '@/types';
+import { MensagemComposerModal } from '@/modules/mensagens/MensagemComposerModal';
+import type { CargaPendente, RevisaoCargaPendente } from '@/types';
 
 function formatData(iso: string): string {
   return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
@@ -15,12 +18,6 @@ function formatData(iso: string): string {
 
 function temConflito(r: RevisaoCargaPendente): boolean {
   return r.sugestoes.some((s) => s.sugestaoId != null && !s.automatico);
-}
-
-interface Progresso {
-  done: number;
-  total: number;
-  falhas: { nome: string; erro: string }[];
 }
 
 interface RejeitarEmMassaModalProps {
@@ -70,15 +67,25 @@ function RejeitarEmMassaModal({ open, count, submitting, onClose, onConfirm }: R
   );
 }
 
-export function SincronizacaoView(): React.JSX.Element {
+interface SincronizacaoViewProps {
+  // Histórico agora é controlado pela barra "pro" da página Sync (o
+  // botão vive lá, no tom amarelo mais claro) — este componente só
+  // recebe o estado já pronto para desenhar o painel.
+  historicoAberto: boolean;
+  historico: CargaPendente[] | null;
+  historicoLoading: boolean;
+}
+
+export function SincronizacaoView({ historicoAberto, historico, historicoLoading }: SincronizacaoViewProps): React.JSX.Element {
+  const avatarPorUsuario = useAvatarPorUsuario();
   const [revisao, setRevisao] = useState<RevisaoCargaPendente[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [revisandoId, setRevisandoId] = useState<string | null>(null);
-  const [progresso, setProgresso] = useState<Progresso | null>(null);
   const [rejeitarEmMassaAberto, setRejeitarEmMassaAberto] = useState(false);
   const [rejeitandoEmMassa, setRejeitandoEmMassa] = useState(false);
+  const [conversaCom, setConversaCom] = useState<{ id: string; name: string } | null>(null);
 
   async function carregar(): Promise<void> {
     setLoading(true);
@@ -132,46 +139,6 @@ export function SincronizacaoView(): React.JSX.Element {
     setSelecionados(new Set(revisao.filter((r) => !temConflito(r)).map((r) => r.pendente.id)));
   }
 
-  async function handleImportarSelecionadas(): Promise<void> {
-    const itens = revisao.filter((r) => selecionados.has(r.pendente.id));
-    if (itens.length === 0) return;
-
-    setProgresso({ done: 0, total: itens.length, falhas: [] });
-    const falhas: { nome: string; erro: string }[] = [];
-
-    for (const r of itens) {
-      const sugEmissor = r.sugestoes.find((s) => s.campo === 'emissor');
-      const sugRecetor = r.sugestoes.find((s) => s.campo === 'recetor');
-      try {
-        await ipcService.sync.importarCarga({
-          pendenteId: r.pendente.id,
-          contentorId: r.pendente.contentorId,
-          emissorId: sugEmissor?.sugestaoId ?? null,
-          recetorId: sugRecetor?.sugestaoId ?? null,
-          nome: r.pendente.nomeCarga,
-          comprimentoCm: r.pendente.comprimentoCm,
-          larguraCm: r.pendente.larguraCm,
-          alturaCm: r.pendente.alturaCm,
-          pesoKg: r.pendente.pesoKg,
-          valor: r.pendente.valor,
-          pago: r.pendente.pago,
-        });
-      } catch (err) {
-        falhas.push({ nome: r.pendente.nomeCarga, erro: cleanIpcError(err) });
-      }
-      setProgresso((p) => (p ? { ...p, done: p.done + 1, falhas } : p));
-    }
-
-    const sucesso = itens.length - falhas.length;
-    if (falhas.length === 0) {
-      toast.success(`${sucesso} carga${sucesso === 1 ? '' : 's'} importada${sucesso === 1 ? '' : 's'}.`);
-    } else {
-      toast.warning(`${sucesso} importada${sucesso === 1 ? '' : 's'}, ${falhas.length} falharam.`);
-    }
-    setProgresso(null);
-    void carregar();
-  }
-
   async function handleRejeitarSelecionadas(motivo: string): Promise<void> {
     const itens = revisao.filter((r) => selecionados.has(r.pendente.id));
     if (itens.length === 0) return;
@@ -199,16 +166,39 @@ export function SincronizacaoView(): React.JSX.Element {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold text-text-primary">Cargas Pendentes de Revisão (PWA)</h2>
-        <button
-          type="button"
-          onClick={() => void carregar()}
-          className="flex items-center gap-1.5 rounded-control px-2.5 py-1.5 text-[12px] font-medium text-text-secondary transition-colors hover:bg-bg-app"
-        >
-          <RefreshCw size={14} /> Atualizar
-        </button>
-      </div>
+      <h2 className="text-[15px] font-semibold text-text-primary">Cargas Pendentes de Revisão (PWA)</h2>
+
+      {historicoAberto ? (
+        <div className="flex flex-col gap-2 rounded-control border border-border bg-bg-app p-3">
+          {historicoLoading ? (
+            <p className="text-[13px] text-text-tertiary">A carregar...</p>
+          ) : !historico || historico.length === 0 ? (
+            <p className="text-[13px] text-text-tertiary">Ainda não há cargas revistas.</p>
+          ) : (
+            historico.map((p, i) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-3 rounded-control px-2.5 py-2 text-[13px]"
+                style={{ backgroundColor: `color-mix(in srgb, ${ROW_TINTS[i % ROW_TINTS.length]} 5%, var(--bg-surface))` }}
+              >
+                {p.estado === 'importada' ? (
+                  <CheckCircle2 size={15} className="shrink-0 text-success" />
+                ) : (
+                  <XCircle size={15} className="shrink-0 text-error" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-text-primary">{p.nomeCarga}</p>
+                  <p className="truncate text-[11px] text-text-tertiary">
+                    {p.emissorNome} → {p.recetorNome} · {p.inseridoPorNome}
+                    {p.estado === 'rejeitada' && p.motivoRejeicao ? ` · ${p.motivoRejeicao}` : ''}
+                  </p>
+                </div>
+                <span className="shrink-0 text-[11px] text-text-tertiary">{formatData(p.importadoEm ?? p.createdAt)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      ) : null}
 
       {erro ? (
         <p className="text-[13px] text-error">{erro}</p>
@@ -244,48 +234,42 @@ export function SincronizacaoView(): React.JSX.Element {
             <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
-                disabled={totalSelecionadas === 0 || progresso != null}
+                disabled={totalSelecionadas === 0}
                 onClick={() => setRejeitarEmMassaAberto(true)}
                 className="rounded-control px-3 py-1.5 text-[12px] font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-40"
               >
                 Rejeitar selecionadas ({totalSelecionadas})
               </button>
-              <button
-                type="button"
-                disabled={totalSelecionadas === 0 || progresso != null}
-                onClick={() => void handleImportarSelecionadas()}
-                className="rounded-control bg-primary px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
-              >
-                Importar selecionadas ({totalSelecionadas})
-              </button>
             </div>
           </div>
-
-          {progresso ? (
-            <ProgressBar
-              value={progresso.done}
-              max={progresso.total}
-              label={`A importar ${progresso.done} de ${progresso.total}...${progresso.falhas.length > 0 ? ` (${progresso.falhas.length} falhas)` : ''}`}
-            />
-          ) : null}
 
           <div className="flex flex-col gap-4">
             {[...porUtilizador.entries()].map(([userId, grupo]) => (
               <div key={userId} className="rounded-surface border border-border bg-bg-surface">
-                <div className="border-b border-border px-4 py-2">
-                  <span className="text-[13px] font-medium text-text-primary">{grupo.nome}</span>
+                <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+                  <UserAvatar avatar={avatarPorUsuario.get(userId)} size={22} />
+                  <button
+                    type="button"
+                    title="Enviar mensagem"
+                    onClick={() => setConversaCom({ id: userId, name: grupo.nome })}
+                    className="flex items-center gap-1.5 text-[13px] font-medium text-text-primary hover:text-primary hover:underline"
+                  >
+                    <MessageCircle size={13} className="shrink-0 text-text-tertiary" />
+                    {grupo.nome}
+                  </button>
                   <span className="ml-2 text-[12px] text-text-tertiary">
                     {grupo.itens.length} carga{grupo.itens.length === 1 ? '' : 's'}
                   </span>
                 </div>
                 <div className="flex flex-col">
-                  {grupo.itens.map((r) => {
+                  {grupo.itens.map((r, i) => {
                     const p = r.pendente;
                     const conflito = temConflito(r);
                     return (
                       <div
                         key={p.id}
-                        className="flex items-center gap-3 border-b border-border px-4 py-2.5 last:border-b-0"
+                        className="flex items-center gap-3 px-4 py-2.5"
+                        style={{ backgroundColor: `color-mix(in srgb, ${ROW_TINTS[i % ROW_TINTS.length]} 5%, var(--bg-surface))` }}
                       >
                         <input
                           type="checkbox"
@@ -338,6 +322,8 @@ export function SincronizacaoView(): React.JSX.Element {
         onClose={() => setRejeitarEmMassaAberto(false)}
         onConfirm={(motivo) => void handleRejeitarSelecionadas(motivo)}
       />
+
+      <MensagemComposerModal open={conversaCom != null} onClose={() => setConversaCom(null)} utilizador={conversaCom} />
     </div>
   );
 }

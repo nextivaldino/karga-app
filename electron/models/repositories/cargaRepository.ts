@@ -3,6 +3,7 @@ import { getDatabase, nowIso } from '../database';
 import { computeNextCode } from '../codeSequence';
 import { settingsRepository } from './settingsRepository';
 import { contentorRepository } from './contentorRepository';
+import { contactoRepository } from './contactoRepository';
 import type { Carga, CargaComEmissor, CreateCargaBatchItem, CreateCargaInput } from '../../../src/types';
 
 interface CargaRow {
@@ -70,6 +71,12 @@ function create(input: CreateCargaInput): Carga {
   if (codigoExiste(input.codigo)) {
     throw new Error(`Já existe uma carga com o código "${input.codigo}".`);
   }
+  if (input.contentorId) {
+    const destino = contentorRepository.findById(input.contentorId);
+    if (destino?.bloqueado) {
+      throw new Error(`O contentor ${destino.codigo} está bloqueado — desbloqueie-o antes de adicionar cargas.`);
+    }
+  }
 
   const db = getDatabase();
   const timestamp = nowIso();
@@ -123,6 +130,7 @@ interface ListFilters {
   texto?: string;
   estadoPagamento?: Carga['estadoPagamento'];
   origemPwaUserId?: string;
+  incluirArquivadas?: boolean;
 }
 
 function list(filters: ListFilters = {}): CargaComEmissor[] {
@@ -130,6 +138,11 @@ function list(filters: ListFilters = {}): CargaComEmissor[] {
   const clauses: string[] = [];
   const params: unknown[] = [];
 
+  // Soft-delete: cargas arquivadas ficam fora das listagens normais por
+  // omissão (histórico preservado, nunca apagado fisicamente).
+  if (!filters.incluirArquivadas) {
+    clauses.push(`cargas.estado != 'arquivada'`);
+  }
   if (filters.id) {
     clauses.push('cargas.id = ?');
     params.push(filters.id);
@@ -170,7 +183,9 @@ function list(filters: ListFilters = {}): CargaComEmissor[] {
        ${where} ORDER BY cargas.created_at DESC`,
     )
     .all(...params);
-  return rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
+  const cargas = rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
+  const destinatariosPorCarga = listDestinatariosPorCarga(cargas.map((c) => c.id));
+  return cargas.map((c) => ({ ...c, destinatarios: destinatariosPorCarga[c.id] ?? [] }));
 }
 
 function update(id: string, changes: Partial<CreateCargaInput>): Carga | null {
@@ -193,6 +208,9 @@ function update(id: string, changes: Partial<CreateCargaInput>): Carga | null {
       if (!destino) throw new Error('Contentor de destino não encontrado.');
       if (destino.estado !== 'aberto') {
         throw new Error('Não é possível associar esta carga: o contentor de destino não está aberto.');
+      }
+      if (destino.bloqueado) {
+        throw new Error(`O contentor ${destino.codigo} está bloqueado — desbloqueie-o antes de adicionar cargas.`);
       }
     }
   }
@@ -246,13 +264,50 @@ function nextCodigo(): string {
   return computeNextCode(prefix, rows.map((r) => r.codigo));
 }
 
+// "Código único para este emissor" — a primeira carga do emissor fixa
+// um código-base (gravado no contacto, `contactos.codigo_base`); as
+// seguintes ficam "base-A", "base-B"... `cargas.codigo` continua a ter
+// a restrição UNIQUE da base de dados intacta — o agrupamento é visual
+// (todas leem-se como pertencentes ao mesmo código-base), não uma
+// duplicação real.
+// `reservados` cobre códigos já atribuídos a cargas empilhadas nesta
+// sessão do formulário mas ainda não gravadas na base de dados — sem
+// isto, duas cargas empilhadas seguidas do mesmo emissor receberiam
+// sempre a mesma sugestão (a consulta só vê o que já está gravado).
+function nextCodigoAgrupado(emissorId: string, reservados: string[] = []): string {
+  const db = getDatabase();
+  const contacto = contactoRepository.findById(emissorId);
+  if (!contacto) throw new Error('Emissor não encontrado.');
+
+  let base = contacto.codigoBase;
+  if (!base) {
+    base = nextCodigo();
+    contactoRepository.definirCodigoBase(emissorId, base);
+  }
+
+  const rows = db
+    .prepare<[string, string], { codigo: string }>('SELECT codigo FROM cargas WHERE codigo = ? OR codigo LIKE ?')
+    .all(base, `${base}-%`);
+  const usados = new Set([...rows.map((r) => r.codigo), ...reservados]);
+
+  if (!usados.has(base)) return base;
+
+  for (let i = 0; i < 26; i++) {
+    const candidato = `${base}-${String.fromCharCode(65 + i)}`;
+    if (!usados.has(candidato)) return candidato;
+  }
+  let n = 1;
+  while (usados.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
 function search(texto: string, limit = 8): Carga[] {
   const db = getDatabase();
   const rows = db
     .prepare<
       [string, string, number],
       CargaRow
-    >('SELECT * FROM cargas WHERE nome LIKE ? OR codigo LIKE ? ORDER BY created_at DESC LIMIT ?')
+    >(`SELECT * FROM cargas WHERE estado != 'arquivada' AND (nome LIKE ? OR codigo LIKE ?) ORDER BY created_at DESC LIMIT ?`)
     .all(`%${texto}%`, `%${texto}%`, limit);
   return rows.map(fromRow);
 }
@@ -281,7 +336,9 @@ function countEntreguesMesAtual(): number {
 function sumValorDevido(): number {
   const db = getDatabase();
   const row = db
-    .prepare<[], { total: number | null }>(`SELECT SUM(valor) as total FROM cargas WHERE estado_pagamento = 'devido'`)
+    .prepare<[], { total: number | null }>(
+      `SELECT SUM(valor) as total FROM cargas WHERE estado_pagamento = 'devido' AND estado != 'arquivada'`,
+    )
     .get();
   return row?.total ?? 0;
 }
@@ -334,7 +391,7 @@ function listDestinatariosPorCarga(cargaIds: string[]): Record<string, string[]>
   return result;
 }
 
-function listUltimas(limit = 5): CargaComEmissor[] {
+function listUltimasSincronizadas(limit = 8): CargaComEmissor[] {
   const db = getDatabase();
   const rows = db
     .prepare<
@@ -343,10 +400,13 @@ function listUltimas(limit = 5): CargaComEmissor[] {
     >(
       `SELECT cargas.*, contactos.nome as emissor_nome FROM cargas
        JOIN contactos ON contactos.id = cargas.emissor_id
+       WHERE cargas.estado != 'arquivada' AND cargas.origem_pwa_user_id IS NOT NULL
        ORDER BY cargas.created_at DESC LIMIT ?`,
     )
     .all(limit);
-  return rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
+  const cargas = rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
+  const destinatariosPorCarga = listDestinatariosPorCarga(cargas.map((c) => c.id));
+  return cargas.map((c) => ({ ...c, destinatarios: destinatariosPorCarga[c.id] ?? [] }));
 }
 
 interface OrigemPwaLinha {
@@ -370,19 +430,76 @@ function listOrigensPwa(): OrigemPwaLinha[] {
     .all();
 }
 
+interface CargasPorContentorLinha {
+  contentorId: string;
+  contentorCodigo: string;
+  contentorNome: string;
+  total: number;
+}
+
+// Contribuição PWA de um utilizador do desktop, discriminada por
+// contentor — usado no card de perfil dos avatares na Home.
+function countPorContentorParaUsuario(userId: string): CargasPorContentorLinha[] {
+  const db = getDatabase();
+  return db
+    .prepare<
+      [string],
+      CargasPorContentorLinha
+    >(
+      `SELECT contentores.id as contentorId, contentores.codigo as contentorCodigo, contentores.nome as contentorNome, COUNT(*) as total
+       FROM cargas JOIN contentores ON contentores.id = cargas.contentor_id
+       WHERE cargas.origem_pwa_user_id = ? AND cargas.estado != 'arquivada'
+       GROUP BY contentores.id ORDER BY total DESC`,
+    )
+    .all(userId);
+}
+
+// Soft-delete: "eliminar" uma carga nunca apaga a linha, só marca
+// estado = 'arquivada' — histórico mantido, fica fora das listagens
+// normais (ver `list()`), tal como qualquer outra entidade no sistema.
+function archive(id: string): Carga | null {
+  const existing = findById(id);
+  if (!existing) return null;
+
+  const db = getDatabase();
+  const updatedAt = nowIso();
+  db.prepare(`UPDATE cargas SET estado = 'arquivada', updated_at = ? WHERE id = ?`).run(updatedAt, id);
+
+  return { ...existing, estado: 'arquivada', updatedAt };
+}
+
+// Reaproveita a validação já existente em `update()` (contentor de
+// destino tem de estar aberto, etc.) para cada carga, dentro de uma
+// única transação — ou move tudo, ou nada (falha numa reverte as outras).
+function moverEmLote(ids: string[], contentorId: string): Carga[] {
+  const db = getDatabase();
+  const runBatch = db.transaction((cargaIds: string[]) => {
+    return cargaIds.map((id) => {
+      const updated = update(id, { contentorId });
+      if (!updated) throw new Error(`Carga não encontrada: ${id}`);
+      return updated;
+    });
+  });
+  return runBatch(ids);
+}
+
 export const cargaRepository = {
   create,
   createBatch,
   findById,
   list,
   update,
+  archive,
+  moverEmLote,
   nextCodigo,
+  nextCodigoAgrupado,
   search,
   countMesAtual,
   countEntreguesMesAtual,
   sumValorDevido,
-  listUltimas,
+  listUltimasSincronizadas,
   addDestinatario,
   listDestinatariosPorCarga,
   listOrigensPwa,
+  countPorContentorParaUsuario,
 };

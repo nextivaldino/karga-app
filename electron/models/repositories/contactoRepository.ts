@@ -11,6 +11,7 @@ interface ContactoRow {
   nif: string | null;
   notas: string | null;
   ativo: number;
+  codigo_base: string | null;
   created_at: string;
   updated_at: string;
   sync_status: Contacto['syncStatus'];
@@ -26,6 +27,7 @@ function fromRow(row: ContactoRow): Contacto {
     nif: row.nif,
     notas: row.notas,
     ativo: row.ativo === 1,
+    codigoBase: row.codigo_base,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: row.sync_status,
@@ -44,17 +46,27 @@ function create(input: CreateContactoInput): Contacto {
     nif: input.nif ?? null,
     notas: input.notas ?? null,
     ativo: 1,
+    codigo_base: null,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
   };
 
   db.prepare(
-    `INSERT INTO contactos (id, nome, telefone, email, morada, nif, notas, ativo, created_at, updated_at, sync_status)
-     VALUES (@id, @nome, @telefone, @email, @morada, @nif, @notas, @ativo, @created_at, @updated_at, @sync_status)`,
+    `INSERT INTO contactos (id, nome, telefone, email, morada, nif, notas, ativo, codigo_base, created_at, updated_at, sync_status)
+     VALUES (@id, @nome, @telefone, @email, @morada, @nif, @notas, @ativo, @codigo_base, @created_at, @updated_at, @sync_status)`,
   ).run(row);
 
   return fromRow(row);
+}
+
+// Só é chamado a partir de `cargaRepository.nextCodigoAgrupado` — nunca
+// diretamente pela UI. Fica gravado no contacto para todas as próximas
+// cargas deste emissor (mesmo em sessões futuras) continuarem a agrupar
+// sob o mesmo código-base.
+function definirCodigoBase(id: string, codigoBase: string): void {
+  const db = getDatabase();
+  db.prepare('UPDATE contactos SET codigo_base = ?, updated_at = ? WHERE id = ?').run(codigoBase, nowIso(), id);
 }
 
 function findById(id: string): Contacto | null {
@@ -87,6 +99,42 @@ function search(texto: string, limit = 10): Contacto[] {
       ContactoRow
     >('SELECT * FROM contactos WHERE ativo = 1 AND nome LIKE ? ORDER BY nome ASC LIMIT ?')
     .all(`%${texto}%`, limit);
+  return rows.map(fromRow);
+}
+
+// Deteção de duplicados ao preencher Emissor/Recetor — nomes iguais são
+// o caso óbvio, mas dois contactos com nomes diferentes que partilham o
+// mesmo telefone ou morada também merecem aviso (podem ser o mesmo
+// cliente escrito de forma diferente). `excludeId` evita que o próprio
+// contacto já selecionado apareça como "parecido consigo mesmo".
+function buscarSimilares(input: { nome?: string; telefone?: string; morada?: string }, excludeId?: string): Contacto[] {
+  const db = getDatabase();
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+
+  if (input.nome?.trim()) {
+    clauses.push('LOWER(nome) = LOWER(?)');
+    params.push(input.nome.trim());
+  }
+  if (input.telefone?.trim()) {
+    clauses.push('telefone = ?');
+    params.push(input.telefone.trim());
+  }
+  if (input.morada?.trim()) {
+    clauses.push('LOWER(morada) = LOWER(?)');
+    params.push(input.morada.trim());
+  }
+  if (clauses.length === 0) return [];
+
+  let where = `ativo = 1 AND (${clauses.join(' OR ')})`;
+  if (excludeId) {
+    where += ' AND id != ?';
+    params.push(excludeId);
+  }
+
+  const rows = db
+    .prepare<unknown[], ContactoRow>(`SELECT * FROM contactos WHERE ${where} ORDER BY nome ASC LIMIT 5`)
+    .all(...params);
   return rows.map(fromRow);
 }
 
@@ -165,6 +213,8 @@ export const contactoRepository = {
   list,
   listPorContentor,
   search,
+  buscarSimilares,
+  definirCodigoBase,
   update,
   archive,
   reactivate,

@@ -1,4 +1,4 @@
-import { TriangleAlert, X } from 'lucide-react';
+import { Warning as TriangleAlert, X } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
 interface BannerProps {

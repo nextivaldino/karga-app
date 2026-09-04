@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Archive, ArchiveRestore, Mail, MessageCircle, Pencil, Plus, Search } from 'lucide-react';
+import { Archive, ArrowCounterClockwise as ArchiveRestore, EnvelopeSimple as Mail, ChatCircle as MessageCircle, PencilSimple as Pencil, Plus, MagnifyingGlass as Search, UserCircle } from '@phosphor-icons/react';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from '@/components/ui/Toast';
@@ -55,17 +55,17 @@ export function ContactosConfig(): React.JSX.Element {
         <button
           type="button"
           onClick={() => setFormOpen(true)}
-          className="flex items-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover"
+          className="flex h-9 shrink-0 items-center gap-1.5 rounded-pill bg-success px-4 text-[13px] font-medium text-white shadow-sm transition-colors hover:brightness-95"
         >
-          <Plus size={16} /> Novo Contacto
+          <Plus size={18} /> Novo Contacto
         </button>
-        <div className="relative">
-          <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+        <div className="relative flex h-9 w-[220px] shrink-0 items-center gap-2 rounded-pill border border-border bg-bg-input px-3 transition-[width] focus-within:w-[300px]">
+          <Search size={15} className="shrink-0 text-text-tertiary" />
           <input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder="Pesquisar..."
-            className="w-56 rounded-control border border-border bg-bg-input py-1.5 pl-8 pr-3 text-[13px] text-text-primary outline-none focus:border-primary"
+            placeholder="Pesquisar contactos..."
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-text-primary outline-none placeholder:text-text-tertiary"
           />
         </div>
         <label className="ml-auto flex items-center gap-1.5 text-[13px] text-text-secondary">
@@ -95,6 +95,7 @@ export function ContactosConfig(): React.JSX.Element {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
+                    <UserCircle size={16} className="shrink-0 text-text-tertiary" />
                     <span className="truncate text-[14px] font-medium text-text-primary">{c.nome}</span>
                     {!c.ativo ? (
                       <span className="rounded-pill bg-bg-app px-1.5 py-0.5 text-[10px] font-medium uppercase text-text-tertiary">

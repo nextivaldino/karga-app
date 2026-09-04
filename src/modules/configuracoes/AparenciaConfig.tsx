@@ -1,4 +1,4 @@
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from '@phosphor-icons/react';
 import { useTheme } from '@/hooks/useTheme';
 
 export function AparenciaConfig(): React.JSX.Element {

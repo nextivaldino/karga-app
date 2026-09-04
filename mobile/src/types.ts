@@ -18,6 +18,7 @@ export interface CargaPendente {
   emissorNif: string | null;
   recetorNome: string;
   recetorTelefone: string | null;
+  recetorEmail: string | null;
   nomeCarga: string;
   comprimentoCm: number | null;
   larguraCm: number | null;
@@ -41,6 +42,7 @@ export interface NovaCargaPendenteInput {
   emissorNif: string | null;
   recetorNome: string;
   recetorTelefone: string | null;
+  recetorEmail: string | null;
   nomeCarga: string;
   comprimentoCm: number | null;
   larguraCm: number | null;

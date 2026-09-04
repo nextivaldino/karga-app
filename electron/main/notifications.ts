@@ -1,7 +1,20 @@
 import { BrowserWindow, Notification } from 'electron';
 import { notificacaoRepository } from '../models/repositories/notificacaoRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
+import { settingsRepository } from '../models/repositories/settingsRepository';
 import type { TipoNotificacao } from '../../src/types';
+
+// Categorias configuráveis em Definições → Notificações — cada uma tem a
+// sua chave em `settingsRepository` (texto '1'/'0', omissa = ligada).
+// Notificações sem categoria (ex: originadas de uma ação direta do
+// utilizador que já tem o seu próprio toast) não passam por este gate.
+export type CategoriaNotificacao = 'contentor_parado' | 'contentor_partida' | 'manutencao';
+
+const SETTING_POR_CATEGORIA: Record<CategoriaNotificacao, string> = {
+  contentor_parado: 'notif_contentores_parados',
+  contentor_partida: 'notif_contentores_partida',
+  manutencao: 'notif_manutencao',
+};
 
 interface CriarNotificacaoOptions {
   tipo: TipoNotificacao;
@@ -10,6 +23,7 @@ interface CriarNotificacaoOptions {
   linkModulo?: string;
   linkEntidadeId?: string;
   nativa?: boolean;
+  categoria?: CategoriaNotificacao;
 }
 
 function focarJanelaENavegar(linkModulo: string | null, linkEntidadeId: string | null): void {
@@ -22,6 +36,11 @@ function focarJanelaENavegar(linkModulo: string | null, linkEntidadeId: string |
 }
 
 export function criarNotificacao(options: CriarNotificacaoOptions): void {
+  if (options.categoria) {
+    const chave = SETTING_POR_CATEGORIA[options.categoria];
+    if (settingsRepository.get(chave) === '0') return;
+  }
+
   const notificacao = notificacaoRepository.criar({
     tipo: options.tipo,
     titulo: options.titulo,
@@ -56,6 +75,7 @@ export function verificarContentores(): void {
           linkModulo: 'contentores',
           linkEntidadeId: contentor.id,
           nativa: true,
+          categoria: 'contentor_partida',
         });
       }
     }
@@ -70,6 +90,7 @@ export function verificarContentores(): void {
           linkModulo: 'contentores',
           linkEntidadeId: contentor.id,
           nativa: false,
+          categoria: 'contentor_parado',
         });
       }
     }

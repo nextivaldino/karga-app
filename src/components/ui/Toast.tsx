@@ -1,4 +1,4 @@
-import { CheckCircle2, Info, TriangleAlert, XCircle } from 'lucide-react';
+import { CheckCircle as CheckCircle2, Info, Warning as TriangleAlert, XCircle } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 
 type ToastTone = 'info' | 'success' | 'warning' | 'error';

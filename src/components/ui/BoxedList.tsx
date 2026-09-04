@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { CaretRight as ChevronRight } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
 export interface BoxedListRowProps {
@@ -24,7 +24,13 @@ export function BoxedListRow({ icon, iconColorClass, title, subtitle, trailing, 
         onClick ? 'cursor-pointer transition-colors hover:bg-bg-app' : ''
       }`}
     >
-      {icon ? <span className={`shrink-0 ${iconColorClass ?? 'text-text-secondary'}`}>{icon}</span> : null}
+      {icon ? (
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-current/10 ${iconColorClass ?? 'text-text-secondary'}`}
+        >
+          {icon}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1">
         <span className="block text-[14px] text-text-primary">{title}</span>
         {subtitle ? <span className="block text-[12px] text-text-tertiary">{subtitle}</span> : null}

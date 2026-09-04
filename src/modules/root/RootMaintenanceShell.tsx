@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Database, HardDrive, KeyRound, LogOut, Ship } from 'lucide-react';
+import { Database, HardDrive, Key, SignOut } from '@phosphor-icons/react';
+import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { toast, ToastContainer } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
 import { useAuth } from '@/modules/auth/AuthContext';
@@ -49,7 +50,7 @@ export function RootMaintenanceShell(): React.JSX.Element {
         } as React.CSSProperties}
       >
         <div className="flex items-center gap-2 text-[13px] font-semibold text-text-primary">
-          <Ship size={16} /> Kraga Desktop — Manutenção (Root)
+          <ModuleIcon module="kraga" size={16} /> Kraga Desktop — Manutenção (Root)
         </div>
         <button
           type="button"
@@ -58,7 +59,7 @@ export function RootMaintenanceShell(): React.JSX.Element {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           className="flex h-8 w-8 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-bg-app"
         >
-          <LogOut size={18} />
+          <SignOut size={18} />
         </button>
       </header>
 
@@ -96,7 +97,7 @@ export function RootMaintenanceShell(): React.JSX.Element {
 
           <div>
             <h2 className="mb-md flex items-center gap-2 text-[15px] font-semibold text-text-primary">
-              <KeyRound size={16} /> Utilizadores Admin
+              <Key size={16} /> Utilizadores Admin
             </h2>
             {loading ? (
               <p className="text-[13px] text-text-tertiary">A carregar...</p>

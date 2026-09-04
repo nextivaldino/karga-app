@@ -5,7 +5,6 @@ import dotenv from 'dotenv';
 import { registerIpcHandlers } from '../ipc';
 import { closeDatabase, getDatabase } from '../models/database';
 import { iniciarVerificacaoPeriodica } from './notifications';
-import { iniciarVerificacaoPeriodicaSync } from './sync';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,7 +47,6 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
   iniciarVerificacaoPeriodica();
-  iniciarVerificacaoPeriodicaSync();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

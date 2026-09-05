@@ -184,23 +184,33 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   async function handleEnviar(): Promise<void> {
     if (!pwaUser) return;
     setTentouEnviar(true);
-    const itens = lote.length > 0 ? lote : [form];
-    if (!itens[0]?.contentorId || !itens[0]?.emissorNome.trim() || !itens[0]?.recetorNome.trim() || !itens[0]?.nomeCarga.trim()) {
+    
+    const itens = [...lote];
+    const formTemDados = form.contentorId && form.emissorNome.trim() && form.recetorNome.trim() && form.nomeCarga.trim();
+    if (formTemDados) {
+      itens.push(form);
+    }
+    
+    if (itens.length === 0) {
       toast.error('Preenche pelo menos uma carga válida.');
       return;
     }
+    
     for (const item of itens) {
       guardarSugestaoNome(item.emissorNome);
       guardarSugestaoNome(item.recetorNome);
       guardarSugestaoCarga(item.nomeCarga);
     }
+    
     setEnviando(true);
     try {
       const resultado = await enviarOuEnfileirar(itens);
       if (resultado === 'enviado') {
         toast.success(`${itens.length} carga${itens.length === 1 ? '' : 's'} enviada${itens.length === 1 ? '' : 's'}.`);
+      } else if (resultado === 'offline') {
+        toast.info(`${itens.length} carga${itens.length === 1 ? '' : 's'} guardada${itens.length === 1 ? '' : 's'} — vai${itens.length === 1 ? ' enviar' : 'ão enviar'} quando voltares a ficar online.`);
       } else {
-        toast.info(`${itens.length} carga${itens.length === 1 ? '' : 's'} guardada${itens.length === 1 ? '' : 's'} — vai${itens.length === 1 ? '' : 'ão'} enviar quando voltares a ficar online.`);
+        toast.warning(`${itens.length} carga${itens.length === 1 ? '' : 's'} guardada${itens.length === 1 ? '' : 's'} na fila (servidor indisponível).`);
       }
       fechar();
     } catch (err) {
@@ -373,15 +383,16 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
           </datalist>
 
           <div className="grid grid-cols-4 gap-2">
-            <FloatingLabelInput fieldSize="sm" label={form.comprimentoCm == null ? 'C (cm)' : ''} aria-label="Comprimento em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label={form.larguraCm == null ? 'L (cm)' : ''} aria-label="Largura em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label={form.alturaCm == null ? 'A (cm)' : ''} aria-label="Altura em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label={form.pesoKg == null ? 'Peso (kg)' : ''} aria-label="Peso em quilogramas" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
+            <FloatingLabelInput label={form.comprimentoCm == null ? 'C (cm)' : ''} aria-label="Comprimento em centímetros" inputMode="decimal" className="text-center tabular-nums" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label={form.larguraCm == null ? 'L (cm)' : ''} aria-label="Largura em centímetros" inputMode="decimal" className="text-center tabular-nums" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label={form.alturaCm == null ? 'A (cm)' : ''} aria-label="Altura em centímetros" inputMode="decimal" className="text-center tabular-nums" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput label={form.pesoKg == null ? 'Peso (kg)' : ''} aria-label="Peso em quilogramas" inputMode="decimal" className="text-center tabular-nums" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
           </div>
           <FloatingLabelInput
             label="Valor"
             icon={Euro}
             type="number"
+            className="tabular-nums"
             value={form.valor ?? ''}
             onChange={(e) => update('valor', numOrNull(e.target.value))}
             rightSlot={<Switch checked={form.pago} onChange={(v) => update('pago', v)} label={form.pago ? 'Pago' : 'Devido'} />}

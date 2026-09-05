@@ -10,7 +10,7 @@ import type { ItemFilaOffline, NovaCargaPendenteInput } from '@/types';
 interface FilaOfflineContextValue {
   fila: ItemFilaOffline[];
   aProcessar: boolean;
-  enviarOuEnfileirar: (itens: NovaCargaPendenteInput[]) => Promise<'enviado' | 'enfileirado'>;
+  enviarOuEnfileirar: (itens: NovaCargaPendenteInput[]) => Promise<'enviado' | 'offline' | 'erro_servidor'>;
   processarFila: () => Promise<void>;
   removerItem: (id: string) => Promise<void>;
 }
@@ -69,13 +69,13 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
   }, [processarFila]);
 
   const enviarOuEnfileirar = useCallback(
-    async (itens: NovaCargaPendenteInput[]): Promise<'enviado' | 'enfileirado'> => {
+    async (itens: NovaCargaPendenteInput[]): Promise<'enviado' | 'offline' | 'erro_servidor'> => {
       if (!pwaUser) throw new Error('Sessão inválida.');
 
       if (!navigator.onLine) {
         for (const item of itens) await adicionarAFila(item);
         await refrescar();
-        return 'enfileirado';
+        return 'offline';
       }
 
       try {
@@ -86,7 +86,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
         // real) — não perde os dados, cai para a fila em vez de rebentar.
         for (const item of itens) await adicionarAFila(item);
         await refrescar();
-        return 'enfileirado';
+        return 'erro_servidor';
       }
     },
     [pwaUser, refrescar],

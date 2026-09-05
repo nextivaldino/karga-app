@@ -29,19 +29,20 @@ type SelectProps = BaseProps & SelectHTMLAttributes<HTMLSelectElement> & { as: '
 
 type FloatingLabelInputProps = InputProps | TextareaProps | SelectProps;
 
-// text-[17px] (não <16px) — evita o auto-zoom do iOS ao focar o campo, e
-// fica um pouco maior para se ler bem o que se escreve. Vertical mais
-// compacto (pt-4.5/pb-1.5) do que a versão anterior, sem perder o alvo de
-// toque (min-h-touch trata da altura mínima). O padding-left NUNCA é
+// text-[18px] (não <16px) — evita o auto-zoom do iOS ao focar o campo, e
+// fica maior para se ler bem o que se escreve, sem negrito (peso normal,
+// a legibilidade vem do tamanho, não do peso). Padding vertical SIMÉTRICO
+// (py-3) — já não precisa de reservar espaço por baixo de uma legenda que
+// fica sempre visível: agora a legenda desaparece por completo assim que
+// há valor (ver `mostrarLabel`), por isso o texto fica centrado no eixo Y
+// tal como no eixo X, sem viés para baixo. O padding-left NUNCA é
 // duplicado (só existe uma classe pl-* de cada vez) — combinar px-3 com
 // pl-11 já causou uma sobreposição de ícone com texto difícil de depurar.
-// Borda mais leve (border-border/60, não a cor cheia) — visual mais "flat",
-// menos pesado, sem perder a distinção entre campo e fundo.
 const BASE_FIELD =
-  'peer w-full rounded-control border border-transparent bg-bg-input pr-3 pb-1.5 pt-[18px] text-[17px] text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
+  'peer w-full rounded-control border border-border/60 bg-bg-input pr-3 py-3 text-[18px] font-normal text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
 
 const BASE_FIELD_SM =
-  'peer w-full rounded-control border border-transparent bg-bg-input pr-2.5 pb-1 pt-[14px] text-[16px] text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
+  'peer w-full rounded-control border border-border/60 bg-bg-input pr-2.5 py-2 text-[16px] font-normal text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
 
 const BASE_LABEL =
   'pointer-events-none absolute text-[16px] text-text-tertiary transition-all peer-focus:text-[11px] peer-focus:text-primary';
@@ -65,7 +66,14 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   const [hasValueNaoControlado, setHasValueNaoControlado] = useState(Boolean(props.defaultValue));
 
   const { label, error, className, icon: Icon, iconClassName, leftSlot, rightSlot, fieldSize = 'md', ...rest } = props;
-  const floated = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select';
+  // Com valor preenchido, o título desaparece por completo (em vez de
+  // encolher para o topo) — evita sobrepor o que o utilizador escreveu.
+  // Um <select> mantém sempre a legenda pequena no topo (o valor
+  // selecionado sozinho não identifica o campo tão bem como num texto
+  // livre já com ícone/cor próprios).
+  const isSelect = rest.as === 'select';
+  const floatedByValue = isControlled ? Boolean(props.value) : hasValueNaoControlado;
+  const mostrarLabel = !floatedByValue || isSelect;
   const withIcon = Boolean(Icon);
   const withSlot = Boolean(leftSlot);
   const withRightSlot = Boolean(rightSlot);
@@ -78,7 +86,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   const labelLeftClass = withSlot ? (sm ? 'left-14' : 'left-16') : withIcon ? (sm ? 'left-8' : 'left-10') : sm ? 'left-2.5' : 'left-3';
 
   const fieldFinalClasses = `${sm ? BASE_FIELD_SM : BASE_FIELD} ${plClass} ${prClass}`;
-  const labelPositionClass = floated
+  const labelPositionClass = isSelect
     ? sm
       ? LABEL_FLOATED_SM
       : LABEL_FLOATED
@@ -131,9 +139,11 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             placeholder={(rest as InputHTMLAttributes<HTMLInputElement>).placeholder ?? ' '}
           />
         )}
-        <label htmlFor={id} className={`${labelFinalClasses} bg-bg-input px-1 -ml-1`}>
-          {label}
-        </label>
+        {mostrarLabel ? (
+          <label htmlFor={id} className={`${labelFinalClasses} bg-bg-input px-1 -ml-1`}>
+            {label}
+          </label>
+        ) : null}
       </div>
       {error ? <p className="mt-1 text-[13px] text-error">{error}</p> : null}
     </div>

@@ -3,6 +3,7 @@ import { CaretDown as ChevronDown, ArrowsInLineVertical as FoldVertical, Squares
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTopBarSlot } from '@/hooks/useTopBarSlot';
+import { useTheme } from '@/hooks/useTheme';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
@@ -159,10 +160,10 @@ function BotaoEnviarContacto({ telefone, email }: { telefone: string | null; ema
         }}
         title="Enviar para o contacto"
         className={`flex h-9 w-9 items-center justify-center rounded-control ${
-          disponivel ? 'text-text-secondary active:bg-bg-app' : 'text-text-tertiary opacity-30'
+          disponivel ? 'text-text-secondary active:bg-bg-app dark:text-white/85' : 'text-text-tertiary opacity-30'
         }`}
       >
-        <Share2 size={17} />
+        <Share2 size={19} />
       </button>
       {aberto ? (
         <div className="absolute right-0 top-10 z-30 w-44 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
@@ -221,27 +222,28 @@ function GrupoContactoHeader({
 
   return (
     <div
-      className="relative z-10 flex w-full items-center gap-2 px-4 py-3"
+      className="relative z-10 flex w-full items-center gap-2 px-4 py-2.5"
       style={{ backgroundColor: `${cor}26`, borderLeft: `3px solid ${cor}` }}
     >
       <button type="button" onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-left">
-        <ChevronDown size={18} className={`shrink-0 transition-transform ${expandido ? 'rotate-180' : ''}`} style={{ color: corTexto }} />
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${cor}33`, color: corTexto }}>
-          <UserRound size={13} />
+        <ChevronDown size={20} className={`shrink-0 transition-transform ${expandido ? 'rotate-180' : ''}`} style={{ color: corTexto }} />
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${cor}33`, color: corTexto }}>
+          <UserRound size={20} />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-text-primary">{grupo.label}</span>
+        <span className="min-w-0 flex-1 truncate text-[16px] font-normal text-text-primary">{grupo.label}</span>
         <span className="shrink-0 text-[11px] font-medium text-text-secondary">
           {grupo.itens.length} {grupo.itens.length === 1 ? 'carga' : 'cargas'}
         </span>
         <EstadoIcon size={14} className={`shrink-0 ${ESTADO_CLASS[estado]}`} aria-label={ESTADO_LABEL[estado]} />
       </button>
-      <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary`}>{formatMoeda(totalValor)}</span>
+      <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-medium tabular-nums text-text-primary`}>{formatMoeda(totalValor)}</span>
       <BotaoEnviarContacto telefone={contacto.telefone} email={contacto.email} />
     </div>
   );
 }
 
 export function CargasPage(): React.JSX.Element {
+  const { theme } = useTheme();
   const { abrir } = useNovaCargaOverlay();
   const { fila, removerItem, processarFila } = useFilaOffline();
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
@@ -321,9 +323,9 @@ export function CargasPage(): React.JSX.Element {
   // que um cartão de uma carga tenha a cor do respetivo grupo na lista.
   const corPorContacto = useMemo(() => {
     const mapa = new Map<string, string>();
-    grupos.forEach((g, i) => mapa.set(g.chave, corAcento(i)));
+    grupos.forEach((g, i) => mapa.set(g.chave, corAcento(i, theme)));
     return mapa;
-  }, [grupos]);
+  }, [grupos, theme]);
 
   // Por omissão, só os contactos com algo por resolver começam expandidos
   // — os já sincronizados ficam recolhidos para poupar espaço. Só corre
@@ -415,7 +417,7 @@ export function CargasPage(): React.JSX.Element {
             <CargaGridCard
               key={l.id}
               linha={l}
-              cor={corPorContacto.get(l.emissorNome.trim().toLowerCase()) ?? corAcento(0)}
+              cor={corPorContacto.get(l.emissorNome.trim().toLowerCase()) ?? corAcento(0, theme)}
               acoes={acoesPara(l)}
             />
           ))}
@@ -424,8 +426,8 @@ export function CargasPage(): React.JSX.Element {
         <div className="flex flex-col">
           <CargaListHeader />
           {grupos.map((grupo, grupoIndex) => {
-            const cor = corAcento(grupoIndex);
-            const corTexto = corAcentoEscura(grupoIndex);
+            const cor = corAcento(grupoIndex, theme);
+            const corTexto = corAcentoEscura(grupoIndex, theme);
             const expandido = expandidos.has(grupo.chave);
             return (
               <div key={grupo.chave} className="flex flex-col">

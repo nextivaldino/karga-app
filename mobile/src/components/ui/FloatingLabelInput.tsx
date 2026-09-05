@@ -52,10 +52,15 @@ const LABEL_FLOATED_SM = 'top-1.5 text-[10px]';
 export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.Element {
   const generatedId = useId();
   const id = props.id ?? generatedId;
-  const [hasValue, setHasValue] = useState(Boolean(props.value ?? props.defaultValue));
+  // Campos controlados (com `value`) recalculam a floated a cada render
+  // — necessário para quando o valor chega de forma assíncrona depois
+  // da montagem (ex: editar uma carga cujo prefill só resolve após uma
+  // chamada à API); só os não controlados precisam de estado próprio.
+  const isControlled = props.value !== undefined;
+  const [hasValueNaoControlado, setHasValueNaoControlado] = useState(Boolean(props.defaultValue));
 
   const { label, error, className, icon: Icon, iconClassName, leftSlot, fieldSize = 'md', ...rest } = props;
-  const floated = hasValue || rest.as === 'select';
+  const floated = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select';
   const withIcon = Boolean(Icon);
   const withSlot = Boolean(leftSlot);
   const sm = fieldSize === 'sm';
@@ -82,7 +87,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             id={id}
             className={`${fieldFinalClasses} min-h-[80px] resize-y ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as TextareaProps).onChange?.(e);
             }}
             placeholder={(rest as TextareaHTMLAttributes<HTMLTextAreaElement>).placeholder ?? ' '}
@@ -93,7 +98,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             id={id}
             className={`${fieldFinalClasses} ${sm ? 'min-h-[36px]' : 'min-h-touch'} appearance-none ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as SelectProps).onChange?.(e);
             }}
           >
@@ -105,7 +110,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             id={id}
             className={`${fieldFinalClasses} ${sm ? 'min-h-[36px]' : 'min-h-touch'} ${className ?? ''}`}
             onChange={(e) => {
-              setHasValue(Boolean(e.target.value));
+              setHasValueNaoControlado(Boolean(e.target.value));
               (props as InputProps).onChange?.(e);
             }}
             placeholder={(rest as InputHTMLAttributes<HTMLInputElement>).placeholder ?? ' '}

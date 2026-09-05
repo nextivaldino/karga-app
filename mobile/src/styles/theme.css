@@ -41,19 +41,22 @@
 
 :root[data-theme='dark'],
 [data-theme='dark'] {
-  --color-primary: #78aeed;
-  --color-primary-hover: #97c4f2;
-  --color-primary-light: rgba(120, 174, 237, 0.15);
-  --color-success: #57e389;
-  --color-error: #ff7b63;
-  --color-warning: #f8e45c;
-  --color-purple: #c061cb;
+  /* Paleta mais suave/dessaturada que a versão "vívida" original — mais
+     confortável à noite, menos néon, mesmas famílias de cor do resto
+     da app (e do Desktop) só que puxadas para um tom mais acinzentado. */
+  --color-primary: #7f9fc4;
+  --color-primary-hover: #96b3d6;
+  --color-primary-light: rgba(127, 159, 196, 0.15);
+  --color-success: #7bc99a;
+  --color-error: #e0836f;
+  --color-warning: #e0c96a;
+  --color-purple: #a878b0;
 
-  --color-primary-rgb: 120 174 237;
-  --color-success-rgb: 87 227 137;
-  --color-error-rgb: 255 123 99;
-  --color-warning-rgb: 248 228 92;
-  --color-purple-rgb: 192 97 203;
+  --color-primary-rgb: 127 159 196;
+  --color-success-rgb: 123 201 154;
+  --color-error-rgb: 224 131 111;
+  --color-warning-rgb: 224 201 106;
+  --color-purple-rgb: 168 120 176;
 
   --bg-app: #1e1e1e;
   --bg-surface: #2d2d2d;

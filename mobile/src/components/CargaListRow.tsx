@@ -73,13 +73,22 @@ export function CargaListRow({ linha, corGrupo, acoes, compacto }: CargaListRowP
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
+  // "Aberta" — ainda não fechou o ciclo (por enviar, na fila, com erro ou
+  // pendente de revisão no desktop); ganha um pouco mais de altura e uma
+  // bolinha antes do código, para se notar de imediato dentro da lista
+  // expandida que ainda precisa de atenção.
+  const aberta = linha.estado !== 'importada';
+
   return (
     <div
-      className={`relative border-b border-border bg-bg-surface py-2 pl-5 pr-4 ${menuAberto ? 'z-20' : ''}`}
-      style={{ borderLeft: `3px solid ${corGrupo}` }}
+      className={`relative border-b border-border ${aberta ? 'py-[8.8px]' : 'py-2'} pl-5 pr-4 ${menuAberto ? 'z-20' : ''}`}
+      style={{ borderLeft: `3px solid ${corGrupo}`, backgroundColor: `${corGrupo}0d` }}
     >
       <div className="flex items-center gap-2">
-        <span className="w-16 shrink-0 truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
+        <span className="flex w-16 shrink-0 items-center gap-1">
+          {aberta ? <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: corGrupo }} /> : null}
+          <span className="truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
+        </span>
 
         <span className={`flex ${compacto ? LARGURA_CONTACTOS_COMPACTA : LARGURA_CONTACTOS} shrink-0 flex-col gap-0.5 text-[12px]`}>
           <span className="flex items-center gap-1 font-medium text-text-primary">
@@ -100,7 +109,7 @@ export function CargaListRow({ linha, corGrupo, acoes, compacto }: CargaListRowP
           {dimensoes ? <span className="block truncate text-[11px] font-light text-text-tertiary">{dimensoes}</span> : null}
         </div>
 
-        <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-bold tabular-nums text-text-primary`}>
+        <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-medium tabular-nums text-text-primary`}>
           {formatMoeda(linha.valor)}
         </span>
 

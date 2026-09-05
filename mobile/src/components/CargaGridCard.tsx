@@ -81,7 +81,7 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
 
       <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
         <EstadoIcon size={14} className={ESTADO_CLASS[linha.estado]} aria-label={ESTADO_LABEL[linha.estado]} />
-        <span className="text-[13px] font-bold tabular-nums text-text-primary">{formatMoeda(linha.valor)}</span>
+        <span className="text-[13px] font-medium tabular-nums text-text-primary">{formatMoeda(linha.valor)}</span>
       </div>
     </div>
   );

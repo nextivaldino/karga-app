@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
 import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
-import { FilaOfflineProvider, useFilaOffline } from '@/hooks/useFilaOffline';
+import { FilaOfflineProvider } from '@/hooks/useFilaOffline';
 import { TopBarSlotProvider } from '@/hooks/useTopBarSlot';
 import { ToastContainer } from '@/components/ui/Toast';
 import { PasswordBanner } from '@/components/PasswordBanner';
@@ -15,16 +15,7 @@ import { TrocarPasswordPage } from '@/pages/TrocarPasswordPage';
 import { HomePage } from '@/pages/HomePage';
 import { CargasPage } from '@/pages/CargasPage';
 import { MensagensPage } from '@/pages/MensagensPage';
-
-function AProcessarFilaBanner(): React.JSX.Element | null {
-  const { aProcessar, fila } = useFilaOffline();
-  if (!aProcessar) return null;
-  return (
-    <div className="border-b border-border bg-primary-light px-4 py-2 text-center text-[13px] font-medium text-primary">
-      A enviar {fila.length} carga{fila.length === 1 ? '' : 's'}...
-    </div>
-  );
-}
+import { DefinicoesPage } from '@/pages/DefinicoesPage';
 
 function AppShell(): React.JSX.Element {
   const { loading, session, mustChangePassword } = useAuth();
@@ -43,13 +34,16 @@ function AppShell(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <Header onTrocarPassword={() => setTrocarPasswordAberto(true)} />
+      {/* A Home tem a sua própria barra de topo (marca + seletor de
+          contentor + notificações/menu) — não precisa da barra genérica
+          das outras páginas por cima disso. */}
+      {page !== 'home' ? <Header /> : null}
       {mustChangePassword ? <PasswordBanner onAlterar={() => setTrocarPasswordAberto(true)} /> : null}
-      <AProcessarFilaBanner />
       <main className="flex-1 overflow-y-auto pb-24">
         {page === 'home' ? <HomePage /> : null}
         {page === 'cargas' ? <CargasPage /> : null}
         {page === 'mensagens' ? <MensagensPage /> : null}
+        {page === 'definicoes' ? <DefinicoesPage onTrocarPassword={() => setTrocarPasswordAberto(true)} /> : null}
       </main>
       <Dock />
       <NovaCargaOverlay />

@@ -5,11 +5,13 @@ import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTheme } from '@/hooks/useTheme';
 import { estiloTema } from '@/lib/themeTokens';
+import { CARGA_BG, CARGA_INK } from '@/lib/cargaVisual';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis } from '@/lib/data';
+import { getContentorAtivo } from '@/lib/contentorAtivo';
 import { guardarSugestaoNome, listarSugestoesNomes } from '@/lib/contactSuggestions';
 import { PAISES_EMISSOR, PAISES_RECETOR } from '@/lib/paisesIndicativo';
 import { CargaListHeader, CargaListRow, type AcaoLinhaCarga } from '@/components/CargaListRow';
@@ -82,7 +84,9 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     listContentoresDisponiveis()
       .then((cs) => {
         setContentores(cs);
-        setForm(prefill ?? { ...CAMPOS_VAZIOS, contentorId: cs[0]?.id ?? '' });
+        const ativo = getContentorAtivo();
+        const contentorPadrao = (ativo && cs.some((c) => c.id === ativo) ? ativo : cs[0]?.id) ?? '';
+        setForm(prefill ?? { ...CAMPOS_VAZIOS, contentorId: contentorPadrao });
       })
       .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
     setLote([]);
@@ -174,24 +178,41 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
       onClick={fechar}
     >
       {/* Painel flutuante — não ocupa as bordas do ecrã; "cresce" a partir
-          do botão "+" da dock (transform-origin em baixo) de forma suave. */}
+          do botão "+" da dock (transform-origin em baixo) de forma suave.
+          Material "liquid glass" (iOS mais recente): fundo translúcido +
+          blur forte, mesma técnica já usada na Dock, em vez de um painel
+          opaco — o conteúdo por trás continua a perceber-se ao de leve. */}
       <div
         data-theme={temaInvertido}
-        style={{ ...estiloTema(temaInvertido), maxHeight: 'calc(100% - 8px)', transformOrigin: 'bottom center' }}
+        style={{
+          ...estiloTema(temaInvertido),
+          backgroundColor: `${(estiloTema(temaInvertido) as Record<string, string>)['--bg-app']}e0`,
+          maxHeight: 'calc(100% - 8px)',
+          transformOrigin: 'bottom center',
+        }}
         onClick={(e) => e.stopPropagation()}
-        className={`flex w-full max-w-[440px] flex-col overflow-hidden rounded-[22.8px] border border-border/60 bg-bg-app shadow-lg transition-all duration-300 ease-out ${
+        className={`flex w-full max-w-[440px] flex-col overflow-hidden rounded-[28px] border border-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
           entrada ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-90 opacity-0'
         }`}
       >
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border/60 bg-bg-header px-3 backdrop-blur-md">
-        <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary">
+      {/* Grabber — afordância de "sheet" ao estilo iOS, sinaliza que o
+          painel pode ser arrastado/fechado, mesmo não sendo arrastável
+          ainda (fecha-se pelo X ou a tocar fora). */}
+      <div className="flex shrink-0 justify-center pb-1 pt-2">
+        <span className="h-1 w-9 rounded-full bg-text-tertiary/40" />
+      </div>
+      <div
+        style={{ backgroundColor: CARGA_BG, color: CARGA_INK }}
+        className="flex h-12 shrink-0 items-center gap-2 px-3"
+      >
+        <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control hover:bg-black/10">
           <X size={20} />
         </button>
-        <span className="shrink-0 text-[15px] font-semibold text-text-primary">Nova Carga</span>
+        <span className="shrink-0 text-[15px] font-semibold">Nova Carga</span>
         <select
           value={form.contentorId}
           onChange={(e) => update('contentorId', e.target.value)}
-          className="ml-auto min-w-0 max-w-[55%] truncate rounded-control border border-border/60 bg-bg-input px-2 py-1.5 text-[13px] text-text-primary"
+          className="ml-auto min-w-0 max-w-[55%] truncate rounded-control border border-black/15 bg-white/70 px-2 py-1.5 text-[13px] text-text-primary"
         >
           {contentores.length === 0 ? <option value="">Sem contentores</option> : null}
           {contentores.map((c) => (

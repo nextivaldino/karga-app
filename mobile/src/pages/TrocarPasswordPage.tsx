@@ -50,16 +50,16 @@ export function TrocarPasswordPage({ onCancel, onDone }: TrocarPasswordPageProps
       ) : null}
 
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-surface bg-warning/10 text-warning">
-          <KeyRound size={32} />
+        <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-warning/15 text-warning shadow-soft">
+          <KeyRound size={32} weight="duotone" />
         </div>
-        <h1 className="text-[20px] font-semibold text-text-primary">Definir nova password</h1>
+        <h1 className="text-[20px] font-bold tracking-tight text-text-primary">Definir nova password</h1>
         <p className="max-w-xs text-[14px] text-text-tertiary">
           Esta é a sua primeira entrada. Defina uma password nova antes de continuar.
         </p>
       </div>
 
-      <form onSubmit={(e) => void handleSubmit(e)} className="flex w-full max-w-sm flex-col gap-3">
+      <form onSubmit={(e) => void handleSubmit(e)} className="card-surface flex w-full max-w-sm flex-col gap-3 p-5">
         <FloatingLabelInput
           label="Nova password"
           type="password"
@@ -79,11 +79,7 @@ export function TrocarPasswordPage({ onCancel, onDone }: TrocarPasswordPageProps
 
         {error ? <p className="text-[14px] text-error">{error}</p> : null}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="mt-2 min-h-touch rounded-control bg-primary text-[16px] font-medium text-white transition-colors active:bg-primary-hover disabled:opacity-60"
-        >
+        <button type="submit" disabled={submitting} className="btn-primary mt-2 w-full">
           {submitting ? 'A gravar...' : 'Definir password'}
         </button>
       </form>

@@ -72,7 +72,7 @@ export function PhoneField({ label, value, onChange, paises, corClass = 'text-te
             {selecionavel ? <ChevronDown size={11} /> : null}
           </button>
           {aberto ? (
-            <div className="absolute left-0 top-6 z-20 w-32 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+            <div className="absolute left-0 top-6 z-20 w-32 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium">
               {paises.map((p) => (
                 <button
                   key={p.codigo}

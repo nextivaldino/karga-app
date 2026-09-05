@@ -27,7 +27,7 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
 
   return (
     <div
-      className={`relative flex flex-col gap-2 rounded-surface border border-border bg-bg-surface p-3 ${menuAberto ? 'z-20' : ''}`}
+      className={`relative flex flex-col gap-2 card-surface p-3 ${menuAberto ? 'z-20' : ''}`}
       style={{ borderTop: `3px solid ${cor}` }}
     >
       <div className="flex items-start justify-between gap-1">
@@ -46,7 +46,7 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
               <Menu size={15} />
             </button>
             {menuAberto ? (
-              <div className="absolute right-0 top-8 z-30 w-36 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+              <div className="absolute right-0 top-8 z-30 w-36 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium">
                 {acoes.map((acao) => (
                   <button
                     key={acao.label}

@@ -13,7 +13,7 @@ export function CollapsibleSection({ title, subtitle, defaultOpen = false, child
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="overflow-hidden rounded-surface border border-border bg-bg-surface">
+    <div className="card-surface overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

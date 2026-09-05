@@ -11,7 +11,7 @@ export function Header(): React.JSX.Element {
   const conteudo = useTopBarSlotContent();
 
   return (
-    <header className="relative z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border bg-bg-header px-4 shadow-sm backdrop-blur-md">
+    <header className="relative z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-bg-header px-4 backdrop-blur-xl">
       <div className="flex min-w-0 flex-1 items-center gap-2">{conteudo}</div>
       <div className="flex shrink-0 items-center gap-1.5">
         <NotificationBell />

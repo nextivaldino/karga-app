@@ -68,7 +68,7 @@ export function ToastContainer(): React.JSX.Element {
         return (
           <div
             key={item.id}
-            className="pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-control border border-border bg-bg-surface px-4 py-3 text-[14px] text-text-primary shadow-lg"
+            className="pointer-events-auto flex w-full max-w-sm items-center gap-2 rounded-surface border border-border bg-bg-surface px-4 py-3 text-[14px] text-text-primary shadow-medium"
           >
             <Icon size={16} className={`shrink-0 ${toneColorClass[item.tone]}`} />
             {item.message}

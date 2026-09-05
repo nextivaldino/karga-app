@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { estiloTema } from '@/lib/themeTokens';
 import { CARGA_BG, CARGA_INK } from '@/lib/cargaVisual';
 
-const ITENS: { page: MobilePage; label: string; icon: React.ComponentType<{ size?: number; className?: string }>; colorClass: string }[] = [
+const ITENS: { page: MobilePage; label: string; icon: React.ComponentType<{ size?: number; className?: string; weight?: 'regular' | 'fill' | 'bold' | 'duotone' }>; colorClass: string }[] = [
   { page: 'home', label: 'Início', icon: House, colorClass: 'text-primary' },
   { page: 'cargas', label: 'Cargas', icon: Package, colorClass: 'text-warning' },
 ];
@@ -31,7 +31,7 @@ export function Dock(): React.JSX.Element {
       <div
         data-theme={temaInvertido}
         style={{ ...tokens, backgroundColor: `${tokens['--bg-surface']}b3` }}
-        className="pointer-events-auto flex flex-col overflow-hidden rounded-[28px] border border-border shadow-lg backdrop-blur-xl backdrop-saturate-150 transition-all duration-300"
+        className="pointer-events-auto flex flex-col overflow-hidden rounded-[32px] border border-border shadow-medium backdrop-blur-xl backdrop-saturate-150 transition-all duration-300"
       >
         {aProcessar ? (
           <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5">
@@ -61,7 +61,7 @@ export function Dock(): React.JSX.Element {
             onClick={() => abrir()}
             title="Nova Carga"
             style={{ backgroundColor: CARGA_BG, color: CARGA_INK }}
-            className="flex h-[52px] items-center gap-1.5 rounded-pill px-4 shadow-md transition-transform active:scale-95"
+            className="flex h-[52px] items-center gap-1.5 rounded-pill px-4 shadow-soft transition-transform active:scale-95"
           >
             <Plus size={25} weight="bold" />
           </button>
@@ -86,10 +86,10 @@ function DockButton({
       type="button"
       onClick={onClick}
       title={item.label}
-      className={`flex h-[52px] items-center gap-1.5 rounded-pill px-3.5 transition-all ${active ? 'bg-bg-app' : ''}`}
+      className={`flex h-[52px] items-center gap-1.5 rounded-pill px-3.5 transition-all ${active ? 'bg-primary/15' : ''}`}
     >
-      <Icon size={24} className={active ? item.colorClass : 'text-text-tertiary'} />
-      {active ? <span className="text-[13px] font-medium text-text-primary">{item.label}</span> : null}
+      <Icon size={24} className={active ? item.colorClass : 'text-text-tertiary'} weight={active ? 'fill' : 'regular'} />
+      {active ? <span className="text-[13px] font-semibold text-text-primary">{item.label}</span> : null}
     </button>
   );
 }

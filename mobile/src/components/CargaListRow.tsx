@@ -125,7 +125,7 @@ export function CargaListRow({ linha, corGrupo, acoes, compacto }: CargaListRowP
                 <Menu size={17} />
               </button>
               {menuAberto ? (
-                <div className="absolute right-0 top-10 z-30 w-40 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+                <div className="absolute right-0 top-10 z-30 w-40 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium">
                   {acoes.map((acao) => (
                     <button
                       key={acao.label}

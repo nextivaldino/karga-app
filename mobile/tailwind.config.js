@@ -33,6 +33,10 @@ export default {
         surface: 'var(--radius-surface)',
         pill: 'var(--radius-pill)',
       },
+      boxShadow: {
+        soft: 'var(--shadow-soft)',
+        medium: 'var(--shadow-medium)',
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },

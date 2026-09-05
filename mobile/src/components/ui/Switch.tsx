@@ -16,12 +16,12 @@ export function Switch({ checked, onChange, disabled, label }: SwitchProps): Rea
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative h-8 w-14 shrink-0 grow-0 basis-14 rounded-pill border transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          checked ? 'border-primary bg-primary' : 'border-border bg-bg-input'
+        className={`relative h-8 w-14 shrink-0 grow-0 basis-14 rounded-pill transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          checked ? 'bg-primary shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)]' : 'bg-bg-input'
         }`}
       >
         <span
-          className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-pill bg-white shadow transition-transform ${
+          className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-pill bg-white shadow-soft transition-transform ${
             checked ? 'translate-x-6' : 'translate-x-0'
           }`}
         />

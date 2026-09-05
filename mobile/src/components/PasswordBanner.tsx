@@ -18,13 +18,13 @@ export function PasswordBanner({ onAlterar }: PasswordBannerProps): React.JSX.El
   }
 
   return (
-    <div className="flex items-center gap-3 border-b border-border bg-warning/10 px-4 py-2.5">
-      <KeyRound size={16} className="shrink-0 text-warning" />
+    <div className="mx-4 mt-3 flex items-center gap-3 rounded-surface border border-warning/25 bg-warning/10 px-4 py-3 shadow-soft">
+      <KeyRound size={16} className="shrink-0 text-warning" weight="duotone" />
       <p className="flex-1 text-[13px] text-text-primary">Recomendamos alterar a password padrão.</p>
-      <button type="button" onClick={onAlterar} className="shrink-0 text-[13px] font-medium text-primary">
+      <button type="button" onClick={onAlterar} className="shrink-0 rounded-pill bg-primary px-3 py-1.5 text-[12px] font-semibold text-white">
         Alterar agora
       </button>
-      <button type="button" onClick={dispensar} className="shrink-0 p-1 text-text-tertiary">
+      <button type="button" onClick={dispensar} className="shrink-0 rounded-full p-1.5 text-text-tertiary active:bg-bg-app">
         <X size={16} />
       </button>
     </div>

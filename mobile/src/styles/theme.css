@@ -8,65 +8,68 @@
   font-display: swap;
 }
 
-/* [data-theme] sem ":root" (não só ":root[data-theme]") permite aplicar
-   um tema a qualquer subárvore — usado para inverter o tema só dentro do
-   popup Nova Carga e dos seus menus, criando contraste deliberado com o
-   resto da app independentemente do tema global escolhido. */
+/* Visual language alinhada a HeroUI (heroui.com): azul vivo, superfícies
+   zinc, radius generoso, dark near-black. Tokens próprios — sem migrar
+   para Tailwind v4 / @heroui (custo alto, mesma aparência).
+   [data-theme] sem ":root" permite inverter tema numa subárvore (Nova Carga). */
 :root[data-theme='light'],
 [data-theme='light'] {
-  --color-primary: #3584e4;
-  --color-primary-hover: #1c71d8;
-  --color-primary-light: #eaf2fc;
-  --color-success: #2ec27e;
-  --color-error: #e01b24;
-  --color-warning: #e5a50a;
-  --color-purple: #9141ac;
+  --color-primary: #006fee;
+  --color-primary-hover: #005bc4;
+  --color-primary-light: #e6f1fe;
+  --color-success: #17c964;
+  --color-error: #f31260;
+  --color-warning: #f5a524;
+  --color-purple: #7828c8;
 
-  --color-primary-rgb: 53 132 228;
-  --color-success-rgb: 46 194 126;
-  --color-error-rgb: 224 27 36;
-  --color-warning-rgb: 229 165 10;
-  --color-purple-rgb: 145 65 172;
+  --color-primary-rgb: 0 111 238;
+  --color-success-rgb: 23 201 100;
+  --color-error-rgb: 243 18 96;
+  --color-warning-rgb: 245 165 36;
+  --color-purple-rgb: 120 40 200;
 
-  --bg-app: #f6f5f4;
+  --bg-app: #f4f4f5;
   --bg-surface: #ffffff;
-  --bg-header: rgba(255, 255, 255, 0.8);
-  --bg-input: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.72);
+  --bg-input: #f4f4f5;
 
-  --text-primary: #241f31;
-  --text-secondary: #5e5c64;
-  --text-tertiary: #9a9996;
-  --border: #deddda;
+  --text-primary: #11181c;
+  --text-secondary: #3f3f46;
+  --text-tertiary: #71717a;
+  --border: #e4e4e7;
+
+  --shadow-soft: 0 0 0 1px rgba(24, 24, 27, 0.04), 0 2px 8px rgba(24, 24, 27, 0.06);
+  --shadow-medium: 0 8px 30px rgba(24, 24, 27, 0.12);
 }
 
 :root[data-theme='dark'],
 [data-theme='dark'] {
-  /* Paleta mais suave/dessaturada que a versão "vívida" original — mais
-     confortável à noite, menos néon, mesmas famílias de cor do resto
-     da app (e do Desktop) só que puxadas para um tom mais acinzentado. */
-  --color-primary: #7f9fc4;
-  --color-primary-hover: #96b3d6;
-  --color-primary-light: rgba(127, 159, 196, 0.15);
-  --color-success: #7bc99a;
-  --color-error: #e0836f;
-  --color-warning: #e0c96a;
-  --color-purple: #a878b0;
+  --color-primary: #006fee;
+  --color-primary-hover: #338ef7;
+  --color-primary-light: rgba(0, 111, 238, 0.18);
+  --color-success: #17c964;
+  --color-error: #f31260;
+  --color-warning: #f5a524;
+  --color-purple: #9353d3;
 
-  --color-primary-rgb: 127 159 196;
-  --color-success-rgb: 123 201 154;
-  --color-error-rgb: 224 131 111;
-  --color-warning-rgb: 224 201 106;
-  --color-purple-rgb: 168 120 176;
+  --color-primary-rgb: 0 111 238;
+  --color-success-rgb: 23 201 100;
+  --color-error-rgb: 243 18 96;
+  --color-warning-rgb: 245 165 36;
+  --color-purple-rgb: 147 83 211;
 
-  --bg-app: #1e1e1e;
-  --bg-surface: #2d2d2d;
-  --bg-header: rgba(36, 31, 49, 0.8);
-  --bg-input: #363636;
+  --bg-app: #000000;
+  --bg-surface: #18181b;
+  --bg-header: rgba(0, 0, 0, 0.72);
+  --bg-input: #27272a;
 
-  --text-primary: #ffffff;
-  --text-secondary: #c0bfbc;
-  --text-tertiary: #77767b;
-  --border: rgba(255, 255, 255, 0.1);
+  --text-primary: #eceef0;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --border: #27272a;
+
+  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-medium: 0 8px 30px rgba(0, 0, 0, 0.55);
 }
 
 :root {
@@ -76,8 +79,8 @@
   --spacing-lg: 16px;
   --spacing-xl: 24px;
 
-  --radius-control: 8px;
-  --radius-surface: 12px;
+  --radius-control: 12px;
+  --radius-surface: 16px;
   --radius-pill: 999px;
 }
 
@@ -92,7 +95,6 @@ body {
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* impede o zoom automático do iOS ao focar inputs com menos de 16px */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -104,4 +106,33 @@ input,
 select,
 textarea {
   font-size: 16px;
+}
+
+@layer components {
+  .btn-primary {
+    min-height: 44px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-primary);
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    box-shadow: var(--shadow-soft);
+    transition: transform 150ms ease, background-color 150ms ease, opacity 150ms ease;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+    background-color: var(--color-primary-hover);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+  }
+
+  .card-surface {
+    border-radius: var(--radius-surface);
+    border: 1px solid var(--border);
+    background-color: var(--bg-surface);
+    box-shadow: var(--shadow-soft);
+  }
 }

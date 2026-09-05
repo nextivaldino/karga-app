@@ -140,7 +140,7 @@ export function NotificationBell(): React.JSX.Element {
         <div
           data-theme={temaInvertido}
           style={estiloTema(temaInvertido)}
-          className="absolute right-0 top-11 z-50 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl"
+          className="absolute right-0 top-11 z-50 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-border px-3.5 py-2.5">
             <span className="text-[13px] font-semibold text-text-primary">Notificações</span>

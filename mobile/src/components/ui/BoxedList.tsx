@@ -11,7 +11,7 @@ export interface BoxedListRowProps {
 }
 
 export function BoxedList({ children }: { children: ReactNode }): React.JSX.Element {
-  return <div className="overflow-hidden rounded-surface border border-border bg-bg-surface">{children}</div>;
+  return <div className="card-surface overflow-hidden">{children}</div>;
 }
 
 export function BoxedListRow({ icon, iconColorClass, title, subtitle, trailing, onClick }: BoxedListRowProps): React.JSX.Element {

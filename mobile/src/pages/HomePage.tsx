@@ -49,14 +49,14 @@ function SeletorContentor(): React.JSX.Element | null {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-touch w-full items-center gap-1.5 rounded-control border border-border bg-bg-surface px-2.5 text-left"
+        className="flex min-h-touch w-full items-center gap-1.5 rounded-pill border border-border bg-bg-surface/80 px-3 text-left shadow-soft backdrop-blur-md"
       >
         <Layers size={15} className="shrink-0 text-success" />
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{atual.codigo}</span>
         <ChevronDown size={13} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open ? (
-        <div className="absolute left-0 top-11 z-30 w-56 overflow-hidden rounded-control border border-border bg-bg-surface shadow-lg">
+        <div className="absolute left-0 top-11 z-30 w-56 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium">
           {contentores.map((c) => (
             <button
               key={c.id}
@@ -67,7 +67,7 @@ function SeletorContentor(): React.JSX.Element | null {
                 setOpen(false);
               }}
               className={`flex min-h-touch w-full items-center gap-2 px-3 text-left text-[13px] ${
-                c.id === atual.id ? 'bg-primary/10 text-primary' : 'text-text-primary active:bg-bg-app'
+                c.id === atual.id ? 'bg-primary/15 font-medium text-primary' : 'text-text-primary active:bg-bg-app'
               }`}
             >
               <span className="font-medium">{c.codigo}</span>
@@ -119,10 +119,10 @@ export function HomePage(): React.JSX.Element {
           (notificações, menu), aqui já integrados com a marca e o
           seletor de contentor. */}
       <div
-        className="relative z-30 flex shrink-0 items-center gap-2 border-b border-border bg-bg-header px-4 pb-2.5 backdrop-blur-md"
+        className="relative z-30 flex shrink-0 items-center gap-2 border-b border-border/60 bg-bg-header px-4 pb-2.5 backdrop-blur-xl"
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
       >
-        <span className="shrink-0 text-[18px] font-bold tracking-wide text-text-primary">KARGA</span>
+        <span className="shrink-0 text-[18px] font-bold tracking-tight text-text-primary">KARGA</span>
         <SeletorContentor />
         <div className="flex shrink-0 items-center gap-1">
           <NotificationBell />
@@ -131,38 +131,37 @@ export function HomePage(): React.JSX.Element {
       </div>
 
       <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-10">
-        {/* Decorativo — dois brilhos suaves atrás do conteúdo, só estética */}
-        <div className="pointer-events-none absolute -top-10 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-56 w-56 rounded-full bg-success/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-10 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-56 w-56 rounded-full bg-success/15 blur-3xl" />
 
         <span className="relative mb-2 text-[15px] font-medium text-text-secondary">Olá, {pwaUser?.nome ?? '...'} 👋</span>
-        <span className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Ship size={30} />
+        <span className="relative mb-5 flex h-16 w-16 items-center justify-center rounded-[20px] bg-primary text-white shadow-medium">
+          <Ship size={28} weight="duotone" />
         </span>
 
-        <div className="relative flex w-full max-w-[280px] flex-col gap-2.5">
-          <div className="flex justify-center gap-2.5">
+        <div className="relative flex w-full max-w-[300px] flex-col gap-3">
+          <div className="flex justify-center gap-3">
             <button
               type="button"
               onClick={() => navigate('cargas')}
-              className="flex flex-1 flex-col items-center gap-1 rounded-surface border border-border bg-bg-surface px-3 py-3.5 text-center active:bg-bg-app"
+              className="card-surface flex flex-1 flex-col items-center gap-1.5 px-3 py-4 text-center transition-transform active:scale-[0.98]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-control bg-warning/10 text-warning">
-                <Package size={16} />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-warning/15 text-warning">
+                <Package size={17} weight="duotone" />
               </span>
-              <span className="text-[18px] font-semibold text-text-primary">{cargasSemana}</span>
+              <span className="text-[20px] font-bold tabular-nums text-text-primary">{cargasSemana}</span>
               <span className="text-[11px] text-text-tertiary">cargas/semana</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('cargas')}
-              className="flex flex-1 flex-col items-center gap-1 rounded-surface border border-border bg-bg-surface px-3 py-3.5 text-center active:bg-bg-app"
+              className="card-surface flex flex-1 flex-col items-center gap-1.5 px-3 py-4 text-center transition-transform active:scale-[0.98]"
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-control bg-primary/10 text-primary">
-                <Euro size={16} />
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary">
+                <Euro size={17} weight="duotone" />
               </span>
-              <span className="text-[18px] font-semibold text-text-primary">{formatMoeda(valorMes)}</span>
+              <span className="text-[20px] font-bold tabular-nums text-text-primary">{formatMoeda(valorMes)}</span>
               <span className="text-[11px] text-text-tertiary">este mês</span>
             </button>
           </div>
@@ -171,12 +170,12 @@ export function HomePage(): React.JSX.Element {
             <button
               type="button"
               onClick={() => navigate('mensagens')}
-              className="flex min-h-touch items-center gap-3 rounded-surface border border-border bg-bg-surface px-4 py-2.5 text-left active:bg-bg-app"
+              className="card-surface flex min-h-touch items-center gap-3 px-4 py-3 text-left transition-transform active:scale-[0.98]"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-purple/10 text-purple">
-                <Bell size={15} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple/15 text-purple">
+                <Bell size={16} weight="duotone" />
               </span>
-              <span className="text-[13px] text-text-primary">
+              <span className="text-[13px] font-medium text-text-primary">
                 {mensagensNaoLidas.length} mensagem{mensagensNaoLidas.length === 1 ? '' : 's'} nova{mensagensNaoLidas.length === 1 ? '' : 's'}
               </span>
             </button>
@@ -186,10 +185,10 @@ export function HomePage(): React.JSX.Element {
             <button
               type="button"
               onClick={() => navigate('cargas')}
-              className="flex min-h-touch items-center gap-3 rounded-surface border border-warning/30 bg-warning/10 px-4 py-2.5 text-left"
+              className="flex min-h-touch items-center gap-3 rounded-surface border border-warning/25 bg-warning/10 px-4 py-3 text-left shadow-soft"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-warning/20 text-warning">
-                <Clock size={15} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/20 text-warning">
+                <Clock size={16} weight="duotone" />
               </span>
               <span className="text-[13px] text-text-primary">
                 {naFila} carga{naFila === 1 ? '' : 's'} por enviar — vai{naFila === 1 ? '' : 'ão'} quando ficares online
@@ -201,10 +200,10 @@ export function HomePage(): React.JSX.Element {
             <button
               type="button"
               onClick={() => navigate('cargas')}
-              className="flex min-h-touch items-center gap-3 rounded-surface border border-error/30 bg-error/10 px-4 py-2.5 text-left"
+              className="flex min-h-touch items-center gap-3 rounded-surface border border-error/25 bg-error/10 px-4 py-3 text-left shadow-soft"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-error/20 text-error">
-                <AlertTriangle size={15} />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-error/20 text-error">
+                <AlertTriangle size={16} weight="duotone" />
               </span>
               <span className="text-[13px] text-text-primary">
                 {comErro} carga{comErro === 1 ? '' : 's'} com falha ao enviar — toca para tentar de novo
@@ -213,8 +212,8 @@ export function HomePage(): React.JSX.Element {
           ) : null}
 
           {naFila === 0 && comErro === 0 ? (
-            <div className="flex min-h-touch items-center justify-center gap-2 rounded-surface border border-success/20 bg-success/[0.06] px-4 py-2.5">
-              <CheckCircle2 size={15} className="shrink-0 text-success" />
+            <div className="flex min-h-touch items-center justify-center gap-2 rounded-surface border border-success/20 bg-success/10 px-4 py-3 shadow-soft">
+              <CheckCircle2 size={16} weight="fill" className="shrink-0 text-success" />
               <span className="text-[12px] font-medium text-success">Tudo sincronizado — as tuas cargas já estão no sistema</span>
             </div>
           ) : null}

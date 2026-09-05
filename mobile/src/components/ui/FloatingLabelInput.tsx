@@ -13,6 +13,9 @@ interface BaseProps {
   // indicativo telefónico "+352 ▾"). Mais largo que um ícone — reserva um
   // padding-left maior. Nunca usado ao mesmo tempo que `icon`.
   leftSlot?: ReactNode;
+  // Controlo opcional dentro do campo, alinhado à direita (ex: estado de
+  // pagamento no campo Valor). Reserva espaço para não sobrepor o texto.
+  rightSlot?: ReactNode;
   // 'sm' — campos secundários (ex: dentro da hierarquia de Emissor/Recetor),
   // mais baixos que o normal; o texto fica sempre ≥16px (evita zoom no iOS).
   // Nome "fieldSize" (não "size") porque <input> já tem um atributo HTML
@@ -35,19 +38,21 @@ type FloatingLabelInputProps = InputProps | TextareaProps | SelectProps;
 // Borda mais leve (border-border/60, não a cor cheia) — visual mais "flat",
 // menos pesado, sem perder a distinção entre campo e fundo.
 const BASE_FIELD =
-  'peer w-full rounded-control border border-border/60 bg-bg-input pr-3 pb-1.5 pt-[18px] text-[17px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
+  'peer w-full rounded-control border border-transparent bg-bg-input pr-3 pb-1.5 pt-[18px] text-[17px] text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
 
 const BASE_FIELD_SM =
-  'peer w-full rounded-control border border-border/60 bg-bg-input pr-2.5 pb-1 pt-[14px] text-[16px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
+  'peer w-full rounded-control border border-transparent bg-bg-input pr-2.5 pb-1 pt-[14px] text-[16px] text-text-primary outline-none transition-shadow focus:border-primary focus:shadow-[0_0_0_2px_rgb(var(--color-primary-rgb)/0.25)] disabled:opacity-60';
 
 const BASE_LABEL =
-  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-[16px] text-text-tertiary transition-all peer-focus:top-3 peer-focus:text-[11px] peer-focus:text-primary';
+  'pointer-events-none absolute text-[16px] text-text-tertiary transition-all peer-focus:text-[11px] peer-focus:text-primary';
 
 const BASE_LABEL_SM =
-  'pointer-events-none absolute top-1/2 -translate-y-1/2 text-[14px] text-text-tertiary transition-all peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-primary';
+  'pointer-events-none absolute text-[14px] text-text-tertiary transition-all peer-focus:text-[10px] peer-focus:text-primary';
 
-const LABEL_FLOATED = 'top-3 text-[11px]';
-const LABEL_FLOATED_SM = 'top-1.5 text-[10px]';
+const LABEL_RESTING = 'top-1/2 -translate-y-1/2 peer-focus:top-3 peer-focus:translate-y-0';
+const LABEL_RESTING_SM = 'top-1/2 -translate-y-1/2 peer-focus:top-1.5 peer-focus:translate-y-0';
+const LABEL_FLOATED = 'top-3 translate-y-0 text-[11px]';
+const LABEL_FLOATED_SM = 'top-1.5 translate-y-0 text-[10px]';
 
 export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.Element {
   const generatedId = useId();
@@ -59,19 +64,28 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   const isControlled = props.value !== undefined;
   const [hasValueNaoControlado, setHasValueNaoControlado] = useState(Boolean(props.defaultValue));
 
-  const { label, error, className, icon: Icon, iconClassName, leftSlot, fieldSize = 'md', ...rest } = props;
+  const { label, error, className, icon: Icon, iconClassName, leftSlot, rightSlot, fieldSize = 'md', ...rest } = props;
   const floated = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select';
   const withIcon = Boolean(Icon);
   const withSlot = Boolean(leftSlot);
+  const withRightSlot = Boolean(rightSlot);
   const sm = fieldSize === 'sm';
 
   const iconLeftClass = sm ? 'left-2.5' : 'left-3';
   const iconSize = sm ? 15 : 18;
   const plClass = withSlot ? (sm ? 'pl-14' : 'pl-16') : withIcon ? (sm ? 'pl-8' : 'pl-10') : sm ? 'pl-2.5' : 'pl-3';
+  const prClass = withRightSlot ? (sm ? 'pr-[112px]' : 'pr-[124px]') : '';
   const labelLeftClass = withSlot ? (sm ? 'left-14' : 'left-16') : withIcon ? (sm ? 'left-8' : 'left-10') : sm ? 'left-2.5' : 'left-3';
 
-  const fieldFinalClasses = `${sm ? BASE_FIELD_SM : BASE_FIELD} ${plClass}`;
-  const labelFinalClasses = `${sm ? BASE_LABEL_SM : BASE_LABEL} ${labelLeftClass}`;
+  const fieldFinalClasses = `${sm ? BASE_FIELD_SM : BASE_FIELD} ${plClass} ${prClass}`;
+  const labelPositionClass = floated
+    ? sm
+      ? LABEL_FLOATED_SM
+      : LABEL_FLOATED
+    : sm
+      ? LABEL_RESTING_SM
+      : LABEL_RESTING;
+  const labelFinalClasses = `${sm ? BASE_LABEL_SM : BASE_LABEL} ${labelLeftClass} ${labelPositionClass}`;
 
   return (
     <div className="w-full">
@@ -81,6 +95,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
         ) : Icon ? (
           <Icon size={iconSize} className={`pointer-events-none absolute z-10 ${iconLeftClass} top-1/2 -translate-y-1/2 ${iconClassName ?? 'text-text-tertiary'}`} />
         ) : null}
+        {rightSlot ? <div className="absolute right-1 top-1/2 z-10 -translate-y-1/2">{rightSlot}</div> : null}
         {props.as === 'textarea' ? (
           <textarea
             {...(rest as TextareaHTMLAttributes<HTMLTextAreaElement>)}
@@ -116,7 +131,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             placeholder={(rest as InputHTMLAttributes<HTMLInputElement>).placeholder ?? ' '}
           />
         )}
-        <label htmlFor={id} className={`${labelFinalClasses} ${floated ? (sm ? LABEL_FLOATED_SM : LABEL_FLOATED) : ''} bg-bg-input px-1 -ml-1`}>
+        <label htmlFor={id} className={`${labelFinalClasses} bg-bg-input px-1 -ml-1`}>
           {label}
         </label>
       </div>

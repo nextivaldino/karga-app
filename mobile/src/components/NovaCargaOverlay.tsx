@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownLeft, ArrowUpRight, CaretDown as ChevronDown, Copy, CurrencyEur as Euro, IdentificationCard as IdCard, Stack as Layers, EnvelopeSimple as Mail, Package, PencilSimple as Pencil, Ruler, PaperPlaneTilt as Send, Note as StickyNote, Trash as Trash2, Scales as Weight, X } from '@phosphor-icons/react';
+import { ArrowDownLeft, ArrowUpRight, CaretDown as ChevronDown, Copy, CurrencyEur as Euro, IdentificationCard as IdCard, Stack as Layers, EnvelopeSimple as Mail, MapPin, Package, PencilSimple as Pencil, PaperPlaneTilt as Send, Note as StickyNote, Trash as Trash2, X } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
-import { useTheme } from '@/hooks/useTheme';
-import { estiloTema } from '@/lib/themeTokens';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { Switch } from '@/components/ui/Switch';
@@ -24,9 +22,11 @@ const CAMPOS_VAZIOS: NovaCargaPendenteInput = {
   emissorTelefone: '',
   emissorEmail: '',
   emissorNif: '',
+  emissorMorada: '',
   recetorNome: '',
   recetorTelefone: '',
   recetorEmail: '',
+  recetorMorada: '',
   nomeCarga: '',
   comprimentoCm: null,
   larguraCm: null,
@@ -52,11 +52,6 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
   const { enviarOuEnfileirar } = useFilaOffline();
-  // O popup e os seus menus usam sempre o tema oposto ao da app — cria
-  // contraste deliberado (destaque de "primeiro plano") independente da
-  // escolha de tema do utilizador.
-  const { theme } = useTheme();
-  const temaInvertido = theme === 'dark' ? 'light' : 'dark';
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [form, setForm] = useState<NovaCargaPendenteInput>(CAMPOS_VAZIOS);
   const [lote, setLote] = useState<NovaCargaPendenteInput[]>([]);
@@ -71,6 +66,11 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   // de uma primeira tentativa falhada — nunca logo de início, um
   // formulário vazio não é um "erro".
   const [tentouEnviar, setTentouEnviar] = useState(false);
+  // "Código único para este emissor" (doc do Desktop) — aqui é só uma
+  // referência local dentro da lista Empilhadas desta sessão (ex: todas
+  // "#1"), nunca um código real: a carga pendente do PWA não tem esse
+  // campo, o código a sério só é atribuído pelo admin ao importar.
+  const [codigoUnicoEmissor, setCodigoUnicoEmissor] = useState(false);
   const sugestoes = listarSugestoesNomes();
   const sugestoesCargas = listarSugestoesCargas();
 
@@ -98,6 +98,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     setRecetorExpandido(false);
     setNotasExpandido(Boolean(prefill?.notas));
     setTentouEnviar(false);
+    setCodigoUnicoEmissor(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto]);
 
@@ -106,6 +107,29 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   function update<K extends keyof NovaCargaPendenteInput>(key: K, value: NovaCargaPendenteInput[K]): void {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  // Pré-visualização de m³ ao vivo — mesma conta do Desktop.
+  const m3Preview =
+    form.comprimentoCm != null && form.larguraCm != null && form.alturaCm != null
+      ? (form.comprimentoCm * form.larguraCm * form.alturaCm) / 1_000_000
+      : null;
+
+  // Referências partilhadas por emissor dentro da lista Empilhadas —
+  // primeira carga de um emissor novo ganha o próximo número, as
+  // seguintes do mesmo emissor reutilizam-no.
+  function referenciasPorEmissor(): Map<string, number> {
+    const mapa = new Map<string, number>();
+    let proximo = 1;
+    for (const item of lote) {
+      const chave = item.emissorNome.trim().toLowerCase();
+      if (!mapa.has(chave)) {
+        mapa.set(chave, proximo);
+        proximo++;
+      }
+    }
+    return mapa;
+  }
+  const referencias = codigoUnicoEmissor ? referenciasPorEmissor() : null;
 
   function handleEmpilhar(): void {
     setTentouEnviar(true);
@@ -129,9 +153,11 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
       emissorTelefone: f.emissorTelefone,
       emissorEmail: f.emissorEmail,
       emissorNif: f.emissorNif,
+      emissorMorada: f.emissorMorada,
       recetorNome: f.recetorNome,
       recetorTelefone: f.recetorTelefone,
       recetorEmail: f.recetorEmail,
+      recetorMorada: f.recetorMorada,
     }));
   }
 
@@ -184,46 +210,27 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     }
   }
 
+  // Página inteira, tal como o formulário do Desktop (sem ser um popup
+  // flutuante) — a mesma estrutura de secções (contentor → emissor →
+  // recetor → nome → dimensões/peso/valor com pré-visualização de m³ →
+  // pagamento → notas → empilhadas → ações), só que adaptada aos campos
+  // que a carga pendente do PWA realmente tem (sem código nem ligação a
+  // contactos reais do Desktop, que a PWA não vê).
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 pb-[calc(env(safe-area-inset-bottom)+92px)] backdrop-blur-[2px] transition-opacity duration-300 ${
-        entrada ? 'opacity-100' : 'opacity-0'
-      }`}
-      onClick={fechar}
+      className={`fixed inset-0 z-50 flex flex-col bg-bg-app transition-opacity duration-200 ${entrada ? 'opacity-100' : 'opacity-0'}`}
     >
-      {/* Painel flutuante — não ocupa as bordas do ecrã; "cresce" a partir
-          do botão "+" da dock (transform-origin em baixo) de forma suave.
-          Material "liquid glass" (iOS mais recente): fundo translúcido +
-          blur forte, mesma técnica já usada na Dock, em vez de um painel
-          opaco — o conteúdo por trás continua a perceber-se ao de leve. */}
       <div
-        data-theme={temaInvertido}
-        style={{
-          ...estiloTema(temaInvertido),
-          backgroundColor: `${(estiloTema(temaInvertido) as Record<string, string>)['--bg-app']}e0`,
-          maxHeight: 'calc(100% - 8px)',
-          transformOrigin: 'bottom center',
-        }}
-        onClick={(e) => e.stopPropagation()}
-        className={`flex w-full max-w-[440px] flex-col overflow-hidden rounded-[28px] border border-white/15 shadow-2xl backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
-          entrada ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-90 opacity-0'
-        }`}
+        className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 pb-3"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
       >
-      {/* Grabber — afordância de "sheet" ao estilo iOS, sinaliza que o
-          painel pode ser arrastado/fechado, mesmo não sendo arrastável
-          ainda (fecha-se pelo X ou a tocar fora). */}
-      <div className="flex shrink-0 justify-center pb-1 pt-2">
-        <span className="h-1 w-9 rounded-full bg-text-tertiary/40" />
-      </div>
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border/60 px-3">
         <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app">
           <X size={20} />
         </button>
-        <span className="shrink-0 text-[15px] font-semibold text-text-primary">Nova Carga</span>
         <select
           value={form.contentorId}
           onChange={(e) => update('contentorId', e.target.value)}
-          className={`ml-auto min-w-0 max-w-[55%] truncate rounded-control border bg-bg-input px-2 py-1.5 text-[13px] text-text-primary ${
+          className={`min-w-0 flex-1 truncate rounded-control border bg-bg-input px-2 py-1.5 text-center text-[13px] font-medium text-text-primary ${
             tentouEnviar && !form.contentorId ? 'border-error' : 'border-border/60'
           }`}
         >
@@ -234,12 +241,15 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             </option>
           ))}
         </select>
+        <div title="Agrupar cargas deste emissor sob a mesma referência">
+          <Switch checked={codigoUnicoEmissor} onChange={setCodigoUnicoEmissor} />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3">
         <div className="flex flex-col gap-2">
           {/* Emissor — azul + seta a sair, em todo o sistema identifica quem envia */}
-          <div className="flex flex-col gap-1.5">
+          <section className="flex flex-col gap-1.5 rounded-2xl border border-primary/20 bg-primary/[0.035] p-2">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
@@ -256,35 +266,43 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 type="button"
                 onClick={() => setEmissorExpandido((v) => !v)}
                 title="Mais campos do emissor"
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${emissorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-primary/25 bg-primary/5 text-primary'}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control border transition-colors ${emissorExpandido ? 'border-primary bg-primary-light text-primary' : 'border-primary/25 bg-primary/5 text-primary'}`}
               >
                 <ChevronDown size={18} className={`transition-transform ${emissorExpandido ? 'rotate-180' : ''}`} />
               </button>
             </div>
             {emissorExpandido ? (
-              <div className="ml-4 flex flex-col gap-1.5 border-l-2 border-primary/25 pl-3">
-                <PhoneField label="Telefone do emissor" paises={PAISES_EMISSOR} corClass="text-primary" value={form.emissorTelefone} onChange={(v) => update('emissorTelefone', v)} />
-                <FloatingLabelInput
-                  label="Email do emissor"
-                  fieldSize="sm"
-                  icon={Mail}
-                  iconClassName="text-primary/70"
-                  value={form.emissorEmail ?? ''}
-                  onChange={(e) => update('emissorEmail', e.target.value || null)}
-                />
-                <FloatingLabelInput
-                  label="NIF (Luxemburgo)"
-                  fieldSize="sm"
-                  icon={IdCard}
-                  iconClassName="text-primary/70"
-                  inputMode="numeric"
-                  maxLength={13}
-                  value={form.emissorNif ?? ''}
-                  onChange={(e) => update('emissorNif', e.target.value.replace(/[^0-9]/g, '') || null)}
-                />
-              </div>
-            ) : null}
-          </div>
+                <div className="flex flex-col gap-1.5 border-t border-primary/15 pt-2">
+                  <PhoneField label="Telefone do emissor" paises={PAISES_EMISSOR} corClass="text-primary" value={form.emissorTelefone} onChange={(v) => update('emissorTelefone', v)} />
+                  <FloatingLabelInput
+                    label="Email do emissor"
+                    fieldSize="sm"
+                    icon={Mail}
+                    iconClassName="text-primary/70"
+                    value={form.emissorEmail ?? ''}
+                    onChange={(e) => update('emissorEmail', e.target.value || null)}
+                  />
+                  <FloatingLabelInput
+                    label="NIF (Luxemburgo)"
+                    fieldSize="sm"
+                    icon={IdCard}
+                    iconClassName="text-primary/70"
+                    inputMode="numeric"
+                    maxLength={13}
+                    value={form.emissorNif ?? ''}
+                    onChange={(e) => update('emissorNif', e.target.value.replace(/[^0-9]/g, '') || null)}
+                  />
+                  <FloatingLabelInput
+                    label="Morada do emissor"
+                    fieldSize="sm"
+                    icon={MapPin}
+                    iconClassName="text-primary/70"
+                    value={form.emissorMorada ?? ''}
+                    onChange={(e) => update('emissorMorada', e.target.value || null)}
+                  />
+                </div>
+              ) : null}
+          </section>
 
           <datalist id="sugestoes-nomes">
             {sugestoes.map((n) => (
@@ -292,11 +310,8 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             ))}
           </datalist>
 
-          {/* Separador fluido entre Emissor e Recetor — a cor faz a transição azul → verde */}
-          <div className="h-px bg-gradient-to-r from-primary/40 via-border to-success/40" />
-
           {/* Recetor — verde + seta a entrar, em todo o sistema identifica quem recebe */}
-          <div className="flex flex-col gap-1.5">
+          <section className="flex flex-col gap-1.5 rounded-2xl border border-success/20 bg-success/[0.035] p-2">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
@@ -313,13 +328,13 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                 type="button"
                 onClick={() => setRecetorExpandido((v) => !v)}
                 title="Mais campos do recetor"
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors ${recetorExpandido ? 'border-success bg-success/10 text-success' : 'border-success/25 bg-success/5 text-success'}`}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control border transition-colors ${recetorExpandido ? 'border-success bg-success/10 text-success' : 'border-success/25 bg-success/5 text-success'}`}
               >
                 <ChevronDown size={18} className={`transition-transform ${recetorExpandido ? 'rotate-180' : ''}`} />
               </button>
             </div>
             {recetorExpandido ? (
-              <div className="ml-4 flex flex-col gap-1.5 border-l-2 border-success/25 pl-3">
+              <div className="flex flex-col gap-1.5 border-t border-success/15 pt-2">
                 <PhoneField label="Telefone do recetor" paises={PAISES_RECETOR} corClass="text-success" value={form.recetorTelefone} onChange={(v) => update('recetorTelefone', v)} />
                 <FloatingLabelInput
                   label="Email do recetor"
@@ -329,9 +344,17 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                   value={form.recetorEmail ?? ''}
                   onChange={(e) => update('recetorEmail', e.target.value || null)}
                 />
+                <FloatingLabelInput
+                  label="Morada do recetor"
+                  fieldSize="sm"
+                  icon={MapPin}
+                  iconClassName="text-success/70"
+                  value={form.recetorMorada ?? ''}
+                  onChange={(e) => update('recetorMorada', e.target.value || null)}
+                />
               </div>
             ) : null}
-          </div>
+          </section>
 
           <div className="h-px bg-border" />
 
@@ -349,32 +372,33 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             ))}
           </datalist>
 
-          <div className="grid grid-cols-3 gap-2">
-            <FloatingLabelInput fieldSize="sm" label="C (cm)" icon={Ruler} type="number" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label="L (cm)" icon={Ruler} type="number" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label="A (cm)" icon={Ruler} type="number" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
+          <div className="grid grid-cols-4 gap-2">
+            <FloatingLabelInput fieldSize="sm" label={form.comprimentoCm == null ? 'C (cm)' : ''} aria-label="Comprimento em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.comprimentoCm ?? ''} onChange={(e) => update('comprimentoCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput fieldSize="sm" label={form.larguraCm == null ? 'L (cm)' : ''} aria-label="Largura em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.larguraCm ?? ''} onChange={(e) => update('larguraCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput fieldSize="sm" label={form.alturaCm == null ? 'A (cm)' : ''} aria-label="Altura em centímetros" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.alturaCm ?? ''} onChange={(e) => update('alturaCm', numOrNull(e.target.value))} />
+            <FloatingLabelInput fieldSize="sm" label={form.pesoKg == null ? 'Peso (kg)' : ''} aria-label="Peso em quilogramas" inputMode="decimal" className="text-center font-semibold tabular-nums" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <FloatingLabelInput fieldSize="sm" label="Peso (kg)" icon={Weight} type="number" value={form.pesoKg ?? ''} onChange={(e) => update('pesoKg', numOrNull(e.target.value))} />
-            <FloatingLabelInput fieldSize="sm" label="Valor" icon={Euro} type="number" value={form.valor ?? ''} onChange={(e) => update('valor', numOrNull(e.target.value))} />
-          </div>
+          <FloatingLabelInput
+            label="Valor"
+            icon={Euro}
+            type="number"
+            value={form.valor ?? ''}
+            onChange={(e) => update('valor', numOrNull(e.target.value))}
+            rightSlot={<Switch checked={form.pago} onChange={(v) => update('pago', v)} label={form.pago ? 'Pago' : 'Devido'} />}
+          />
+          <p className="text-right text-[12px] text-text-tertiary">
+            {m3Preview == null ? 'm³: —' : `m³: ${m3Preview.toFixed(3)}`}
+          </p>
 
-          {/* Pago fica no fim do formulário, na mesma linha do gatilho de Notas */}
-          <div className="flex items-center gap-2">
-            {notasExpandido ? null : (
-              <button
-                type="button"
-                onClick={() => setNotasExpandido(true)}
-                className="flex min-h-touch flex-1 items-center gap-2 rounded-control border border-dashed border-border/60 px-3 text-[13px] text-text-tertiary active:bg-bg-app"
-              >
-                <StickyNote size={14} /> Notas (opcional)
-              </button>
-            )}
-            <div className="flex min-h-touch shrink-0 items-center gap-2 rounded-control border border-border/60 bg-bg-surface px-3">
-              <span className={`text-[13px] font-medium ${form.pago ? 'text-success' : 'text-warning'}`}>{form.pago ? 'Pago' : 'Devido'}</span>
-              <Switch checked={form.pago} onChange={(v) => update('pago', v)} />
-            </div>
-          </div>
+          {notasExpandido ? null : (
+            <button
+              type="button"
+              onClick={() => setNotasExpandido(true)}
+              className="flex min-h-touch w-full items-center gap-2 rounded-control border border-dashed border-border/60 px-3 text-[13px] text-text-tertiary active:bg-bg-app"
+            >
+              <StickyNote size={14} /> Notas (opcional)
+            </button>
+          )}
 
           {notasExpandido ? (
             <FloatingLabelInput as="textarea" label="Notas" icon={StickyNote} value={form.notas ?? ''} onChange={(e) => update('notas', e.target.value || null)} />
@@ -402,7 +426,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
                     compacto
                     linha={{
                       id: `lote-${index}`,
-                      codigo: `#${index + 1}`,
+                      codigo: `#${referencias?.get(item.emissorNome.trim().toLowerCase()) ?? index + 1}`,
                       emissorNome: item.emissorNome,
                       recetorNome: item.recetorNome,
                       nomeCarga: item.nomeCarga,
@@ -421,11 +445,14 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
         ) : null}
       </div>
 
-      <div className="flex shrink-0 gap-2 border-t border-border/60 p-3">
+      <div
+        className="flex shrink-0 gap-2 border-t border-border/60 p-3"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+      >
         <button
           type="button"
           onClick={handleEmpilhar}
-          className="flex min-h-touch flex-1 items-center justify-center gap-1.5 rounded-control border border-primary text-[14px] font-medium text-primary active:bg-primary-light"
+          className="flex min-h-touch flex-1 items-center justify-center gap-1.5 rounded-pill border border-primary text-[14px] font-semibold text-primary active:bg-primary-light"
         >
           <Layers size={16} /> Guardar e adicionar outra
         </button>
@@ -433,7 +460,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
           type="button"
           disabled={enviando}
           onClick={() => void handleEnviar()}
-          className="flex min-h-touch flex-1 items-center justify-center gap-1.5 rounded-control bg-primary text-[14px] font-medium text-white active:bg-primary-hover disabled:opacity-60"
+          className="btn-primary flex flex-1 items-center justify-center gap-1.5 disabled:opacity-60"
         >
           {enviando ? 'A enviar...' : (
             <>
@@ -441,7 +468,6 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
             </>
           )}
         </button>
-      </div>
       </div>
     </div>
   );

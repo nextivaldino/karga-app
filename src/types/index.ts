@@ -368,9 +368,11 @@ export interface CargaPendente {
   emissorTelefone: string | null;
   emissorEmail: string | null;
   emissorNif: string | null;
+  emissorMorada: string | null;
   recetorNome: string;
   recetorTelefone: string | null;
   recetorEmail: string | null;
+  recetorMorada: string | null;
   nomeCarga: string;
   comprimentoCm: number | null;
   larguraCm: number | null;

@@ -42,9 +42,11 @@ interface CargaPendenteRow {
   emissor_telefone: string | null;
   emissor_email: string | null;
   emissor_nif: string | null;
+  emissor_morada: string | null;
   recetor_nome: string;
   recetor_telefone: string | null;
   recetor_email: string | null;
+  recetor_morada: string | null;
   nome_carga: string;
   comprimento_cm: number | null;
   largura_cm: number | null;
@@ -69,9 +71,11 @@ function mapCargaPendente(row: CargaPendenteRow): CargaPendente {
     emissorTelefone: row.emissor_telefone,
     emissorEmail: row.emissor_email,
     emissorNif: row.emissor_nif,
+    emissorMorada: row.emissor_morada,
     recetorNome: row.recetor_nome,
     recetorTelefone: row.recetor_telefone,
     recetorEmail: row.recetor_email,
+    recetorMorada: row.recetor_morada,
     nomeCarga: row.nome_carga,
     comprimentoCm: row.comprimento_cm,
     larguraCm: row.largura_cm,
@@ -119,9 +123,11 @@ export async function enviarCargasPendentes(userId: string, items: NovaCargaPend
     emissor_telefone: vazioParaNull(item.emissorTelefone),
     emissor_email: vazioParaNull(item.emissorEmail),
     emissor_nif: vazioParaNull(item.emissorNif),
+    emissor_morada: vazioParaNull(item.emissorMorada),
     recetor_nome: item.recetorNome.trim(),
     recetor_telefone: vazioParaNull(item.recetorTelefone),
     recetor_email: vazioParaNull(item.recetorEmail),
+    recetor_morada: vazioParaNull(item.recetorMorada),
     nome_carga: item.nomeCarga.trim(),
     comprimento_cm: item.comprimentoCm,
     largura_cm: item.larguraCm,

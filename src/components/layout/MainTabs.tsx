@@ -31,20 +31,10 @@ const TABS: {
 //   distinto do fundo do cabeçalho e da cor cheia da ativa; hover reforça
 //   para var(--bg-app).
 // - Cada aba colapsa para só-ícone via o chevron que aparece no hover.
-const FLARE_RADIUS = 10;
-const COLLAPSED_WIDTH = 44;
-const EXPANDED_WIDTH = 128;
-// Folga no topo da aba — ~10% da altura do cabeçalho (48px) — para não
-// ficar encostada à altura toda da barra. O botão exterior mantém-se a
-// 100% da altura via items-stretch (encaixe exato, zero arredondamento
-// possível); é o retângulo INTERIOR que fica mais baixo, começando
-// `TAB_TOP_GAP`px abaixo do topo mas colado ao fundo do botão exterior
-// (`bottom-0` dentro de uma caixa que já é exata) — assim a base nunca
-// tem folga fracionária a separar a aba da sub-barra por baixo (o bug
-// que tínhamos com `items-end` + altura explícita: a base ficava a meio
-// pixel do sítio certo, e essa fresta deixava a cor do cabeçalho aparecer
-// como uma linha fina).
-const TAB_TOP_GAP = 5;
+const FLARE_RADIUS = 14;
+const COLLAPSED_WIDTH = 42;
+const EXPANDED_WIDTH = 120;
+const TAB_TOP_GAP = 6;
 
 function TabFlare({ side, tabColor }: { side: 'left' | 'right'; tabColor: string }): React.JSX.Element {
   // O círculo tem de estar centrado no canto EXTERIOR-SUPERIOR da
@@ -138,11 +128,15 @@ export function MainTabs(): React.JSX.Element {
             <div
               style={{
                 top: TAB_TOP_GAP,
-                backgroundColor: active ? tabColor : 'var(--toolbar-hover)',
+                backgroundColor: active ? tabColor : 'transparent',
                 color: active && isSync ? SYNC_INK : undefined,
               }}
-              className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 rounded-t-[10px] px-3 text-[13px] font-medium transition-colors ${
-                active ? (isSync ? '' : 'text-text-primary') : 'text-text-secondary group-hover:bg-bg-app group-hover:text-text-primary'
+              className={`absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 rounded-t-[12px] px-3 text-[12px] font-medium transition-all duration-150 ${
+                active
+                  ? isSync
+                    ? ''
+                    : 'text-text-primary'
+                  : 'text-text-tertiary hover:bg-text-primary/5 hover:text-text-secondary'
               }`}
             >
               {active ? (
@@ -152,7 +146,7 @@ export function MainTabs(): React.JSX.Element {
                 </>
               ) : null}
               <span className="relative shrink-0">
-                <ModuleIcon module={tab.iconModule} size={18} colorOverride={active && isSync ? SYNC_INK : undefined} />
+                <ModuleIcon module={tab.iconModule} size={16} colorOverride={active && isSync ? SYNC_INK : undefined} />
                 {tab.page === 'sync' && pendentesSync > 0 ? (
                   <span
                     style={{
@@ -167,11 +161,8 @@ export function MainTabs(): React.JSX.Element {
                 ) : null}
               </span>
               {!colapsada ? (
-                <span className={`whitespace-nowrap ${active && !isSync ? tab.colorClass : ''}`}>{tab.label}</span>
+                <span className={`whitespace-nowrap tracking-[0.01em] ${active && !isSync ? tab.colorClass : ''}`}>{tab.label}</span>
               ) : null}
-              {/* Botão de colapsar sobreposto (não ocupa espaço no layout
-                  normal da aba) — só aparece no hover, para não obrigar a
-                  aba a ficar mais larga só para lhe dar lugar permanente. */}
               {!colapsada ? (
                 <button
                   type="button"

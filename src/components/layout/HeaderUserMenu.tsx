@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CaretRight, Gear, Info, List, Moon, SignOut as LogOut, Sun } from '@phosphor-icons/react';
 import { useAuth } from '@/modules/auth/AuthContext';
 import { useNavigation } from '@/hooks/useNavigation';
@@ -6,21 +7,23 @@ import { useTheme } from '@/hooks/useTheme';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { SobreModal } from './SobreModal';
 
-// Substitui o antigo par solto de ícones (tema + sair) por um único
-// menu de hambúrguer — agrupa tema, perfil/definições e sessão num só
-// sítio, ao estilo do menu de conta do Finder/macOS.
 export function HeaderUserMenu(): React.JSX.Element {
   const { user, logout } = useAuth();
   const { navigate } = useNavigation();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [sobreAberto, setSobreAberto] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        const portal = document.getElementById('user-menu-portal');
+        if (portal && portal.contains(e.target as Node)) return;
+        setOpen(false);
+      }
     }
     function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') setOpen(false);
@@ -31,6 +34,18 @@ export function HeaderUserMenu(): React.JSX.Element {
       window.removeEventListener('mousedown', onClickOutside);
       window.removeEventListener('keydown', onKeyDown);
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function updatePos(): void {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return;
+      setDropdownPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+    }
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    return () => window.removeEventListener('resize', updatePos);
   }, [open]);
 
   return (
@@ -46,8 +61,8 @@ export function HeaderUserMenu(): React.JSX.Element {
         <List size={18} />
       </button>
 
-      {open ? (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-64 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg">
+      {open && dropdownPos ? createPortal(
+        <div id="user-menu-portal" className="fixed z-[100] w-64 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
           {user ? (
             <div className="flex items-center gap-2.5 border-b border-border px-3.5 py-3">
               <UserAvatar avatar={user.avatar} size={32} />
@@ -106,7 +121,8 @@ export function HeaderUserMenu(): React.JSX.Element {
             <LogOut size={16} />
             Sair{user ? ` (${user.name})` : ''}
           </button>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       <SobreModal open={sobreAberto} onClose={() => setSobreAberto(false)} />

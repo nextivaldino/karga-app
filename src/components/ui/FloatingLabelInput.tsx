@@ -22,7 +22,7 @@ type SelectProps = BaseProps &
 type FloatingLabelInputProps = InputProps | TextareaProps | SelectProps;
 
 const fieldClasses =
-  'w-full rounded-control border border-border bg-bg-input px-3 py-2.5 text-[14px] text-text-primary outline-none transition-colors focus:border-primary disabled:opacity-60';
+  'w-full rounded-control border border-border bg-bg-input px-3 py-2.5 text-[13.5px] text-text-primary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60 placeholder:text-text-tertiary';
 
 export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.Element {
   const generatedId = useId();
@@ -104,7 +104,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
         {!preenchido ? (
           <label
             htmlFor={id}
-            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[14px] text-text-secondary`}
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[13px] text-text-tertiary transition-all`}
             style={{ maxWidth: `calc(100% - ${withIcon ? 44 : 24}px)` }}
           >
             {label}

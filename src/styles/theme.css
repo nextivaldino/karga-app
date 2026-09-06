@@ -9,69 +9,83 @@
 }
 
 :root[data-theme='light'] {
-  --color-primary: #3584e4;
-  --color-primary-hover: #1c71d8;
-  --color-primary-light: #eaf2fc;
-  --color-success: #2ec27e;
-  --color-error: #e01b24;
-  --color-warning: #e5a50a;
-  --color-purple: #9141ac;
+  /* ── Acentos ─────────────────────────────────────────────────────── */
+  --color-primary:       #3b82f6;   /* blue-500 — mais vivo e moderno    */
+  --color-primary-hover: #2563eb;   /* blue-600                          */
+  --color-primary-light: #eff6ff;   /* blue-50                           */
+  --color-success:       #16a34a;   /* green-600                         */
+  --color-error:         #dc2626;   /* red-600                           */
+  --color-warning:       #d97706;   /* amber-600                         */
+  --color-purple:        #7c3aed;   /* violet-600                        */
 
-  --color-primary-rgb: 53 132 228;
-  --color-success-rgb: 46 194 126;
-  --color-error-rgb: 224 27 36;
-  --color-warning-rgb: 229 165 10;
-  --color-purple-rgb: 145 65 172;
+  --color-primary-rgb:   59 130 246;
+  --color-success-rgb:   22 163 74;
+  --color-error-rgb:     220 38 38;
+  --color-warning-rgb:   217 119 6;
+  --color-purple-rgb:    124 58 237;
 
-  --bg-app: #f6f5f4;
+  /* ── Superfícies ─────────────────────────────────────────────────── */
+  --bg-app:     #f1f5f9;             /* slate-100 — frio, limpo, sem bege */
   --bg-surface: #ffffff;
-  --bg-header: rgba(255, 255, 255, 0.8);
-  --bg-input: #ffffff;
+  --bg-header:  rgba(248, 250, 252, 0.88);  /* slate-50 semitransparente  */
+  --bg-input:   #f8fafc;             /* slate-50 ligeiramente off-white   */
 
-  --text-primary: #241f31;
-  --text-secondary: #5e5c64;
-  --text-tertiary: #9a9996;
-  --border: #deddda;
+  /* ── Texto ───────────────────────────────────────────────────────── */
+  --text-primary:   #0f172a;         /* slate-900 — quase preto, sem roxo */
+  --text-secondary: #475569;         /* slate-600                         */
+  --text-tertiary:  #94a3b8;         /* slate-400                         */
 
-  --panel-paper-bg: #fdf9ee;
-  --panel-paper-bg-alt: #f7f0da;
-  --panel-paper-border: #c9971f;
+  /* ── Bordas ──────────────────────────────────────────────────────── */
+  --border: #e2e8f0;                 /* slate-200 — limpa e definida      */
 
-  --toolbar-bg: #e7e9ee;
-  --toolbar-hover: rgba(0, 0, 0, 0.06);
+  /* ── Paper (painéis especiais) ───────────────────────────────────── */
+  --panel-paper-bg:     #fefce8;
+  --panel-paper-bg-alt: #fef9c3;
+  --panel-paper-border: #ca8a04;
+
+  /* ── Toolbar ─────────────────────────────────────────────────────── */
+  --toolbar-bg:    #e8edf3;          /* slate frio e consistente          */
+  --toolbar-hover: rgba(15, 23, 42, 0.05);
 }
 
 :root[data-theme='dark'] {
-  --color-primary: #78aeed;
-  --color-primary-hover: #97c4f2;
-  --color-primary-light: rgba(120, 174, 237, 0.15);
-  --color-success: #57e389;
-  --color-error: #ff7b63;
-  --color-warning: #f8e45c;
-  --color-purple: #c061cb;
+  /* ── Acentos ─────────────────────────────────────────────────────── */
+  --color-primary:       #6b7280;   /* gray-500 — neutral */
+  --color-primary-hover: #9ca3af;   /* gray-400 */
+  --color-primary-light: rgba(107, 114, 128, 0.12);
+  --color-success:       #4ade80;   /* green-400 keeps positive accent */
+  --color-error:         #f87171;   /* red-400 */
+  --color-warning:       #fbbf24;   /* amber-400 */
+  --color-purple:        #a78bfa;   /* retained for brand identity */
 
-  --color-primary-rgb: 120 174 237;
-  --color-success-rgb: 87 227 137;
-  --color-error-rgb: 255 123 99;
-  --color-warning-rgb: 248 228 92;
-  --color-purple-rgb: 192 97 203;
+  --color-primary-rgb:   107 114 128;
+  --color-success-rgb:   74 222 128;
+  --color-error-rgb:     248 113 113;
+  --color-warning-rgb:   251 191 36;
+  --color-purple-rgb:    167 139 250;
 
-  --bg-app: #1e1e1e;
-  --bg-surface: #2d2d2d;
-  --bg-header: rgba(36, 31, 49, 0.8);
-  --bg-input: #363636;
+  /* ── Superfícies ─────────────────────────────────────────────────── */
+  --bg-app:     #111827;   /* gray-900 — neutral dark background */
+  --bg-surface: #1f2937;   /* gray-800 */
+  --bg-header:  rgba(17, 24, 39, 0.88); /* semi‑transparent */
+  --bg-input:   #1f2937;
 
-  --text-primary: #ffffff;
-  --text-secondary: #c0bfbc;
-  --text-tertiary: #77767b;
-  --border: rgba(255, 255, 255, 0.1);
+  /* ── Texto ───────────────────────────────────────────────────────── */
+  --text-primary:   #f3f4f6;   /* gray-100 */
+  --text-secondary: #d1d5db;   /* gray-300 */
+  --text-tertiary:  #9ca3af;   /* gray-400 */
 
-  --panel-paper-bg: #2a2418;
-  --panel-paper-bg-alt: #332c1c;
-  --panel-paper-border: #b8860b;
+  /* ── Bordas ──────────────────────────────────────────────────────── */
+  --border: rgba(107, 114, 128, 0.15); /* gray‑500 with slight transparency */
 
-  --toolbar-bg: #1a1a1a;
-  --toolbar-hover: rgba(255, 255, 255, 0.08);
+  /* ── Paper ───────────────────────────────────────────────────────── */
+  --panel-paper-bg:     #2d2d2d;
+  --panel-paper-bg-alt: #333333;
+  --panel-paper-border: #4b5563;
+
+  /* ── Toolbar ─────────────────────────────────────────────────────── */
+  --toolbar-bg:    #1f2937;   /* gray‑800, matches surface */
+  --toolbar-hover: rgba(107, 114, 128, 0.08);
 }
 
 :root {
@@ -81,81 +95,72 @@
   --spacing-lg: 16px;
   --spacing-xl: 24px;
 
-  --radius-control: 8px;
+  --radius-control: 9px;
   --radius-surface: 12px;
   --radius-pill: 999px;
 
-  /* Métricas de "chrome" (header/toolbar/ícones de topo) — uma única régua
-     vertical para todo o cabeçalho, em vez de números soltos por
-     componente. Toolbar mais fina que o header (42px vs 48px), tal como
-     no Finder a barra de ferramentas é mais baixa que a title bar. */
   --chrome-header-h: 48px;
   --chrome-toolbar-h: 42px;
   --chrome-icon-btn: 32px;
 }
 
-/* Popover que se quer sempre no tema oposto ao da app (ex: menu de
-   contêiner estilo Windows) — em vez de reimplementar cores à mão,
-   redefine-se o mesmo conjunto de tokens com os valores do tema
-   contrário, dentro deste scope. Qualquer classe Tailwind já baseada em
-   `var(--...)` (bg-bg-surface, text-text-primary, border, etc.) inverte
-   sozinha, sem precisar de variantes dark:/light: espalhadas pelo JSX. */
+/* Popover que se quer sempre no tema oposto ao da app */
 :root[data-theme='light'] .theme-invert {
   color-scheme: dark;
-  --color-primary: #78aeed;
-  --color-primary-hover: #97c4f2;
-  --color-primary-light: rgba(120, 174, 237, 0.15);
-  --color-success: #57e389;
-  --color-error: #ff7b63;
-  --color-warning: #f8e45c;
-  --color-purple: #c061cb;
+  --color-primary:       #60a5fa;
+  --color-primary-hover: #93c5fd;
+  --color-primary-light: rgba(96, 165, 250, 0.12);
+  --color-success:       #4ade80;
+  --color-error:         #f87171;
+  --color-warning:       #fbbf24;
+  --color-purple:        #a78bfa;
 
-  --color-primary-rgb: 120 174 237;
-  --color-success-rgb: 87 227 137;
-  --color-error-rgb: 255 123 99;
-  --color-warning-rgb: 248 228 92;
-  --color-purple-rgb: 192 97 203;
+  --color-primary-rgb:   96 165 250;
+  --color-success-rgb:   74 222 128;
+  --color-error-rgb:     248 113 113;
+  --color-warning-rgb:   251 191 36;
+  --color-purple-rgb:    167 139 250;
 
-  --bg-app: #1e1e1e;
-  --bg-surface: #2d2d2d;
-  --bg-input: #363636;
+  --bg-app:     #0f172a;
+  --bg-surface: #1e293b;
+  --bg-input:   #1e293b;
 
-  --text-primary: #ffffff;
-  --text-secondary: #c0bfbc;
-  --text-tertiary: #77767b;
-  --border: rgba(255, 255, 255, 0.1);
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary:  #475569;
+  --border: rgba(148, 163, 184, 0.12);
 
-  --toolbar-bg: #1a1a1a;
-  --toolbar-hover: rgba(255, 255, 255, 0.08);
+  --toolbar-bg:    #162032;
+  --toolbar-hover: rgba(148, 163, 184, 0.08);
 }
 
 :root[data-theme='dark'] .theme-invert {
   color-scheme: light;
-  --color-primary: #3584e4;
-  --color-primary-hover: #1c71d8;
-  --color-primary-light: #eaf2fc;
-  --color-success: #2ec27e;
-  --color-error: #e01b24;
-  --color-warning: #e5a50a;
-  --color-purple: #9141ac;
+  --color-primary:       #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #eff6ff;
+  --color-success:       #16a34a;
+  --color-error:         #dc2626;
+  --color-warning:       #d97706;
+  --color-purple:        #7c3aed;
 
-  --color-primary-rgb: 53 132 228;
-  --color-success-rgb: 46 194 126;
-  --color-error-rgb: 224 27 36;
-  --color-warning-rgb: 229 165 10;
-  --color-purple-rgb: 145 65 172;
+  --color-primary-rgb:   59 130 246;
+  --color-success-rgb:   22 163 74;
+  --color-error-rgb:     220 38 38;
+  --color-warning-rgb:   217 119 6;
+  --color-purple-rgb:    124 58 237;
 
-  --bg-app: #f6f5f4;
+  --bg-app:     #f1f5f9;
   --bg-surface: #ffffff;
-  --bg-input: #ffffff;
+  --bg-input:   #f8fafc;
 
-  --text-primary: #241f31;
-  --text-secondary: #5e5c64;
-  --text-tertiary: #9a9996;
-  --border: #deddda;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary:  #94a3b8;
+  --border: #e2e8f0;
 
-  --toolbar-bg: #e7e9ee;
-  --toolbar-hover: rgba(0, 0, 0, 0.06);
+  --toolbar-bg:    #e8edf3;
+  --toolbar-hover: rgba(15, 23, 42, 0.05);
 }
 
 html,

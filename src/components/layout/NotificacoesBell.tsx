@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, CheckCircle, Info, Warning, XCircle } from '@phosphor-icons/react';
 import { ipcService } from '@/services/ipcService';
 import { useNavigation } from '@/hooks/useNavigation';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import type { MainPage, Notificacao } from '@/types';
 
-// Um ícone + cor por tipo, num círculo pastel (mesma linguagem "tint"
-// já usada em CargasList/ContentoresIconsView) — em vez do pontinho
-// genérico anterior, para diferenciar de relance sistema/sucesso/aviso/erro.
 const TIPO_VISUAL: Record<Notificacao['tipo'], { Icon: typeof Info; bg: string; fg: string }> = {
-  info: { Icon: Info, bg: 'bg-primary/15', fg: 'text-primary' },
+  info: { Icon: Info, bg: 'bg-warning/15', fg: 'text-warning' },
   sucesso: { Icon: CheckCircle, bg: 'bg-success/15', fg: 'text-success' },
   aviso: { Icon: Warning, bg: 'bg-warning/15', fg: 'text-warning' },
   erro: { Icon: XCircle, bg: 'bg-error/15', fg: 'text-error' },
@@ -17,14 +15,11 @@ const TIPO_VISUAL: Record<Notificacao['tipo'], { Icon: typeof Info; bg: string; 
 
 const PAGINAS_VALIDAS: MainPage[] = ['home', 'cargas', 'contentores', 'configuracoes', 'sync'];
 
-// Só ocupa espaço no cabeçalho quando há notificações de sistema por
-// ler (contentor parado/a partir, backup, manutenção) — os avisos de
-// cargas PWA já não passam por aqui, vivem nas superfícies dedicadas de
-// Sincronização. Quando tudo está lido, desaparece e devolve o espaço.
 export function NotificacoesBell(): React.JSX.Element | null {
   const { navigate } = useNavigation();
   const [open, setOpen] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   async function carregar(): Promise<void> {
@@ -53,11 +48,27 @@ export function NotificacoesBell(): React.JSX.Element | null {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        const portal = document.getElementById('notificacoes-portal');
+        if (portal && portal.contains(e.target as Node)) return;
+        setOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function updatePos(): void {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setDropdownPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+    }
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    return () => window.removeEventListener('resize', updatePos);
+  }, [open]);
 
   async function handleClickNotificacao(n: Notificacao): Promise<void> {
     if (!n.lida) await ipcService.notificacoes.marcarLida(n.id);
@@ -94,14 +105,14 @@ export function NotificacoesBell(): React.JSX.Element | null {
         </span>
       </button>
 
-      {open ? (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-80 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg">
+      {open && dropdownPos ? createPortal(
+        <div id="notificacoes-portal" className="fixed z-[100] w-80 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg" style={{ top: dropdownPos.top, right: dropdownPos.right }}>
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <span className="text-[13px] font-semibold text-text-primary">Notificações</span>
             <button
               type="button"
               onClick={() => void handleLimpar()}
-              className="text-[12px] font-medium text-primary hover:underline"
+              className="text-[12px] font-medium text-warning hover:underline"
             >
               Limpar
             </button>
@@ -134,7 +145,8 @@ export function NotificacoesBell(): React.JSX.Element | null {
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );

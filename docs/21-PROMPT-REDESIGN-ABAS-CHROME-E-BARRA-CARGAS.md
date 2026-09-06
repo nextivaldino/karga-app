@@ -101,3 +101,25 @@ reorganização visual e de clareza, não uma mudança de comportamento.
 Depois de implementares as duas partes, tira um screenshot (via CDP) da
 página Home (para veres as abas) e da página Cargas (para veres a nova
 barra contextual) e descreve-me o resultado antes de eu confirmar.
+
+═══════════════════════════════════════════════════════════════
+ADENDA (2026-09-05) — ESTADO REAL DA IMPLEMENTAÇÃO
+═══════════════════════════════════════════════════════════════
+
+A Parte 2 deste documento foi implementada com desvios em relação ao
+pedido original, os quais foram consolidados no código e assumidos como o padrão final:
+
+1. A **pesquisa "omnibox"** não foi colocada na barra contextual da página 
+   Cargas. Em vez disso, tornou-se um **campo de pesquisa global no 
+   cabeçalho principal** da aplicação (acessível em todas as páginas).
+
+2. A ordem atual e definitiva da barra da página Cargas (da esquerda para a direita) é:
+   - **Seletor de Contentor + Filtros** (`ContainerPickerButton`)
+   - **Sincronização / Sync Card** (ao centro)
+   - **Seletor Lista / Faturação** (`ViewSwitcher` melhorado)
+   - **[+ Nova Carga]** (alinhado à direita)
+   - **Modo Editor** (toggle, no fim de tudo)
+
+Este estado reflete as decisões de evolução da interface tomadas durante a 
+construção do módulo de sincronização (Sync Hub). Deve ser considerado o spec 
+atual, substituindo as regras literais da "PARTE 2" acima.

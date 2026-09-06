@@ -25,7 +25,7 @@ export function ContextToolbar({ children, variant = 'action' }: ContextToolbarP
     );
   }
   return (
-    <div className="relative flex min-h-[var(--chrome-toolbar-h)] shrink-0 items-center gap-3 border-b border-border bg-[var(--toolbar-bg)] px-lg py-1.5 shadow-sm">
+    <div className="relative flex min-h-[var(--chrome-toolbar-h)] shrink-0 items-center gap-3 border-b border-border/50 bg-[var(--toolbar-bg)] px-lg py-1.5">
       {children}
     </div>
   );

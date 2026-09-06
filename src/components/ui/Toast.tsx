@@ -42,11 +42,18 @@ const toneIcon: Record<ToastTone, React.ComponentType<{ size?: number; className
   error: XCircle,
 };
 
+const toneBgClass: Record<ToastTone, string> = {
+  info: 'bg-blue-600',
+  success: 'bg-green-600',
+  warning: 'bg-yellow-600',
+  error: 'bg-red-600',
+};
+
 const toneColorClass: Record<ToastTone, string> = {
-  info: 'text-primary',
-  success: 'text-success',
-  warning: 'text-warning',
-  error: 'text-error',
+  info: 'text-white',
+  success: 'text-white',
+  warning: 'text-white',
+  error: 'text-white',
 };
 
 export function ToastContainer(): React.JSX.Element {
@@ -66,7 +73,7 @@ export function ToastContainer(): React.JSX.Element {
         return (
           <div
             key={item.id}
-            className="pointer-events-auto flex items-center gap-2 rounded-control border border-border bg-bg-surface px-4 py-3 text-[13px] text-text-primary shadow-lg"
+            className={`pointer-events-auto flex items-center gap-2 rounded-control border border-border ${toneBgClass[item.tone]} px-4 py-3 text-[13px] text-white shadow-lg`}
           >
             <Icon size={16} className={toneColorClass[item.tone]} />
             {item.message}

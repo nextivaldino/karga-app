@@ -114,21 +114,21 @@ export function HeaderSearch(): React.JSX.Element {
   return (
     <div ref={ref} className="relative shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <div
-        className={`flex items-center gap-1.5 rounded-control border bg-bg-app px-2 transition-colors ${
-          focused ? 'border-primary' : 'border-transparent'
+        className={`flex items-center gap-1.5 rounded-full border bg-bg-app/70 px-2.5 transition-all ${
+          focused ? 'border-primary/60 bg-bg-surface ring-2 ring-primary/10' : 'border-border/50 hover:border-border hover:bg-bg-app'
         }`}
-        style={{ height: 'var(--chrome-icon-btn)', width: FIELD_WIDTH }}
+        style={{ height: 28, width: FIELD_WIDTH }}
       >
-        <Search size={15} className="shrink-0 text-text-tertiary" />
+        <Search size={13} className="shrink-0 text-text-tertiary" />
         <input
           ref={inputRef}
           value={query}
           onFocus={() => setFocused(true)}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Pesquisar em Cargas, Contentores, Contactos..."
+          placeholder="Pesquisar..."
           title="Pesquisar (Cmd+K)"
-          className="min-w-0 flex-1 bg-transparent text-[12.5px] text-text-primary outline-none placeholder:text-text-tertiary"
+          className="min-w-0 flex-1 bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-tertiary"
         />
       </div>
 
@@ -139,7 +139,7 @@ export function HeaderSearch(): React.JSX.Element {
             // contraste tipo menu do Windows), painel opaco (sem
             // translucidez/blur), `hover:brightness-95` nas linhas.
             <div
-              className="theme-invert fixed z-50 flex overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg"
+              className="theme-invert fixed z-[100] flex overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg"
               style={{
                 top: dropdownPos.top,
                 right: dropdownPos.right,

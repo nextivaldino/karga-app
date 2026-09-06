@@ -56,22 +56,19 @@ export function AppShell(): React.JSX.Element {
         // já não depende de manter duas larguras fixas em pixels em
         // sincronia (`HEADER_SIDE_WIDTH`), o que partia sempre que um
         // dos lados ganhava mais conteúdo (ex: o campo de pesquisa).
-        className="relative z-10 grid h-[var(--chrome-header-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 bg-bg-header px-lg backdrop-blur-md"
+        className="relative z-50 grid h-[var(--chrome-header-h)] shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-4 border-b border-border/60 bg-bg-header/90 px-lg shadow-[0_1px_0_0_rgba(15,23,42,0.06)] backdrop-blur-2xl"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        <div className="flex min-w-0 items-center gap-1.5" style={{ paddingLeft: IS_MAC ? 70 : 0 }}>
-          <ModuleIcon module="kraga" size={16} className="shrink-0" />
-          <span className="text-[13px] font-semibold text-text-primary">Kraga Desktop</span>
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden" style={{ paddingLeft: IS_MAC ? 70 : 0 }}>
+          <ModuleIcon module="kraga" size={15} className="shrink-0 opacity-90" />
+          <span className="truncate text-[12px] font-bold tracking-[0.08em] text-text-secondary uppercase">Karga</span>
         </div>
 
         <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <MainTabs />
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          {/* Preenche o espaço livre entre o fim das abas e os ícones,
-              centrando o campo de pesquisa nesse vão — "no meio entre a
-              aba Sync e o menu de hambúrguer". */}
+        <div className="flex min-w-0 items-center justify-end gap-0.5" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <div className="flex min-w-0 flex-1 items-center justify-center">
             <HeaderSearch />
           </div>
@@ -79,7 +76,7 @@ export function AppShell(): React.JSX.Element {
           <MensagensBell />
           <NotificacoesBell />
 
-          <div className="mx-1.5 h-5 w-px shrink-0 bg-border" />
+          <div className="mx-2 h-4 w-px shrink-0 bg-border/60" />
 
           <HeaderUserMenu />
         </div>

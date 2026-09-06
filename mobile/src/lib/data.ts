@@ -22,22 +22,39 @@ function mapContentor(row: ContentorRow): ContentorDisponivel {
   };
 }
 
+async function buscarContentoresDoServidor(): Promise<ContentorDisponivel[]> {
+  const { data, error } = await supabase
+    .from('contentores_disponiveis')
+    .select('*')
+    .eq('estado', 'aberto')
+    .order('codigo', { ascending: true });
+  if (error) throw new Error(error.message);
+  const contentores = (data ?? []).map(mapContentor);
+  void guardarCache('contentores', contentores);
+  return contentores;
+}
+
 // Cai para a cache local (última leitura com sucesso) quando offline ou a
 // ligação falha — a app não fica em branco, mesmo sem net (doc 19 §6).
 export async function listContentoresDisponiveis(): Promise<ContentorDisponivel[]> {
   try {
-    const { data, error } = await supabase
-      .from('contentores_disponiveis')
-      .select('*')
-      .eq('estado', 'aberto')
-      .order('codigo', { ascending: true });
-    if (error) throw new Error(error.message);
-    const contentores = (data ?? []).map(mapContentor);
-    void guardarCache('contentores', contentores);
-    return contentores;
+    return await buscarContentoresDoServidor();
   } catch (err) {
     const cache = await lerCacheContentores();
     if (cache.length > 0) return cache;
+    throw err;
+  }
+}
+
+// Variante que também diz se a lista é mesmo do servidor ou uma cópia
+// antiga em cache — só quem precisa de mostrar "sem ligação" (Home) usa
+// isto; o resto da app trata os dois casos da mesma forma.
+export async function listContentoresDisponiveisComEstado(): Promise<{ contentores: ContentorDisponivel[]; ligado: boolean }> {
+  try {
+    return { contentores: await buscarContentoresDoServidor(), ligado: true };
+  } catch (err) {
+    const cache = await lerCacheContentores();
+    if (cache.length > 0) return { contentores: cache, ligado: false };
     throw err;
   }
 }

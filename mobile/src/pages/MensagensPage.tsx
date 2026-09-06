@@ -5,6 +5,7 @@ import { useTopBarSlot } from '@/hooks/useTopBarSlot';
 import { enviarMensagem, listMensagens, marcarMensagemLida } from '@/lib/data';
 import { EMPRESA_SENTINEL_ID } from '@/lib/constants';
 import { toast } from '@/components/ui/Toast';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { formatRelativo } from '@/lib/formatRelativo';
 import type { Mensagem } from '@/types';
 
@@ -17,15 +18,16 @@ export function MensagensPage(): React.JSX.Element {
 
   useTopBarSlot(<span className="text-[16px] font-semibold text-text-primary">Mensagens</span>);
 
-  function carregar(): void {
-    listMensagens()
-      .then(setMensagens)
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar mensagens.'))
-      .finally(() => setLoading(false));
+  async function recarregar(): Promise<void> {
+    try {
+      setMensagens(await listMensagens());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao carregar mensagens.');
+    }
   }
 
   useEffect(() => {
-    carregar();
+    void recarregar().finally(() => setLoading(false));
   }, []);
 
   async function handleAbrir(m: Mensagem): Promise<void> {
@@ -44,7 +46,7 @@ export function MensagensPage(): React.JSX.Element {
     try {
       await enviarMensagem(pwaUser.id, EMPRESA_SENTINEL_ID, texto);
       setTexto('');
-      carregar();
+      void recarregar();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha ao enviar mensagem.');
     } finally {
@@ -54,7 +56,7 @@ export function MensagensPage(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto p-4">
+      <PullToRefresh onRefresh={recarregar} className="flex-1 p-4">
         {loading ? (
           <p className="text-[14px] text-text-tertiary">A carregar...</p>
         ) : mensagens.length === 0 ? (
@@ -85,7 +87,7 @@ export function MensagensPage(): React.JSX.Element {
             })}
           </div>
         )}
-      </div>
+      </PullToRefresh>
 
       <div className="flex shrink-0 items-center gap-2 border-t border-border bg-bg-surface p-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
         <input

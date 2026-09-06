@@ -5,6 +5,7 @@ import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTopBarSlot } from '@/hooks/useTopBarSlot';
 import { useTheme } from '@/hooks/useTheme';
 import { toast } from '@/components/ui/Toast';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { listContentoresDisponiveis, listMinhasCargasPendentes } from '@/lib/data';
 import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda, type EstadoListaCarga } from '@/lib/cargaEstado';
 import { corAcento, corAcentoEscura } from '@/lib/rowAccents';
@@ -256,18 +257,19 @@ export function CargasPage(): React.JSX.Element {
   const [vista, setVista] = useState<'lista' | 'grelha'>('lista');
   const seedFeita = useRef(false);
 
-  useEffect(() => {
-    listContentoresDisponiveis()
-      .then(setContentores)
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
-  }, []);
+  async function recarregar(): Promise<void> {
+    try {
+      const [cs, cgs] = await Promise.all([listContentoresDisponiveis(), listMinhasCargasPendentes()]);
+      setContentores(cs);
+      setCargas(cgs);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao carregar dados.');
+    }
+  }
 
   useEffect(() => {
     setLoading(true);
-    listMinhasCargasPendentes()
-      .then(setCargas)
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar cargas.'))
-      .finally(() => setLoading(false));
+    void recarregar().finally(() => setLoading(false));
   }, []);
 
   const linhas = useMemo<LinhaCarga[]>(() => {
@@ -408,40 +410,42 @@ export function CargasPage(): React.JSX.Element {
   );
 
   return (
-    <div className="flex flex-col gap-3 py-4">
-      {loading ? (
-        <p className="px-4 text-[14px] text-text-tertiary">A carregar...</p>
-      ) : grupos.length === 0 ? (
-        <p className="px-4 text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
-      ) : vista === 'grelha' ? (
-        <div className="grid grid-cols-2 gap-3 px-4">
-          {filtradas.map((l) => (
-            <CargaGridCard
-              key={l.id}
-              linha={l}
-              cor={corPorContacto.get(l.emissorNome.trim().toLowerCase()) ?? corAcento(0, theme)}
-              acoes={acoesPara(l)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col">
-          <CargaListHeader />
-          {grupos.map((grupo, grupoIndex) => {
-            const cor = corAcento(grupoIndex, theme);
-            const corTexto = corAcentoEscura(grupoIndex, theme);
-            const expandido = expandidos.has(grupo.chave);
-            return (
-              <div key={grupo.chave} className="flex flex-col">
-                <GrupoContactoHeader grupo={grupo} cor={cor} corTexto={corTexto} expandido={expandido} onToggle={() => alternarGrupo(grupo.chave)} />
-                {expandido
-                  ? grupo.itens.map((l) => <CargaListRow key={l.id} linha={l} corGrupo={cor} acoes={acoesPara(l)} />)
-                  : null}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <PullToRefresh onRefresh={recarregar} className="h-full">
+      <div className="flex flex-col gap-3 py-4">
+        {loading ? (
+          <p className="px-4 text-[14px] text-text-tertiary">A carregar...</p>
+        ) : grupos.length === 0 ? (
+          <p className="px-4 text-[14px] text-text-tertiary">Nenhuma carga aqui.</p>
+        ) : vista === 'grelha' ? (
+          <div className="grid grid-cols-2 gap-3 px-4">
+            {filtradas.map((l) => (
+              <CargaGridCard
+                key={l.id}
+                linha={l}
+                cor={corPorContacto.get(l.emissorNome.trim().toLowerCase()) ?? corAcento(0, theme)}
+                acoes={acoesPara(l)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            <CargaListHeader />
+            {grupos.map((grupo, grupoIndex) => {
+              const cor = corAcento(grupoIndex, theme);
+              const corTexto = corAcentoEscura(grupoIndex, theme);
+              const expandido = expandidos.has(grupo.chave);
+              return (
+                <div key={grupo.chave} className="flex flex-col">
+                  <GrupoContactoHeader grupo={grupo} cor={cor} corTexto={corTexto} expandido={expandido} onToggle={() => alternarGrupo(grupo.chave)} />
+                  {expandido
+                    ? grupo.itens.map((l) => <CargaListRow key={l.id} linha={l} corGrupo={cor} acoes={acoesPara(l)} />)
+                    : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </PullToRefresh>
   );
 }

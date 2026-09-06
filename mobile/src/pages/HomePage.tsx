@@ -1,42 +1,85 @@
-import { useEffect, useState } from 'react';
-import { Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Stack as Layers, Boat as Ship } from '@phosphor-icons/react';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowsClockwise, Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Stack as Layers, Boat as Ship } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
-import { listContentoresDisponiveis, listMinhasCargasPendentes, listMensagens } from '@/lib/data';
+import { listContentoresDisponiveisComEstado, listMinhasCargasPendentes, listMensagens } from '@/lib/data';
 import { toast } from '@/components/ui/Toast';
 import { NotificationBell } from '@/components/NotificationBell';
 import { GearMenu } from '@/components/GearMenu';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import type { CargaPendente, ContentorDisponivel, Mensagem } from '@/types';
 
 function formatMoeda(valor: number): string {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(valor);
 }
 
+// A cada quantos ms tenta ligar-se sozinho ao servidor enquanto estiver
+// a mostrar a cópia em cache (offline ou o pedido falhou) — não é só ao
+// reconectar à rede: um servidor em baixo com net local OK também conta.
+const INTERVALO_RETRY_MS = 20_000;
+
 // Contentor predefinido — atribuído pelo Admin a este utilizador, ou o
 // padrão global do sistema — nunca uma escolha do utilizador PWA (mesma
-// prioridade usada na Nova Carga).
+// prioridade usada na Nova Carga). Liga-se ao servidor para saber qual é
+// o real (não fica preso à última cópia guardada sem o utilizador dar
+// por isso): tenta sozinho ao reconectar e de tempo em tempo, e também
+// dá um botão para forçar a tentativa na hora.
 function ContentorPredefinido(): React.JSX.Element | null {
   const { pwaUser } = useAuth();
   const [contentor, setContentor] = useState<ContentorDisponivel | null>(null);
+  const [ligado, setLigado] = useState(true);
+  const [aLigar, setALigar] = useState(false);
+
+  const tentarLigar = useCallback(async () => {
+    setALigar(true);
+    try {
+      const { contentores: cs, ligado: ok } = await listContentoresDisponiveisComEstado();
+      const doProprioUser = pwaUser?.contentorPadraoId;
+      setContentor(cs.find((c) => c.id === doProprioUser) ?? cs.find((c) => c.padraoGlobal) ?? cs[0] ?? null);
+      setLigado(ok);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.');
+      setLigado(false);
+    } finally {
+      setALigar(false);
+    }
+  }, [pwaUser?.contentorPadraoId]);
 
   useEffect(() => {
-    listContentoresDisponiveis()
-      .then((cs) => {
-        const doProprioUser = pwaUser?.contentorPadraoId;
-        setContentor(
-          cs.find((c) => c.id === doProprioUser) ?? cs.find((c) => c.padraoGlobal) ?? cs[0] ?? null,
-        );
-      })
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
-  }, [pwaUser?.contentorPadraoId]);
+    void tentarLigar();
+  }, [tentarLigar]);
+
+  useEffect(() => {
+    if (ligado) return;
+    function onOnline(): void {
+      void tentarLigar();
+    }
+    window.addEventListener('online', onOnline);
+    const interval = setInterval(() => void tentarLigar(), INTERVALO_RETRY_MS);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      clearInterval(interval);
+    };
+  }, [ligado, tentarLigar]);
 
   if (!contentor) return null;
 
   return (
     <div className="flex min-h-touch min-w-0 flex-1 items-center gap-1.5 rounded-pill border border-border bg-bg-surface/80 px-3 shadow-soft backdrop-blur-md">
-      <Layers size={15} className="shrink-0 text-success" />
+      <Layers size={15} className={`shrink-0 ${ligado ? 'text-success' : 'text-warning'}`} />
       <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{contentor.codigo}</span>
+      {!ligado ? (
+        <button
+          type="button"
+          onClick={() => void tentarLigar()}
+          disabled={aLigar}
+          title="Sem ligação ao servidor — a mostrar a última lista guardada. Toca para tentar de novo."
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-warning active:bg-warning/10 disabled:opacity-60"
+        >
+          <ArrowsClockwise size={13} className={aLigar ? 'animate-spin' : ''} />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -50,18 +93,19 @@ export function HomePage(): React.JSX.Element {
   const naFila = fila.filter((f) => f.estado === 'fila').length;
   const comErro = fila.filter((f) => f.estado === 'erro').length;
 
+  async function recarregar(): Promise<void> {
+    try {
+      const [cs, ms] = await Promise.all([listMinhasCargasPendentes(), listMensagens()]);
+      setCargas(cs);
+      setMensagensNaoLidas(ms.filter((m) => !m.lida && m.paraUserId === pwaUser?.id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha ao carregar dados.');
+    }
+  }
+
   useEffect(() => {
-    let cancelado = false;
-    Promise.all([listMinhasCargasPendentes(), listMensagens()])
-      .then(([cs, ms]) => {
-        if (cancelado) return;
-        setCargas(cs);
-        setMensagensNaoLidas(ms.filter((m) => !m.lida && m.paraUserId === pwaUser?.id));
-      })
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar dados.'));
-    return () => {
-      cancelado = true;
-    };
+    void recarregar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pwaUser?.id]);
 
   const seteDiasAtras = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -74,7 +118,7 @@ export function HomePage(): React.JSX.Element {
     .reduce((soma, c) => soma + (c.valor ?? 0), 0);
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full flex-col">
       {/* Substitui a barra de topo genérica — a Home não precisa de uma
           tira própria com o título da página, só dos itens que ela traria
           (notificações, menu), aqui já integrados com a marca e o
@@ -91,7 +135,7 @@ export function HomePage(): React.JSX.Element {
         </div>
       </div>
 
-      <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-10">
+      <PullToRefresh onRefresh={recarregar} className="relative flex flex-1 flex-col items-center justify-center px-6 py-10">
         <div className="pointer-events-none absolute -top-10 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-0 h-56 w-56 rounded-full bg-success/15 blur-3xl" />
 
@@ -179,7 +223,7 @@ export function HomePage(): React.JSX.Element {
             </div>
           ) : null}
         </div>
-      </div>
+      </PullToRefresh>
     </div>
   );
 }

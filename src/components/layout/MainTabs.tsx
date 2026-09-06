@@ -15,9 +15,9 @@ const TABS: {
   modulo: ModuloPermissao | null;
 }[] = [
   { page: 'home', label: 'Home', iconModule: 'home', colorClass: 'text-primary', modulo: null },
-  { page: 'cargas', label: 'Cargas', iconModule: 'cargas', colorClass: 'text-warning', modulo: 'cargas' },
+  { page: 'cargas', label: 'Cargas', iconModule: 'cargas', colorClass: 'text-[#ffb400]', modulo: 'cargas' },
   { page: 'contentores', label: 'Contentores', iconModule: 'contentores', colorClass: 'text-success', modulo: 'contentores' },
-  { page: 'sync', label: 'Sync', iconModule: 'sincronizacao', colorClass: 'text-warning', modulo: 'cargas' },
+  { page: 'sync', label: 'Sync', iconModule: 'sincronizacao', colorClass: 'text-[#ffb400]', modulo: 'cargas' },
 ];
 
 // Abas ao estilo autêntico do separador de abas do Chrome — ver
@@ -136,7 +136,9 @@ export function MainTabs(): React.JSX.Element {
                   ? isSync
                     ? ''
                     : 'text-text-primary'
-                  : 'text-text-tertiary hover:bg-text-primary/5 hover:text-text-secondary'
+                  : tab.page === 'sync' && pendentesSync > 0
+                    ? 'text-[#1A1200] hover:bg-[#FFB400]/20 hover:text-[#1A1200]'
+                    : 'text-text-tertiary hover:bg-text-primary/5 hover:text-text-secondary'
               }`}
             >
               {active ? (
@@ -146,18 +148,35 @@ export function MainTabs(): React.JSX.Element {
                 </>
               ) : null}
               <span className="relative shrink-0">
-                <ModuleIcon module={tab.iconModule} size={16} colorOverride={active && isSync ? SYNC_INK : undefined} />
+                <ModuleIcon
+                  module={tab.iconModule}
+                  size={16}
+                  colorOverride={
+                    active && isSync
+                      ? SYNC_INK
+                      : !active && tab.page === 'sync' && pendentesSync > 0
+                        ? SYNC_HEADER_BG
+                        : undefined
+                  }
+                />
                 {tab.page === 'sync' && pendentesSync > 0 ? (
-                  <span
-                    style={{
-                      borderColor: active ? tabColor : 'var(--toolbar-hover)',
-                      backgroundColor: SYNC_HEADER_BG,
-                      color: SYNC_INK,
-                    }}
-                    className="absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-pill border-2 px-0.5 text-[8px] font-bold"
-                  >
-                    {pendentesSync > 99 ? '99+' : pendentesSync}
-                  </span>
+                  <>
+                    {/* Anel de pulse por baixo do badge — chama atenção sem piscar */}
+                    <span
+                      className="absolute -right-2 -top-1.5 h-3.5 w-3.5 animate-ping rounded-full opacity-60"
+                      style={{ backgroundColor: SYNC_HEADER_BG }}
+                    />
+                    <span
+                      style={{
+                        borderColor: active ? tabColor : 'var(--toolbar-hover)',
+                        backgroundColor: active ? SYNC_INK : SYNC_HEADER_BG,
+                        color: active ? '#FFB400' : SYNC_INK,
+                      }}
+                      className="absolute -right-2 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-pill border-2 px-0.5 text-[8px] font-bold"
+                    >
+                      {pendentesSync > 99 ? '99+' : pendentesSync}
+                    </span>
+                  </>
                 ) : null}
               </span>
               {!colapsada ? (

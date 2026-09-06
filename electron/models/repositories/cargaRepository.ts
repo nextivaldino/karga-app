@@ -567,6 +567,7 @@ export const cargaRepository = {
   update,
   archive,
   moverEmLote,
+  codigoExiste,
   nextCodigo,
   nextCodigoAgrupado,
   search,

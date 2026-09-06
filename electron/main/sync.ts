@@ -173,7 +173,14 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
     recetorId = novo.id;
   }
 
-  const codigo = cargaRepository.nextCodigo();
+  // Código: automático (padrão) ou o que o Admin definiu na revisão
+  // (sequência a partir de um código-base, ou um por carga à mão) —
+  // validado aqui na mesma, para nunca deixar passar um duplicado.
+  const codigoManual = input.codigo?.trim();
+  if (codigoManual && cargaRepository.codigoExiste(codigoManual)) {
+    throw new Error(`Já existe uma carga com o código "${codigoManual}".`);
+  }
+  const codigo = codigoManual || cargaRepository.nextCodigo();
   const carga = cargaRepository.create({
     codigo,
     nome: input.nome,

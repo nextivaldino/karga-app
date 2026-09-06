@@ -7,6 +7,31 @@ interface ExportarTudoData {
   contactos: Contacto[];
 }
 
+// Código e Nome ficam sempre na folha "Cargas" (identificam a linha); o
+// resto é configurável em Configurações → Exportação. Sem `colunasCargas`,
+// mantém o comportamento de sempre (tudo visível).
+export interface ColunasExcelCargas {
+  emissor: boolean;
+  peso: boolean;
+  m3: boolean;
+  valor: boolean;
+  moeda: boolean;
+  pagamento: boolean;
+  estado: boolean;
+  criadoEm: boolean;
+}
+
+const COLUNAS_EXCEL_PADRAO: ColunasExcelCargas = {
+  emissor: true,
+  peso: true,
+  m3: true,
+  valor: true,
+  moeda: true,
+  pagamento: true,
+  estado: true,
+  criadoEm: true,
+};
+
 const CONTACTOS_COLUMNS: Partial<ExcelJS.Column>[] = [
   { header: 'Nome', key: 'nome', width: 26 },
   { header: 'Telefone', key: 'telefone', width: 16 },
@@ -31,7 +56,8 @@ export async function buildContactosWorkbook(contactos: Contacto[]): Promise<Exc
   return workbook;
 }
 
-export async function buildExportarTudoWorkbook(data: ExportarTudoData): Promise<ExcelJS.Workbook> {
+export async function buildExportarTudoWorkbook(data: ExportarTudoData, colunasCargas?: ColunasExcelCargas): Promise<ExcelJS.Workbook> {
+  const col = colunasCargas ?? COLUNAS_EXCEL_PADRAO;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Kraga Desktop';
   workbook.created = new Date();
@@ -40,14 +66,14 @@ export async function buildExportarTudoWorkbook(data: ExportarTudoData): Promise
   cargasSheet.columns = [
     { header: 'Código', key: 'codigo', width: 12 },
     { header: 'Nome', key: 'nome', width: 26 },
-    { header: 'Emissor', key: 'emissorNome', width: 24 },
-    { header: 'Peso (kg)', key: 'pesoKg', width: 12 },
-    { header: 'm³', key: 'm3', width: 10 },
-    { header: 'Valor', key: 'valor', width: 12 },
-    { header: 'Moeda', key: 'moeda', width: 8 },
-    { header: 'Pagamento', key: 'estadoPagamento', width: 12 },
-    { header: 'Estado', key: 'estado', width: 14 },
-    { header: 'Criado em', key: 'createdAt', width: 22 },
+    ...(col.emissor ? [{ header: 'Emissor', key: 'emissorNome', width: 24 }] : []),
+    ...(col.peso ? [{ header: 'Peso (kg)', key: 'pesoKg', width: 12 }] : []),
+    ...(col.m3 ? [{ header: 'm³', key: 'm3', width: 10 }] : []),
+    ...(col.valor ? [{ header: 'Valor', key: 'valor', width: 12 }] : []),
+    ...(col.moeda ? [{ header: 'Moeda', key: 'moeda', width: 8 }] : []),
+    ...(col.pagamento ? [{ header: 'Pagamento', key: 'estadoPagamento', width: 12 }] : []),
+    ...(col.estado ? [{ header: 'Estado', key: 'estado', width: 14 }] : []),
+    ...(col.criadoEm ? [{ header: 'Criado em', key: 'createdAt', width: 22 }] : []),
   ];
   cargasSheet.addRows(data.cargas);
 

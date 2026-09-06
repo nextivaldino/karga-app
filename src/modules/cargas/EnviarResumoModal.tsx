@@ -29,6 +29,8 @@ interface EnviarResumoModalProps {
   onSent: () => void;
 }
 
+// Só usado antes da preferência guardada chegar (praticamente instantâneo,
+// já que é a mesma chamada IPC que já carrega os dados da empresa).
 const COLUNAS_INICIAIS: ColunasRecibo = { valor: true, pagamento: true };
 
 // Popup "papel" — pensado para lembrar um recibo físico (fundo e borda
@@ -61,6 +63,20 @@ export function EnviarResumoModal({
     window.addEventListener('mousedown', onClickOutside);
     return () => window.removeEventListener('mousedown', onClickOutside);
   }, [open]);
+
+  // Reinicia para as colunas por defeito (Configurações → Exportação)
+  // sempre que o modal abre para um contacto — o toggle "Colunas" abaixo
+  // continua a permitir ajustar só para este envio.
+  useEffect(() => {
+    if (!open || !contacto) return;
+    let cancelled = false;
+    void carregarDadosRecibo().then(({ colunasPadrao }) => {
+      if (!cancelled) setColunas(colunasPadrao);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, contacto?.id]);
 
   useEffect(() => {
     if (!open || !contacto) return;

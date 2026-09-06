@@ -1,9 +1,9 @@
 import { ipcService } from '@/services/ipcService';
-import type { DadosEmpresaRecibo, OpcoesRecibo } from '@/lib/reciboTemplate';
+import type { ColunasRecibo, DadosEmpresaRecibo, OpcoesRecibo } from '@/lib/reciboTemplate';
 
 // Ponto único de leitura das settings que alimentam recibos/mensagens —
 // evita cada modal de envio saber sozinho quais chaves ler.
-export async function carregarDadosRecibo(): Promise<{ empresa: DadosEmpresaRecibo; opcoes: OpcoesRecibo }> {
+export async function carregarDadosRecibo(): Promise<{ empresa: DadosEmpresaRecibo; opcoes: OpcoesRecibo; colunasPadrao: ColunasRecibo }> {
   const all = await ipcService.settings.getAll();
 
   return {
@@ -21,6 +21,12 @@ export async function carregarDadosRecibo(): Promise<{ empresa: DadosEmpresaReci
       incluirContacto: all.recibo_incluir_contacto !== '0',
       incluirNif: all.recibo_incluir_nif !== '0',
       incluirIban: all.recibo_incluir_iban === '1',
+    },
+    // Defaults configuráveis em Configurações → Exportação; o
+    // EnviarResumoModal ainda permite ajustar por envio a partir daqui.
+    colunasPadrao: {
+      valor: all.recibo_incluir_valor !== '0',
+      pagamento: all.recibo_incluir_pagamento !== '0',
     },
   };
 }

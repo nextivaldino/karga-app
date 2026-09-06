@@ -7,6 +7,7 @@ import { cargaRepository } from '../models/repositories/cargaRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { maintenanceRepository } from '../models/repositories/maintenanceRepository';
+import { settingsRepository } from '../models/repositories/settingsRepository';
 import { parseContactosExcel, type ImportPreviewResult } from '../lib/excelImport';
 import { buildContactosWorkbook, buildExportarTudoWorkbook } from '../lib/exportarTudoService';
 import { criarNotificacao } from './notifications';
@@ -130,11 +131,23 @@ export async function exportarTudo(passwordConfirmacao: string): Promise<{ path:
   });
   if (result.canceled || !result.filePath) return { canceled: true };
 
-  const workbook = await buildExportarTudoWorkbook({
-    cargas: cargaRepository.list(),
-    contentores: contentorRepository.list({ incluirOcultos: true }),
-    contactos: contactoRepository.list(true),
-  });
+  const workbook = await buildExportarTudoWorkbook(
+    {
+      cargas: cargaRepository.list(),
+      contentores: contentorRepository.list({ incluirOcultos: true }),
+      contactos: contactoRepository.list(true),
+    },
+    {
+      emissor: settingsRepository.get('export_excel_col_emissor') !== '0',
+      peso: settingsRepository.get('export_excel_col_peso') !== '0',
+      m3: settingsRepository.get('export_excel_col_m3') !== '0',
+      valor: settingsRepository.get('export_excel_col_valor') !== '0',
+      moeda: settingsRepository.get('export_excel_col_moeda') !== '0',
+      pagamento: settingsRepository.get('export_excel_col_pagamento') !== '0',
+      estado: settingsRepository.get('export_excel_col_estado') !== '0',
+      criadoEm: settingsRepository.get('export_excel_col_criado_em') !== '0',
+    },
+  );
   await workbook.xlsx.writeFile(result.filePath);
   return { path: result.filePath };
 }

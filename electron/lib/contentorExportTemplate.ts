@@ -13,6 +13,27 @@ interface ContentorExportCargaLinha {
   destinatarios: string[];
 }
 
+// Código e Nome ficam sempre visíveis (identificam a linha); o resto é
+// configurável em Configurações → Exportação. Sem `colunas`, mantém o
+// comportamento de sempre (tudo visível) — compatível com chamadas antigas.
+export interface ColunasListaContentorPdf {
+  dimensoes: boolean;
+  peso: boolean;
+  m3: boolean;
+  valor: boolean;
+  emissor: boolean;
+  destinatario: boolean;
+}
+
+const COLUNAS_PDF_PADRAO: ColunasListaContentorPdf = {
+  dimensoes: true,
+  peso: true,
+  m3: true,
+  valor: true,
+  emissor: true,
+  destinatario: true,
+};
+
 interface BuildContentorListaHtmlParams {
   empresaNome: string;
   empresaMorada: string;
@@ -26,6 +47,7 @@ interface BuildContentorListaHtmlParams {
   moeda: string;
   idioma: IdiomaExportacao;
   cargas: ContentorExportCargaLinha[];
+  colunas?: ColunasListaContentorPdf;
 }
 
 const LOCALE: Record<IdiomaExportacao, string> = { pt: 'pt-PT', en: 'en-GB', fr: 'fr-FR' };
@@ -118,6 +140,7 @@ function formatDimensoes(
 
 export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): string {
   const t = LABELS[params.idioma];
+  const col = params.colunas ?? COLUNAS_PDF_PADRAO;
 
   const totalPeso = params.cargas.reduce((sum, c) => sum + (c.pesoKg ?? 0), 0);
   const totalM3 = params.cargas.reduce((sum, c) => sum + (c.m3 ?? 0), 0);
@@ -129,12 +152,12 @@ export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): 
         <tr>
           <td>${escapeHtml(c.codigo)}</td>
           <td>${escapeHtml(c.nome)}</td>
-          <td>${formatDimensoes(c.comprimentoCm, c.larguraCm, c.alturaCm, t.semData)}</td>
-          <td class="right">${c.pesoKg != null ? `${c.pesoKg} kg` : t.semData}</td>
-          <td class="right">${c.m3 != null ? c.m3.toFixed(3) : t.semData}</td>
-          <td class="right">${formatMoeda(c.valor, params.moeda, params.idioma)}</td>
-          <td>${escapeHtml(c.emissorNome)}</td>
-          <td>${c.destinatarios.length ? escapeHtml(c.destinatarios.join(', ')) : t.semData}</td>
+          ${col.dimensoes ? `<td>${formatDimensoes(c.comprimentoCm, c.larguraCm, c.alturaCm, t.semData)}</td>` : ''}
+          ${col.peso ? `<td class="right">${c.pesoKg != null ? `${c.pesoKg} kg` : t.semData}</td>` : ''}
+          ${col.m3 ? `<td class="right">${c.m3 != null ? c.m3.toFixed(3) : t.semData}</td>` : ''}
+          ${col.valor ? `<td class="right">${formatMoeda(c.valor, params.moeda, params.idioma)}</td>` : ''}
+          ${col.emissor ? `<td>${escapeHtml(c.emissorNome)}</td>` : ''}
+          ${col.destinatario ? `<td>${c.destinatarios.length ? escapeHtml(c.destinatarios.join(', ')) : t.semData}</td>` : ''}
         </tr>`,
     )
     .join('');
@@ -193,12 +216,12 @@ export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): 
       <tr>
         <th>${t.colCodigo}</th>
         <th>${t.colNome}</th>
-        <th>${t.colDimensoes}</th>
-        <th class="right">${t.colPeso}</th>
-        <th class="right">${t.colM3}</th>
-        <th class="right">${t.colValor}</th>
-        <th>${t.colEmissor}</th>
-        <th>${t.colDestinatario}</th>
+        ${col.dimensoes ? `<th>${t.colDimensoes}</th>` : ''}
+        ${col.peso ? `<th class="right">${t.colPeso}</th>` : ''}
+        ${col.m3 ? `<th class="right">${t.colM3}</th>` : ''}
+        ${col.valor ? `<th class="right">${t.colValor}</th>` : ''}
+        ${col.emissor ? `<th>${t.colEmissor}</th>` : ''}
+        ${col.destinatario ? `<th>${t.colDestinatario}</th>` : ''}
       </tr>
     </thead>
     <tbody>${linhas}</tbody>
@@ -206,9 +229,9 @@ export function buildContentorListaHtml(params: BuildContentorListaHtmlParams): 
 
   <div class="totais">
     <div><span>${t.totalCargas}</span><span>${params.cargas.length}</span></div>
-    <div><span>${t.totalPeso}</span><span>${totalPeso} kg</span></div>
-    <div><span>${t.totalM3}</span><span>${totalM3.toFixed(3)}</span></div>
-    <div class="final"><span>${t.totalValor}</span><span>${formatMoeda(totalValor, params.moeda, params.idioma)}</span></div>
+    ${col.peso ? `<div><span>${t.totalPeso}</span><span>${totalPeso} kg</span></div>` : ''}
+    ${col.m3 ? `<div><span>${t.totalM3}</span><span>${totalM3.toFixed(3)}</span></div>` : ''}
+    ${col.valor ? `<div class="final"><span>${t.totalValor}</span><span>${formatMoeda(totalValor, params.moeda, params.idioma)}</span></div>` : ''}
   </div>
 
   <div class="footer">Kraga Desktop</div>

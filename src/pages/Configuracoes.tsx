@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, ChartBar, Buildings, MagnifyingGlass, Palette, ShieldCheck, User, Users } from '@phosphor-icons/react';
+import { Bell, ChartBar, Buildings, ArrowsClockwise, FileArrowDown, MagnifyingGlass, Palette, ShieldCheck, User, Users } from '@phosphor-icons/react';
 import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { Breadcrumb } from '@/components/layout/Breadcrumb';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
@@ -10,8 +10,10 @@ import { BackupSegurancaConfig } from '@/modules/configuracoes/BackupSegurancaCo
 import { ContactosConfig } from '@/modules/configuracoes/ContactosConfig';
 import { ContentoresConfig } from '@/modules/configuracoes/ContentoresConfig';
 import { EmpresaConfig } from '@/modules/configuracoes/EmpresaConfig';
+import { ExportacaoConfig } from '@/modules/configuracoes/ExportacaoConfig';
 import { NotificacoesConfig } from '@/modules/configuracoes/NotificacoesConfig';
 import { RelatoriosConfig } from '@/modules/configuracoes/RelatoriosConfig';
+import { SincronizacaoConfig } from '@/modules/configuracoes/SincronizacaoConfig';
 import { UtilizadoresConfig } from '@/modules/configuracoes/UtilizadoresConfig';
 import { PwaDevicesStub } from '@/modules/pwa-devices/PwaDevicesStub';
 import { useAuth } from '@/modules/auth/AuthContext';
@@ -28,7 +30,9 @@ type Secao =
   | 'backup'
   | 'pwa'
   | 'relatorios'
-  | 'notificacoes';
+  | 'notificacoes'
+  | 'sincronizacao'
+  | 'exportacao';
 
 const SECAO_TITULO: Record<Secao, string> = {
   empresa: 'Empresa',
@@ -40,6 +44,8 @@ const SECAO_TITULO: Record<Secao, string> = {
   pwa: 'Dispositivos PWA',
   relatorios: 'Relatórios',
   notificacoes: 'Notificações',
+  sincronizacao: 'Sincronização',
+  exportacao: 'Exportação',
 };
 
 const ROLE_LABEL: Record<UserRole, string> = {
@@ -70,6 +76,7 @@ function buildGrupos(naoLidas: number): GrupoNav[] {
       itens: [
         { secao: 'contentores', icon: <ModuleIcon module="contentores" size={20} /> },
         { secao: 'relatorios', icon: <ChartBar size={20} weight="fill" className="text-primary" /> },
+        { secao: 'exportacao', icon: <FileArrowDown size={20} weight="fill" className="text-purple" /> },
       ],
     },
     {
@@ -77,6 +84,7 @@ function buildGrupos(naoLidas: number): GrupoNav[] {
       itens: [
         { secao: 'utilizadores', icon: <User size={20} weight="fill" className="text-warning" /> },
         { secao: 'pwa', icon: <ModuleIcon module="dispositivos" size={20} /> },
+        { secao: 'sincronizacao', icon: <ArrowsClockwise size={20} weight="fill" style={{ color: '#B07800' }} /> },
       ],
     },
     {
@@ -100,6 +108,7 @@ export function Configuracoes(): React.JSX.Element {
   useEffect(() => {
     if (page !== 'configuracoes') return;
     if (params?.userId || params?.mensagemDeUserId) setSecao('utilizadores');
+    else if (params?.secao && params.secao in SECAO_TITULO) setSecao(params.secao as Secao);
   }, [page, params]);
 
   // Contagem viva na barra lateral — a mesma fonte de dados que já
@@ -200,6 +209,8 @@ export function Configuracoes(): React.JSX.Element {
         {secao === 'backup' ? <BackupSegurancaConfig /> : null}
         {secao === 'pwa' ? <PwaDevicesStub /> : null}
         {secao === 'relatorios' ? <RelatoriosConfig /> : null}
+        {secao === 'sincronizacao' ? <SincronizacaoConfig /> : null}
+        {secao === 'exportacao' ? <ExportacaoConfig /> : null}
       </div>
     </div>
   );

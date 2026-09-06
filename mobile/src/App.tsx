@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/hooks/useTheme';
 import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
 import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
 import { FilaOfflineProvider } from '@/hooks/useFilaOffline';
+import { ContentorAtivoProvider } from '@/hooks/useContentorAtivo';
 import { TopBarSlotProvider } from '@/hooks/useTopBarSlot';
 import { ToastContainer } from '@/components/ui/Toast';
 import { PasswordBanner } from '@/components/PasswordBanner';
@@ -56,14 +57,16 @@ export default function App(): React.JSX.Element {
     <ThemeProvider>
       <AuthProvider>
         <FilaOfflineProvider>
-          <NavigationProvider>
-            <NovaCargaOverlayProvider>
-              <TopBarSlotProvider>
-                <AppShell />
-                <ToastContainer />
-              </TopBarSlotProvider>
-            </NovaCargaOverlayProvider>
-          </NavigationProvider>
+          <ContentorAtivoProvider>
+            <NavigationProvider>
+              <NovaCargaOverlayProvider>
+                <TopBarSlotProvider>
+                  <AppShell />
+                  <ToastContainer />
+                </TopBarSlotProvider>
+              </NovaCargaOverlayProvider>
+            </NavigationProvider>
+          </ContentorAtivoProvider>
         </FilaOfflineProvider>
       </AuthProvider>
     </ThemeProvider>

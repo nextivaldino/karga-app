@@ -3,15 +3,15 @@ import { ArrowDownLeft, ArrowUpRight, CaretDown as ChevronDown, Copy, CurrencyEu
 import { useAuth } from '@/hooks/useAuth';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
+import { useContentorAtivo } from '@/hooks/useContentorAtivo';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
-import { listContentoresDisponiveis } from '@/lib/data';
 import { guardarSugestaoCarga, guardarSugestaoNome, listarSugestoesCargas, listarSugestoesNomes } from '@/lib/contactSuggestions';
 import { PAISES_EMISSOR, PAISES_RECETOR } from '@/lib/paisesIndicativo';
 import { CargaListHeader, CargaListRow, type AcaoLinhaCarga } from '@/components/CargaListRow';
-import type { ContentorDisponivel, NovaCargaPendenteInput } from '@/types';
+import type { NovaCargaPendenteInput } from '@/types';
 
 // Pago ativo por defeito (doc 19 §5) — no contexto de campo, assume-se
 // pagamento já combinado, ao contrário do Desktop (Devido por defeito).
@@ -51,7 +51,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
   const { enviarOuEnfileirar } = useFilaOffline();
-  const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
+  const { contentores, contentorAtivoId } = useContentorAtivo();
   const [form, setForm] = useState<NovaCargaPendenteInput>(CAMPOS_VAZIOS);
   const [lote, setLote] = useState<NovaCargaPendenteInput[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -84,21 +84,9 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
 
   useEffect(() => {
     if (!aberto) return;
-    listContentoresDisponiveis()
-      .then((cs) => {
-        setContentores(cs);
-        // Prioridade: contentor atribuído a este utilizador pelo Admin >
-        // padrão global do sistema > primeiro da lista — nunca uma escolha
-        // do utilizador PWA, que não deve ver nem selecionar entre vários.
-        const doProprioUser = pwaUser?.contentorPadraoId;
-        const contentorPadrao =
-          (doProprioUser && cs.some((c) => c.id === doProprioUser) ? doProprioUser : null) ??
-          cs.find((c) => c.padraoGlobal)?.id ??
-          cs[0]?.id ??
-          '';
-        setForm(prefill ?? { ...CAMPOS_VAZIOS, contentorId: contentorPadrao });
-      })
-      .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
+    // O contentor de destino é o "ativo" partilhado com a Home (o mesmo
+    // seletor) — abrir a Nova Carga nunca decide isto sozinho.
+    setForm(prefill ?? { ...CAMPOS_VAZIOS, contentorId: contentorAtivoId ?? '' });
     setLote([]);
     setEmissorExpandido(false);
     setRecetorExpandido(false);

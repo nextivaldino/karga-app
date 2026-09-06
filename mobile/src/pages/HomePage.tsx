@@ -1,74 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowsClockwise, Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Stack as Layers, Boat as Ship } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
-import { listContentoresDisponiveisComEstado, listMinhasCargasPendentes, listMensagens } from '@/lib/data';
+import { useContentorAtivo } from '@/hooks/useContentorAtivo';
+import { listMinhasCargasPendentes, listMensagens } from '@/lib/data';
 import { toast } from '@/components/ui/Toast';
 import { NotificationBell } from '@/components/NotificationBell';
 import { GearMenu } from '@/components/GearMenu';
 import { PullToRefresh } from '@/components/PullToRefresh';
-import type { CargaPendente, ContentorDisponivel, Mensagem } from '@/types';
+import type { CargaPendente, Mensagem } from '@/types';
 
 function formatMoeda(valor: number): string {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(valor);
 }
 
-// A cada quantos ms tenta ligar-se sozinho ao servidor enquanto estiver
-// a mostrar a cópia em cache (offline ou o pedido falhou) — não é só ao
-// reconectar à rede: um servidor em baixo com net local OK também conta.
-const INTERVALO_RETRY_MS = 20_000;
-
-// Contentor predefinido — atribuído pelo Admin a este utilizador, ou o
-// padrão global do sistema — nunca uma escolha do utilizador PWA (mesma
-// prioridade usada na Nova Carga). Liga-se ao servidor para saber qual é
-// o real (não fica preso à última cópia guardada sem o utilizador dar
-// por isso): tenta sozinho ao reconectar e de tempo em tempo, e também
-// dá um botão para forçar a tentativa na hora.
+// Contentor predefinido — resolvido pelo servidor (atribuído pelo Admin >
+// padrão global > primeiro aberto), nunca uma escolha do utilizador PWA.
+// A cor do ícone diz se veio mesmo do servidor ou é a última cópia em
+// cache; o botão só serve para forçar uma nova tentativa de ligação.
 function ContentorPredefinido(): React.JSX.Element | null {
-  const { pwaUser } = useAuth();
-  const [contentor, setContentor] = useState<ContentorDisponivel | null>(null);
-  const [ligado, setLigado] = useState(true);
-  const [aLigar, setALigar] = useState(false);
-
-  const tentarLigar = useCallback(async () => {
-    setALigar(true);
-    try {
-      const { contentores: cs, ligado: ok } = await listContentoresDisponiveisComEstado();
-      const doProprioUser = pwaUser?.contentorPadraoId;
-      setContentor(cs.find((c) => c.id === doProprioUser) ?? cs.find((c) => c.padraoGlobal) ?? cs[0] ?? null);
-      setLigado(ok);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.');
-      setLigado(false);
-    } finally {
-      setALigar(false);
-    }
-  }, [pwaUser?.contentorPadraoId]);
-
-  useEffect(() => {
-    void tentarLigar();
-  }, [tentarLigar]);
-
-  useEffect(() => {
-    if (ligado) return;
-    function onOnline(): void {
-      void tentarLigar();
-    }
-    window.addEventListener('online', onOnline);
-    const interval = setInterval(() => void tentarLigar(), INTERVALO_RETRY_MS);
-    return () => {
-      window.removeEventListener('online', onOnline);
-      clearInterval(interval);
-    };
-  }, [ligado, tentarLigar]);
-
-  if (!contentor) return null;
+  const { contentores, contentorAtivoId, ligado, aLigar, tentarLigar } = useContentorAtivo();
+  const atual = contentores.find((c) => c.id === contentorAtivoId) ?? null;
+  if (!atual) return null;
 
   return (
     <div className="flex min-h-touch min-w-0 flex-1 items-center gap-1.5 rounded-pill border border-border bg-bg-surface/80 px-3 shadow-soft backdrop-blur-md">
       <Layers size={15} className={`shrink-0 ${ligado ? 'text-success' : 'text-warning'}`} />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{contentor.codigo}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{atual.codigo}</span>
       {!ligado ? (
         <button
           type="button"

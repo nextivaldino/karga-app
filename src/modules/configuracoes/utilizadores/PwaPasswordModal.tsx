@@ -48,7 +48,9 @@ export function PwaPasswordModal({ open, onClose, target, pwaEmail, passwordTemp
             Copiar
           </button>
         </div>
-        <p className="text-[12px] text-text-tertiary">Email de acesso: {pwaEmail}</p>
+        <p className="text-[12px] text-text-tertiary">
+          Login: {pwaEmail} (ou só o nome "{target?.name}")
+        </p>
       </div>
     </HeaderBarModal>
   );

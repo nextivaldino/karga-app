@@ -68,6 +68,7 @@ export const ipcService = {
       invoke<void>('auth:changePassword', userId, currentPassword, newPassword),
     listQuickLogin: () => invoke<QuickLoginUser[]>('auth:listQuickLogin'),
     loginSemPassword: (userId: string) => invoke<PublicUser>('auth:loginSemPassword', userId),
+    solicitarResetPasswordAdmin: (email: string) => invoke<void>('auth:solicitarResetPasswordAdmin', email),
   },
   settings: {
     get: (chave: string) => invoke<string | null>('settings:get', chave),
@@ -132,6 +133,7 @@ export const ipcService = {
     nextCodigo: () => invoke<string>('cargas:nextCodigo'),
     nextCodigoAgrupado: (emissorId: string, reservados?: string[]) =>
       invoke<string>('cargas:nextCodigoAgrupado', emissorId, reservados),
+    codigoExiste: (codigo: string) => invoke<boolean>('cargas:codigoExiste', codigo),
     addDestinatario: (cargaId: string, contactoId: string) =>
       invoke<void>('cargas:addDestinatario', cargaId, contactoId),
     createBatch: (items: CreateCargaBatchItem[]) => invoke<Carga[]>('cargas:createBatch', items),

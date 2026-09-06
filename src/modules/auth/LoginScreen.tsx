@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { EnvelopeSimple, Lock } from '@phosphor-icons/react';
 import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
+import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { toast } from '@/components/ui/Toast';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cleanIpcError } from '@/lib/cleanIpcError';
@@ -19,6 +20,10 @@ export function LoginScreen(): React.JSX.Element {
   const [quickLogin, setQuickLogin] = useState<QuickLoginUser[] | null>(null);
   const [usarPassword, setUsarPassword] = useState(false);
   const [entrandoComoId, setEntrandoComoId] = useState<string | null>(null);
+
+  const [esqueciOpen, setEsqueciOpen] = useState(false);
+  const [esqueciEmail, setEsqueciEmail] = useState('');
+  const [esqueciSubmitting, setEsqueciSubmitting] = useState(false);
 
   useEffect(() => {
     void ipcService.auth.listQuickLogin().then(setQuickLogin).catch(() => setQuickLogin([]));
@@ -46,6 +51,22 @@ export function LoginScreen(): React.JSX.Element {
       toast.error(cleanIpcError(err));
     } finally {
       setEntrandoComoId(null);
+    }
+  }
+
+  async function handleSolicitarReset(): Promise<void> {
+    if (!esqueciEmail.trim()) return;
+    setEsqueciSubmitting(true);
+    try {
+      await ipcService.auth.solicitarResetPasswordAdmin(esqueciEmail.trim());
+    } catch {
+      // Silencioso mesmo em erro — o backend nunca revela se o email
+      // existe, a UI não deve dar pistas diferentes consoante o caso.
+    } finally {
+      setEsqueciSubmitting(false);
+      setEsqueciOpen(false);
+      setEsqueciEmail('');
+      toast.success('Se esse email pertencer a um Admin, o Root vai ver o pedido de reset.');
     }
   }
 
@@ -147,6 +168,17 @@ export function LoginScreen(): React.JSX.Element {
               {submitting ? 'A entrar...' : 'Entrar'}
             </button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setEsqueciEmail(email);
+                setEsqueciOpen(true);
+              }}
+              className="mt-md w-full text-center text-[12px] font-medium text-text-secondary"
+            >
+              Esqueci-me da password
+            </button>
+
             {quickLogin != null && quickLogin.length > 0 ? (
               <button
                 type="button"
@@ -164,6 +196,46 @@ export function LoginScreen(): React.JSX.Element {
         <span className="opacity-70">desenvolvido pela </span>
         <span className="font-semibold tracking-wide text-text-secondary">NEXT-LABS</span>
       </p>
+
+      <HeaderBarModal
+        open={esqueciOpen}
+        onClose={() => setEsqueciOpen(false)}
+        title="Esqueci-me da password"
+        widthClassName="max-w-[400px]"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setEsqueciOpen(false)}
+              className="rounded-control px-4 py-2 text-[13px] font-medium text-text-secondary transition-colors hover:bg-bg-app"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={esqueciSubmitting || !esqueciEmail.trim()}
+              onClick={() => void handleSolicitarReset()}
+              className="rounded-control bg-primary px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-60"
+            >
+              {esqueciSubmitting ? 'A enviar...' : 'Enviar pedido'}
+            </button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-[13px] text-text-secondary">
+            Só para contas Admin. Escreve o teu email — o Root vai ver o pedido na próxima vez que iniciar sessão e
+            pode definir-te uma password nova.
+          </p>
+          <FloatingLabelInput
+            label="Email"
+            type="email"
+            icon={<EnvelopeSimple size={16} />}
+            value={esqueciEmail}
+            onChange={(e) => setEsqueciEmail(e.target.value)}
+          />
+        </div>
+      </HeaderBarModal>
     </div>
   );
 }

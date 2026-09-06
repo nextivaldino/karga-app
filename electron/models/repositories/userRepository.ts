@@ -14,6 +14,7 @@ interface UserRow {
   avatar: string | null;
   login_sem_password: number;
   contentor_padrao_id: string | null;
+  password_reset_solicitado_em: string | null;
   created_at: string;
   updated_at: string;
   sync_status: User['syncStatus'];
@@ -32,6 +33,7 @@ function fromRow(row: UserRow): User {
     avatar: row.avatar,
     loginSemPassword: row.login_sem_password === 1,
     contentorPadraoId: row.contentor_padrao_id,
+    passwordResetSolicitadoEm: row.password_reset_solicitado_em,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: row.sync_status,
@@ -60,6 +62,7 @@ function create(input: CreateUserInput): User {
     avatar: null,
     login_sem_password: 0,
     contentor_padrao_id: null,
+    password_reset_solicitado_em: null,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
@@ -162,6 +165,20 @@ function setContentorPadrao(id: string, contentorId: string | null): User | null
   return findById(id);
 }
 
+// Pedido de reset feito pelo próprio ecrã de login (sem sessão) — Root
+// vê isto em Manutenção → Utilizadores Admin e decide se reseta.
+function marcarPedidoResetPassword(id: string): void {
+  const db = getDatabase();
+  db.prepare(`UPDATE users SET password_reset_solicitado_em = ? WHERE id = ?`).run(nowIso(), id);
+}
+
+// Limpa o pedido depois de o Root efetivamente resetar a password (ou
+// se quiser dispensá-lo sem resetar).
+function limparPedidoResetPassword(id: string): void {
+  const db = getDatabase();
+  db.prepare(`UPDATE users SET password_reset_solicitado_em = NULL WHERE id = ?`).run(id);
+}
+
 // Só o essencial (id/nome/avatar) para desenhar a grelha do ecrã de
 // login, ANTES de haver sessão — nunca expor email/role/password aqui.
 function listQuickLogin(): { id: string; name: string; avatar: string | null }[] {
@@ -185,5 +202,7 @@ export const userRepository = {
   setAvatar,
   setLoginSemPassword,
   setContentorPadrao,
+  marcarPedidoResetPassword,
+  limparPedidoResetPassword,
   listQuickLogin,
 };

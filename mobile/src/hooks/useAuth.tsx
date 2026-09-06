@@ -93,11 +93,20 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<void> => {
+  const login = useCallback(async (identificador: string, password: string): Promise<void> => {
     setDeactivatedMessage(null);
+    let email = identificador.trim();
+    // Aceita o nome da pessoa, não só o email — o Supabase Auth só
+    // conhece emails, por isso resolve-se primeiro pela função pública
+    // resolver_email_login (RLS impede ler pwa_users antes do login).
+    if (!email.includes('@')) {
+      const { data: emailResolvido } = await supabase.rpc('resolver_email_login', { identificador: email });
+      if (typeof emailResolvido !== 'string') throw new Error('Utilizador ou password incorretos.');
+      email = emailResolvido;
+    }
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error || !data.session) {
-      throw new Error(error?.message === 'Invalid login credentials' ? 'Email ou password incorretos.' : (error?.message ?? 'Falha no login.'));
+      throw new Error(error?.message === 'Invalid login credentials' ? 'Utilizador ou password incorretos.' : (error?.message ?? 'Falha no login.'));
     }
     const user = await fetchPwaUser(data.session.user.id);
     if (!user || !user.ativo) {

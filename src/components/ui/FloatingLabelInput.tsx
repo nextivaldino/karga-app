@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { Eye, EyeSlash } from '@phosphor-icons/react';
 
 interface BaseProps {
   label: string;
@@ -35,8 +36,13 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
   // `onChange`, porque aí não há prop viva a seguir depois do 1º render.
   const isControlled = props.value !== undefined;
   const [hasValueNaoControlado, setHasValueNaoControlado] = useState(Boolean(props.defaultValue));
+  const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const { label, error, icon, className, ...rest } = props;
+  // Todo o campo de password ganha o olho de mostrar/esconder — sem
+  // precisar de nenhum caller pedir isto, já que todos os campos de
+  // password da app passam por aqui (ver CLAUDE.md, "sem exceção").
+  const isPassword = props.as !== 'select' && props.as !== 'textarea' && (props as InputProps).type === 'password';
   // "Preenchido" — quando true, os dados reais ficam sozinhos na caixa,
   // sem legenda nenhuma a competir com eles (o antigo padrão de legenda
   // flutuante por cima do texto atrapalhava a leitura do valor real).
@@ -54,7 +60,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
     ['date', 'time', 'month', 'week', 'datetime-local'].includes((props as InputProps).type ?? '');
   const preenchido = (isControlled ? Boolean(props.value) : hasValueNaoControlado) || rest.as === 'select' || isDataNativa;
   const withIcon = Boolean(icon);
-  const fieldPadding = withIcon ? 'pl-9' : '';
+  const fieldPadding = `${withIcon ? 'pl-9' : ''} ${isPassword ? 'pr-9' : ''}`;
   const labelPosition = withIcon ? 'left-9' : 'left-3';
   const iconTopClass = props.as === 'textarea' ? 'top-3' : 'top-1/2 -translate-y-1/2';
   const tooltip = preenchido ? label : undefined;
@@ -94,6 +100,7 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             {...(rest as InputHTMLAttributes<HTMLInputElement>)}
             id={id}
             title={tooltip}
+            type={isPassword ? (mostrarPassword ? 'text' : 'password') : (rest as InputProps).type}
             className={`${fieldClasses} ${fieldPadding} ${className ?? ''}`}
             onChange={(e) => {
               setHasValueNaoControlado(Boolean(e.target.value));
@@ -101,11 +108,22 @@ export function FloatingLabelInput(props: FloatingLabelInputProps): React.JSX.El
             }}
           />
         )}
+        {isPassword ? (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setMostrarPassword((v) => !v)}
+            title={mostrarPassword ? 'Esconder password' : 'Mostrar password'}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary transition-colors hover:text-text-primary"
+          >
+            {mostrarPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
+          </button>
+        ) : null}
         {!preenchido ? (
           <label
             htmlFor={id}
             className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${labelPosition} truncate text-[13px] text-text-tertiary transition-all`}
-            style={{ maxWidth: `calc(100% - ${withIcon ? 44 : 24}px)` }}
+            style={{ maxWidth: `calc(100% - ${withIcon ? 44 : 24}px - ${isPassword ? 32 : 0}px)` }}
           >
             {label}
           </label>

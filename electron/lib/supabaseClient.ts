@@ -87,23 +87,6 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
   }
 }
 
-// Doc 19 §2 — próximo email sequencial userNN@karga.com, calculado a partir
-// dos emails já usados em pwa_users (evita colisão mesmo que algum tenha
-// sido desativado/eliminado entretanto).
-export async function proximoEmailPwa(): Promise<string> {
-  const supabase = requireSupabaseClient();
-  const { data, error } = await supabase.from('pwa_users').select('email').ilike('email', 'user%@karga.com');
-  if (error) throw new Error(error.message);
-
-  let maior = 0;
-  for (const row of data ?? []) {
-    const match = /^user(\d+)@karga\.com$/i.exec(row.email);
-    if (match) maior = Math.max(maior, Number(match[1]));
-  }
-  const proximo = maior + 1;
-  return `user${String(proximo).padStart(2, '0')}@karga.com`;
-}
-
 export async function obterEmailUtilizadorPwaAuth(authUid: string): Promise<string> {
   const supabase = requireSupabaseClient();
   const { data, error } = await supabase.auth.admin.getUserById(authUid);
@@ -136,14 +119,27 @@ export async function desativarUtilizadorPwaAuth(authUid: string): Promise<void>
 // Reativa uma conta banida por desativarUtilizadorPwaAuth, com uma nova
 // password temporária — usado quando o Admin volta a ligar o toggle PWA de
 // um utilizador que já teve conta antes (evita duplicar a conta no Auth,
-// que falharia por email já existir).
-export async function reativarUtilizadorPwaAuth(authUid: string, passwordTemporaria: string): Promise<void> {
+// que falharia por email já existir). Sincroniza também o email: o Admin
+// pode ter editado o perfil enquanto o PWA estava desativado.
+export async function reativarUtilizadorPwaAuth(authUid: string, passwordTemporaria: string, email: string): Promise<void> {
   const supabase = requireSupabaseClient();
   const { error } = await supabase.auth.admin.updateUserById(authUid, {
     ban_duration: 'none',
     password: passwordTemporaria,
+    email,
+    email_confirm: true,
     user_metadata: { must_change_password: true },
   });
+  if (error) throw new Error(error.message);
+}
+
+// O login do PWA é o email real do perfil (Configurações → Utilizadores),
+// não um email sintético — se o Admin editar esse email, a conta no
+// Supabase Auth tem de acompanhar, senão o funcionário fica trancado de
+// fora com a password certa mas o email errado.
+export async function atualizarEmailUtilizadorPwaAuth(authUid: string, email: string): Promise<void> {
+  const supabase = requireSupabaseClient();
+  const { error } = await supabase.auth.admin.updateUserById(authUid, { email, email_confirm: true });
   if (error) throw new Error(error.message);
 }
 

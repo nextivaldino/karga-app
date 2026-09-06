@@ -108,16 +108,27 @@ export function RootMaintenanceShell(): React.JSX.Element {
                 {admins.map((admin) => (
                   <div
                     key={admin.id}
-                    className="flex items-center justify-between rounded-control border border-border bg-bg-surface px-4 py-3"
+                    className={`flex items-center justify-between rounded-control border px-4 py-3 ${
+                      admin.passwordResetSolicitadoEm ? 'border-warning/40 bg-warning/10' : 'border-border bg-bg-surface'
+                    }`}
                   >
                     <div>
                       <p className="text-[14px] font-medium text-text-primary">{admin.name}</p>
                       <p className="text-[12px] text-text-tertiary">{admin.email}</p>
+                      {admin.passwordResetSolicitadoEm ? (
+                        <p className="mt-0.5 text-[12px] font-medium text-warning">
+                          ⚠ Pediu reset de password no ecrã de login
+                        </p>
+                      ) : null}
                     </div>
                     <button
                       type="button"
                       onClick={() => setResetTarget(admin)}
-                      className="rounded-control border border-border px-3 py-1.5 text-[13px] font-medium text-text-primary transition-colors hover:bg-bg-app"
+                      className={`rounded-control border px-3 py-1.5 text-[13px] font-medium transition-colors ${
+                        admin.passwordResetSolicitadoEm
+                          ? 'border-warning bg-warning text-white hover:brightness-95'
+                          : 'border-border text-text-primary hover:bg-bg-app'
+                      }`}
                     >
                       Resetar Password
                     </button>

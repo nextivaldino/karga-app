@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function LoginPage(): React.JSX.Element {
   const { login, deactivatedMessage, clearDeactivatedMessage } = useAuth();
-  const [email, setEmail] = useState('');
+  const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -16,7 +16,7 @@ export function LoginPage(): React.JSX.Element {
     clearDeactivatedMessage();
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
+      await login(identificador.trim(), password);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha no login.');
     } finally {
@@ -42,11 +42,10 @@ export function LoginPage(): React.JSX.Element {
 
         <form onSubmit={(e) => void handleSubmit(e)} className="card-surface flex flex-col gap-3 p-5">
           <FloatingLabelInput
-            label="Email"
-            type="email"
+            label="Email ou nome"
             autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={identificador}
+            onChange={(e) => setIdentificador(e.target.value)}
             required
           />
           <FloatingLabelInput

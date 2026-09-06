@@ -3,10 +3,10 @@ import { userRepository } from '../models/repositories/userRepository';
 import { permissaoRepository } from '../models/repositories/permissaoRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
 import {
+  atualizarEmailUtilizadorPwaAuth,
   criarUtilizadorPwaAuth,
   desativarUtilizadorPwaAuth,
   obterEmailUtilizadorPwaAuth,
-  proximoEmailPwa,
   reativarUtilizadorPwaAuth,
   upsertPwaUser,
 } from '../lib/supabaseClient';
@@ -58,11 +58,11 @@ export async function criarUsuario(
   return toPublicUser(user);
 }
 
-export function editarUsuario(
+export async function editarUsuario(
   requestedByRole: UserRole,
   userId: string,
   changes: { name: string; email: string },
-): PublicUser {
+): Promise<PublicUser> {
   if (requestedByRole !== 'admin') throw new Error('Só um Admin pode editar utilizadores.');
 
   const existing = userRepository.findById(userId);
@@ -76,6 +76,22 @@ export function editarUsuario(
   }
 
   const updated = userRepository.update(userId, { name: changes.name.trim(), email });
+  if (!updated) throw new Error('Utilizador não encontrado.');
+
+  // O email do perfil é também o login do PWA — se mudou e o acesso PWA
+  // já está ativo, a conta no Supabase Auth tem de acompanhar.
+  if (updated.pwaHabilitado && updated.pwaAuthUid && email !== existing.email) {
+    await atualizarEmailUtilizadorPwaAuth(updated.pwaAuthUid, email);
+    await upsertPwaUser({
+      id: updated.id,
+      nome: updated.name,
+      email,
+      ativo: true,
+      authUid: updated.pwaAuthUid,
+      contentorPadraoId: updated.contentorPadraoId,
+    });
+  }
+
   return toPublicUser(updated);
 }
 
@@ -128,6 +144,7 @@ export async function resetPasswordAdmin(
 
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   userRepository.update(targetUserId, { passwordHash });
+  userRepository.limparPedidoResetPassword(targetUserId);
 }
 
 export async function resetPasswordUser(
@@ -157,14 +174,16 @@ export async function habilitarPwa(requestedByRole: UserRole, userId: string): P
   if (!existing) throw new Error('Utilizador não encontrado.');
   if (existing.role !== 'user') throw new Error('Só utilizadores do tipo "user" podem ter acesso PWA.');
 
+  // O login do PWA é o email real do perfil (o que o Admin já pôs em
+  // Configurações → Utilizadores) — mais fácil do funcionário se lembrar
+  // do que um userNN@karga.com sem qualquer ligação a quem é a pessoa.
+  const pwaEmail = existing.email;
   let authUid = existing.pwaAuthUid;
-  let pwaEmail: string;
   if (authUid) {
-    // Reativação — mantém o mesmo email userNN@karga.com já atribuído.
-    await reativarUtilizadorPwaAuth(authUid, PASSWORD_PWA_INICIAL);
-    pwaEmail = await obterEmailUtilizadorPwaAuth(authUid);
+    // Reativação — sincroniza a password e o email (pode ter mudado
+    // entretanto) com o que está no perfil local.
+    await reativarUtilizadorPwaAuth(authUid, PASSWORD_PWA_INICIAL, pwaEmail);
   } else {
-    pwaEmail = await proximoEmailPwa();
     authUid = await criarUtilizadorPwaAuth(pwaEmail, PASSWORD_PWA_INICIAL);
   }
   await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid, contentorPadraoId: existing.contentorPadraoId });

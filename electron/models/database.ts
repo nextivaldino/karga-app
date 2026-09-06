@@ -237,6 +237,10 @@ function runMigrations(database: Database.Database): void {
   // users é a atribuição por utilizador, tem prioridade sobre o global.
   addColumnIfMissing(database, 'contentores', 'padrao_global', 'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing(database, 'users', 'contentor_padrao_id', 'TEXT');
+  // Pedido de reset de password feito pelo próprio ecrã de login (Admin
+  // esquecido) — timestamp de quando pediu, null = sem pedido pendente.
+  // Root vê isto em Manutenção → Utilizadores Admin.
+  addColumnIfMissing(database, 'users', 'password_reset_solicitado_em', 'TEXT');
 }
 
 function addColumnIfMissing(database: Database.Database, table: string, column: string, definition: string): void {

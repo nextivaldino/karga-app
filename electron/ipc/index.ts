@@ -103,6 +103,8 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('auth:loginSemPassword', (_event, userId: string) => auth.loginSemPassword(userId));
 
+  ipcMain.handle('auth:solicitarResetPasswordAdmin', (_event, email: string) => auth.solicitarResetPasswordAdmin(email));
+
   ipcMain.handle('settings:get', (_event, chave: string) => settingsRepository.get(chave));
 
   ipcMain.handle('settings:getAll', () => settingsRepository.getAll());
@@ -222,6 +224,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('cargas:nextCodigoAgrupado', (_event, emissorId: string, reservados?: string[]) =>
     cargaRepository.nextCodigoAgrupado(emissorId, reservados),
   );
+
+  ipcMain.handle('cargas:codigoExiste', (_event, codigo: string) => cargaRepository.codigoExiste(codigo));
 
   ipcMain.handle('cargas:addDestinatario', (_event, cargaId: string, contactoId: string) => {
     requirePermissao('cargas', 'editar');
@@ -415,6 +419,14 @@ export function registerIpcHandlers(): void {
       dataChegadaPrevista: contentor.dataChegadaPrevista,
       moeda,
       idioma: idioma as IdiomaExportacao,
+      colunas: {
+        dimensoes: settingsRepository.get('export_pdf_col_dimensoes') !== '0',
+        peso: settingsRepository.get('export_pdf_col_peso') !== '0',
+        m3: settingsRepository.get('export_pdf_col_m3') !== '0',
+        valor: settingsRepository.get('export_pdf_col_valor') !== '0',
+        emissor: settingsRepository.get('export_pdf_col_emissor') !== '0',
+        destinatario: settingsRepository.get('export_pdf_col_destinatario') !== '0',
+      },
       cargas: cargas.map((c) => ({
         codigo: c.codigo,
         nome: c.nome,
@@ -574,8 +586,8 @@ export function registerIpcHandlers(): void {
     return user;
   });
 
-  ipcMain.handle('users:update', (_event, userId: string, changes: { name: string; email: string }) => {
-    const user = userManagement.editarUsuario(requireSession().role, userId, changes);
+  ipcMain.handle('users:update', async (_event, userId: string, changes: { name: string; email: string }) => {
+    const user = await userManagement.editarUsuario(requireSession().role, userId, changes);
     registarAuditoria('editou_utilizador', 'user', userId);
     return user;
   });

@@ -16,6 +16,10 @@ export interface User {
   // sobre o padrão global (ver Contentor.padraoGlobal). null = usa o
   // padrão do sistema.
   contentorPadraoId: string | null;
+  // Timestamp de um pedido de reset de password feito pelo próprio ecrã
+  // de login (Admin esquecido) — null = sem pedido pendente. Só o Root
+  // vê isto (Manutenção → Utilizadores Admin).
+  passwordResetSolicitadoEm: string | null;
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
@@ -439,6 +443,9 @@ export interface ImportarCargaInput {
   pesoKg: number | null;
   valor: number | null;
   pago: boolean;
+  // Código manual/sequencial escolhido na revisão — omitido (ou vazio)
+  // usa o próximo código automático do sistema, como sempre aconteceu.
+  codigo?: string | null;
 }
 
 export interface HabilitarPwaResult {

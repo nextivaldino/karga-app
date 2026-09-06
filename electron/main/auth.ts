@@ -86,6 +86,16 @@ export async function loginSemPassword(userId: string): Promise<PublicUser> {
   return currentUser;
 }
 
+// Chamado a partir do ecrã de login, sem sessão — um Admin que se
+// esqueceu da password avisa o Root sem precisar de outro canal. Nunca
+// revela se o email existe ou é de um Admin (resolve sempre em silêncio),
+// para não dar pistas a quem tentar adivinhar contas por tentativa e erro.
+export function solicitarResetPasswordAdmin(email: string): void {
+  const user = userRepository.findByEmail(email.toLowerCase().trim());
+  if (!user || user.role !== 'admin' || !user.active) return;
+  userRepository.marcarPedidoResetPassword(user.id);
+}
+
 export function logout(): void {
   if (currentSessaoId) sessaoRepository.terminar(currentSessaoId);
   currentUser = null;

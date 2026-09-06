@@ -5,6 +5,9 @@ export interface ContentorDisponivel {
   nome: string;
   codigo: string;
   estado: string;
+  // Contentor padrão para envios PWA sem atribuição própria — só um pode
+  // ser true de cada vez em todo o sistema.
+  padraoGlobal: boolean;
   updatedAt: string;
 }
 
@@ -72,6 +75,9 @@ export interface PwaUser {
   email: string;
   ativo: boolean;
   authUid: string | null;
+  // Contentor padrão deste utilizador (atribuído pelo Admin) — tem
+  // prioridade sobre o padrão global. null = usa o padrão do sistema.
+  contentorPadraoId: string | null;
 }
 
 // Estado que só existe localmente, antes de a carga chegar ao Supabase —

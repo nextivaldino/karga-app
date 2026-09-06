@@ -8,7 +8,6 @@ import { PhoneField } from '@/components/ui/PhoneField';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
 import { listContentoresDisponiveis } from '@/lib/data';
-import { getContentorAtivo } from '@/lib/contentorAtivo';
 import { guardarSugestaoCarga, guardarSugestaoNome, listarSugestoesCargas, listarSugestoesNomes } from '@/lib/contactSuggestions';
 import { PAISES_EMISSOR, PAISES_RECETOR } from '@/lib/paisesIndicativo';
 import { CargaListHeader, CargaListRow, type AcaoLinhaCarga } from '@/components/CargaListRow';
@@ -88,8 +87,15 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
     listContentoresDisponiveis()
       .then((cs) => {
         setContentores(cs);
-        const ativo = getContentorAtivo();
-        const contentorPadrao = (ativo && cs.some((c) => c.id === ativo) ? ativo : cs[0]?.id) ?? '';
+        // Prioridade: contentor atribuído a este utilizador pelo Admin >
+        // padrão global do sistema > primeiro da lista — nunca uma escolha
+        // do utilizador PWA, que não deve ver nem selecionar entre vários.
+        const doProprioUser = pwaUser?.contentorPadraoId;
+        const contentorPadrao =
+          (doProprioUser && cs.some((c) => c.id === doProprioUser) ? doProprioUser : null) ??
+          cs.find((c) => c.padraoGlobal)?.id ??
+          cs[0]?.id ??
+          '';
         setForm(prefill ?? { ...CAMPOS_VAZIOS, contentorId: contentorPadrao });
       })
       .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
@@ -107,6 +113,8 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   function update<K extends keyof NovaCargaPendenteInput>(key: K, value: NovaCargaPendenteInput[K]): void {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  const contentorAtual = contentores.find((c) => c.id === form.contentorId) ?? null;
 
   // Pré-visualização de m³ ao vivo — mesma conta do Desktop.
   const m3Preview =
@@ -237,20 +245,13 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
         <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app">
           <X size={20} />
         </button>
-        <select
-          value={form.contentorId}
-          onChange={(e) => update('contentorId', e.target.value)}
-          className={`min-w-0 flex-1 truncate rounded-control border bg-bg-input px-2 py-1.5 text-center text-[13px] font-medium text-text-primary ${
+        <div
+          className={`flex min-w-0 flex-1 items-center justify-center truncate rounded-control border bg-bg-input px-2 py-1.5 text-center text-[13px] font-medium text-text-primary ${
             tentouEnviar && !form.contentorId ? 'border-error' : 'border-border/60'
           }`}
         >
-          {contentores.length === 0 ? <option value="">Sem contentores</option> : null}
-          {contentores.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.codigo} — {c.nome}
-            </option>
-          ))}
-        </select>
+          {contentorAtual ? `${contentorAtual.codigo} — ${contentorAtual.nome}` : 'Sem contentor atribuído'}
+        </div>
         <div title="Agrupar cargas deste emissor sob a mesma referência">
           <Switch checked={codigoUnicoEmissor} onChange={setCodigoUnicoEmissor} />
         </div>

@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { CaretDown as ChevronDown, Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Stack as Layers, Boat as Ship } from '@phosphor-icons/react';
+import { useEffect, useState } from 'react';
+import { Warning as AlertTriangle, Bell, CheckCircle as CheckCircle2, Clock, CurrencyEur as Euro, Package, Stack as Layers, Boat as Ship } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { listContentoresDisponiveis, listMinhasCargasPendentes, listMensagens } from '@/lib/data';
-import { getContentorAtivo, setContentorAtivo } from '@/lib/contentorAtivo';
 import { toast } from '@/components/ui/Toast';
 import { NotificationBell } from '@/components/NotificationBell';
 import { GearMenu } from '@/components/GearMenu';
@@ -14,68 +13,30 @@ function formatMoeda(valor: number): string {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(valor);
 }
 
-// Contentor "ativo" — os que o admin liberou para este utilizador no
-// Kraga Desktop (mesma fonte de dados que a Nova Carga já usa). Escolher
-// aqui fica guardado e é o que a Nova Carga abre por omissão.
-function SeletorContentor(): React.JSX.Element | null {
-  const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
-  const [selecionado, setSelecionado] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+// Contentor predefinido — atribuído pelo Admin a este utilizador, ou o
+// padrão global do sistema — nunca uma escolha do utilizador PWA (mesma
+// prioridade usada na Nova Carga).
+function ContentorPredefinido(): React.JSX.Element | null {
+  const { pwaUser } = useAuth();
+  const [contentor, setContentor] = useState<ContentorDisponivel | null>(null);
 
   useEffect(() => {
     listContentoresDisponiveis()
       .then((cs) => {
-        setContentores(cs);
-        const ativo = getContentorAtivo();
-        setSelecionado(ativo && cs.some((c) => c.id === ativo) ? ativo : (cs[0]?.id ?? null));
+        const doProprioUser = pwaUser?.contentorPadraoId;
+        setContentor(
+          cs.find((c) => c.id === doProprioUser) ?? cs.find((c) => c.padraoGlobal) ?? cs[0] ?? null,
+        );
       })
       .catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.'));
-  }, []);
+  }, [pwaUser?.contentorPadraoId]);
 
-  useEffect(() => {
-    function onClickOutside(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, []);
-
-  if (contentores.length === 0) return null;
-  const atual = contentores.find((c) => c.id === selecionado) ?? contentores[0]!;
+  if (!contentor) return null;
 
   return (
-    <div ref={ref} className="relative min-w-0 flex-1">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-h-touch w-full items-center gap-1.5 rounded-pill border border-border bg-bg-surface/80 px-3 text-left shadow-soft backdrop-blur-md"
-      >
-        <Layers size={15} className="shrink-0 text-success" />
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{atual.codigo}</span>
-        <ChevronDown size={13} className={`shrink-0 text-text-tertiary transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open ? (
-        <div className="absolute left-0 top-11 z-30 w-56 overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium">
-          {contentores.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => {
-                setSelecionado(c.id);
-                setContentorAtivo(c.id);
-                setOpen(false);
-              }}
-              className={`flex min-h-touch w-full items-center gap-2 px-3 text-left text-[13px] ${
-                c.id === atual.id ? 'bg-primary/15 font-medium text-primary' : 'text-text-primary active:bg-bg-app'
-              }`}
-            >
-              <span className="font-medium">{c.codigo}</span>
-              <span className="min-w-0 flex-1 truncate text-text-tertiary">{c.nome}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+    <div className="flex min-h-touch min-w-0 flex-1 items-center gap-1.5 rounded-pill border border-border bg-bg-surface/80 px-3 shadow-soft backdrop-blur-md">
+      <Layers size={15} className="shrink-0 text-success" />
+      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-text-primary">{contentor.codigo}</span>
     </div>
   );
 }
@@ -123,7 +84,7 @@ export function HomePage(): React.JSX.Element {
         style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
       >
         <span className="shrink-0 text-[18px] font-bold tracking-tight text-text-primary">KARGA</span>
-        <SeletorContentor />
+        <ContentorPredefinido />
         <div className="flex shrink-0 items-center gap-1">
           <NotificationBell />
           <GearMenu />

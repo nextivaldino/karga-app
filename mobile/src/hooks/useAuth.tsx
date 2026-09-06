@@ -23,7 +23,14 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 async function fetchPwaUser(authUid: string): Promise<PwaUser | null> {
   const { data, error } = await supabase.from('pwa_users').select('*').eq('auth_uid', authUid).single();
   if (error || !data) return null;
-  return { id: data.id, nome: data.nome, email: data.email, ativo: data.ativo, authUid: data.auth_uid };
+  return {
+    id: data.id,
+    nome: data.nome,
+    email: data.email,
+    ativo: data.ativo,
+    authUid: data.auth_uid,
+    contentorPadraoId: data.contentor_padrao_id,
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {

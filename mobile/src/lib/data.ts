@@ -7,11 +7,19 @@ interface ContentorRow {
   nome: string;
   codigo: string;
   estado: string;
+  padrao_global: boolean;
   updated_at: string;
 }
 
 function mapContentor(row: ContentorRow): ContentorDisponivel {
-  return { id: row.id, nome: row.nome, codigo: row.codigo, estado: row.estado, updatedAt: row.updated_at };
+  return {
+    id: row.id,
+    nome: row.nome,
+    codigo: row.codigo,
+    estado: row.estado,
+    padraoGlobal: row.padrao_global,
+    updatedAt: row.updated_at,
+  };
 }
 
 // Cai para a cache local (última leitura com sucesso) quando offline ou a

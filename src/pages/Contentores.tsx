@@ -245,7 +245,12 @@ export function Contentores(): React.JSX.Element {
           onExport={setExportando}
         />
 
-        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+        {/* h-11 (44px) é a altura real do pill fechado (h-8 + p-1.5 de
+            cada lado) — com essa altura explícita, -translate-y-1/2 centra
+            a caixa de referência na barra tal como os outros elementos, e
+            o cartão (filho normal, não absoluto) nasce encostado ao topo
+            dela, só crescendo para baixo ao abrir em vez de também para cima. */}
+        <div className="absolute left-1/2 top-1/2 z-40 h-11 -translate-x-1/2 -translate-y-1/2">
           <SincronizacaoCargaCard
             contentoresAbertos={contentoresAbertos}
             selectedContentorId={selectedContentorId}

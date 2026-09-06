@@ -7,11 +7,11 @@ import { Boat, Gear, House, Package, Stack, Wallet, ArrowsClockwise, DeviceMobil
 export const MODULE_ICON: Record<ModuleIconName, { icon: Icon; color: string }> = {
   kraga: { icon: Boat, color: '#ffb400' },
   home: { icon: House, color: '#3584e4' },
-  cargas: { icon: Package, color: '#e5a50a' },
+  cargas: { icon: Package, color: '#ffb400' },
   contentores: { icon: Stack, color: '#2ec27e' },
   configuracoes: { icon: Gear, color: '#9141ac' },
   faturacao: { icon: Wallet, color: '#2190a4' },
-  sincronizacao: { icon: ArrowsClockwise, color: '#e66100' },
+  sincronizacao: { icon: ArrowsClockwise, color: '#ffb400' },
   dispositivos: { icon: DeviceMobile, color: '#d56199' },
 };
 

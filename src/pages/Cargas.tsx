@@ -167,11 +167,12 @@ export function Cargas(): React.JSX.Element {
           onExport={setExportando}
         />
 
-        {/* Centrado verticalmente como os outros elementos da barra (top-1/2
-            + margin-top fixo de metade da altura fechada, 36px), em vez de
-            -translate-y-1/2 — esse recalcularia o centro com a altura atual
-            do cartão e fá-lo-ia crescer para cima E para baixo ao abrir. */}
-        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+        {/* h-11 (44px) é a altura real do pill fechado (h-8 + p-1.5 de
+            cada lado) — com essa altura explícita, -translate-y-1/2 centra
+            a caixa de referência na barra tal como os outros elementos, e
+            o cartão (filho normal, não absoluto) nasce encostado ao topo
+            dela, só crescendo para baixo ao abrir em vez de também para cima. */}
+        <div className="absolute left-1/2 top-1/2 z-40 h-11 -translate-x-1/2 -translate-y-1/2">
           <SincronizacaoCargaCard
             contentoresAbertos={contentoresAbertos}
             selectedContentorId={selectedContentorId}
@@ -191,16 +192,12 @@ export function Cargas(): React.JSX.Element {
                 icon: <List size={15} />,
                 title: 'Lista — gerir e ver cargas',
                 badge: cargas.length,
-                badgeStyle:
-                  subAba === 'lista' ? { backgroundColor: SYNC_INK, color: SYNC_HEADER_BG } : { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
-                activeStyle: { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
               },
               {
                 value: 'faturacao',
                 label: 'Faturação',
                 icon: <Wallet size={15} />,
                 title: 'Faturação — controlar pagamentos',
-                activeStyle: { backgroundColor: SYNC_HEADER_BG, color: SYNC_INK },
               },
             ]}
           />

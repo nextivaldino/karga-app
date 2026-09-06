@@ -94,7 +94,12 @@ export function Home(): React.JSX.Element {
           onSelect={selectContentor}
           loading={loadingContentores}
         />
-        <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
+        {/* h-11 (44px) é a altura real do pill fechado (h-8 + p-1.5 de
+            cada lado) — com essa altura explícita, -translate-y-1/2 centra
+            a caixa de referência na barra tal como os outros elementos, e
+            o cartão (filho normal, não absoluto) nasce encostado ao topo
+            dela, só crescendo para baixo ao abrir em vez de também para cima. */}
+        <div className="absolute left-1/2 top-1/2 z-40 h-11 -translate-x-1/2 -translate-y-1/2">
           <SincronizacaoCargaCard
             contentoresAbertos={contentoresAbertos}
             selectedContentorId={selectedContentorId}
@@ -111,7 +116,6 @@ export function Home(): React.JSX.Element {
           >
             <Plus size={16} weight="bold" /> Nova Carga
           </button>
-          <UsersAvatarBar />
         </div>
       </ContextToolbar>
 
@@ -174,6 +178,7 @@ export function Home(): React.JSX.Element {
                     <span className="text-text-secondary">{widget.label}</span>
                   </button>
                 ))}
+                <UsersAvatarBar variant="pill" />
               </div>
             }
           >
@@ -192,6 +197,7 @@ export function Home(): React.JSX.Element {
                   <span className="text-[12px] text-text-secondary">{widget.label}</span>
                 </button>
               ))}
+              <UsersAvatarBar variant="card" />
             </div>
           </CollapsibleSection>
 

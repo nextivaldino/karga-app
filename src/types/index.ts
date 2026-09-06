@@ -12,6 +12,10 @@ export interface User {
   pwaAuthUid: string | null;
   avatar: string | null;
   loginSemPassword: boolean;
+  // Contentor padrão para envios PWA deste utilizador — tem prioridade
+  // sobre o padrão global (ver Contentor.padraoGlobal). null = usa o
+  // padrão do sistema.
+  contentorPadraoId: string | null;
   createdAt: string;
   updatedAt: string;
   syncStatus: SyncStatus;
@@ -249,6 +253,10 @@ export interface Contentor {
   // cargas, mesma sequência de código; sai deste estado só pela ação
   // explícita "Converter em Contentor" (`converterEmContentor`).
   ehLista: boolean;
+  // Contentor padrão para envios PWA sem atribuição própria — só um
+  // contentor pode ter isto a true de cada vez em todo o sistema (ver
+  // contentorRepository.definirPadraoGlobal).
+  padraoGlobal: boolean;
   diasParado: number | null;
   partindoEmBreve: boolean;
   chegadaEmBreve: boolean;

@@ -359,6 +359,11 @@ export function registerIpcHandlers(): void {
     return contentorRepository.mostrar(id);
   });
 
+  ipcMain.handle('contentores:definirPadraoGlobal', (_event, id: string) => {
+    requirePermissao('contentores', 'editar');
+    return contentorRepository.definirPadraoGlobal(id);
+  });
+
   ipcMain.handle('contentores:eliminar', (_event, id: string) => {
     requirePermissao('contentores', 'eliminar');
     contentorRepository.eliminar(id);
@@ -615,6 +620,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('users:setLoginSemPassword', (_event, userId: string, valor: boolean) =>
     userManagement.setLoginSemPassword(requireSession(), userId, valor),
+  );
+
+  ipcMain.handle('users:setContentorPadrao', (_event, userId: string, contentorId: string | null) =>
+    userManagement.setContentorPadraoPwa(requireSession().role, userId, contentorId),
   );
 
   ipcMain.handle('permissoes:listPorUser', (_event, userId: string) => permissaoRepository.listPorUser(userId));

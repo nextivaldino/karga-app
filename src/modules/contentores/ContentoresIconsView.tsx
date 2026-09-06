@@ -112,6 +112,11 @@ function CartaoContentor({
           <ModuleIcon module="contentores" size={20} />
         )}
         <span className="truncate text-[13px] font-medium text-text-primary">{contentor.codigo}</span>
+        {contentor.padraoGlobal ? (
+          <span title="Padrão para envios PWA" className="shrink-0 text-[12px] text-warning">
+            ★
+          </span>
+        ) : null}
         <span className={`ml-auto shrink-0 text-[11px] ${ESTADO_CONTENTOR_COLOR_CLASS[contentor.estado]}`}>
           {ESTADO_CONTENTOR_LABEL[contentor.estado]}
         </span>

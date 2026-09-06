@@ -164,6 +164,7 @@ export const ipcService = {
     desbloquear: (id: string) => invoke<Contentor | null>('contentores:desbloquear', id),
     ocultar: (id: string) => invoke<Contentor | null>('contentores:ocultar', id),
     mostrar: (id: string) => invoke<Contentor | null>('contentores:mostrar', id),
+    definirPadraoGlobal: (id: string) => invoke<Contentor | null>('contentores:definirPadraoGlobal', id),
     eliminar: (id: string) => invoke<void>('contentores:eliminar', id),
     fechar: (id: string) => invoke<Contentor>('contentores:fechar', id),
     marcarEmTransito: (id: string) => invoke<Contentor>('contentores:marcarEmTransito', id),
@@ -223,6 +224,8 @@ export const ipcService = {
     setAvatar: (userId: string, avatar: string | null) => invoke<PublicUser>('users:setAvatar', userId, avatar),
     setLoginSemPassword: (userId: string, valor: boolean) =>
       invoke<PublicUser>('users:setLoginSemPassword', userId, valor),
+    setContentorPadrao: (userId: string, contentorId: string | null) =>
+      invoke<PublicUser>('users:setContentorPadrao', userId, contentorId),
   },
   permissoes: {
     listPorUser: (userId: string) => invoke<Permissao[]>('permissoes:listPorUser', userId),

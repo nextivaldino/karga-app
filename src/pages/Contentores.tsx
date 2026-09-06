@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, CheckCircle as CheckCircle2, Download, Eye, EyeSlash as EyeOff, Funnel as Filter, SquaresFour as LayoutGrid, List, Lock, PencilSimple as Pencil, Plus, Boat as Ship, Trash as Trash2, LockOpen as Unlock } from '@phosphor-icons/react';
+import { Check, CheckCircle as CheckCircle2, Download, Eye, EyeSlash as EyeOff, Funnel as Filter, SquaresFour as LayoutGrid, List, Lock, PencilSimple as Pencil, Plus, Boat as Ship, Star, Trash as Trash2, LockOpen as Unlock } from '@phosphor-icons/react';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
 import { ContainerPickerButton } from '@/components/ui/ContainerPickerButton';
 import { ViewSwitcher } from '@/components/ui/ViewSwitcher';
@@ -155,6 +155,16 @@ export function Contentores(): React.JSX.Element {
     }
   }
 
+  async function handleDefinirPadraoGlobal(contentor: Contentor): Promise<void> {
+    try {
+      await ipcService.contentores.definirPadraoGlobal(contentor.id);
+      toast.success(`Contentor ${contentor.codigo} definido como padrão PWA.`);
+      refresh();
+    } catch (err) {
+      toast.error(cleanIpcError(err));
+    }
+  }
+
   function buildMenuItems(contentor: Contentor): ContextMenuItem[] {
     const podeEditar = !contentor.bloqueado && contentor.estado === 'aberto';
     const podeEliminar = contentor.estado === 'aberto' && contentor.totalCargas === 0;
@@ -201,6 +211,16 @@ export function Contentores(): React.JSX.Element {
         label: contentor.oculto ? 'Mostrar' : 'Ocultar',
         icon: contentor.oculto ? <Eye size={14} /> : <EyeOff size={14} />,
         onClick: () => void handleOcultar(contentor),
+      },
+      {
+        key: 'padrao-pwa',
+        label: contentor.padraoGlobal ? '★ Padrão PWA (atual)' : 'Marcar como padrão PWA',
+        icon: <Star size={14} weight={contentor.padraoGlobal ? 'fill' : 'regular'} />,
+        onClick: () => void handleDefinirPadraoGlobal(contentor),
+        disabled: contentor.padraoGlobal || contentor.estado !== 'aberto',
+        disabledReason: contentor.padraoGlobal
+          ? 'Este já é o contentor padrão para envios PWA.'
+          : 'Só um contentor aberto pode ser o padrão PWA.',
       },
       {
         key: 'eliminar',

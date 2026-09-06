@@ -73,6 +73,11 @@ export function ContentoresListView({
             <span className="truncate font-medium">{contentor.codigo}</span>
             <span className="flex min-w-0 items-center gap-1.5 truncate">
               <span className="truncate">{contentor.nome}</span>
+              {contentor.padraoGlobal ? (
+                <span title="Padrão para envios PWA" className="shrink-0 text-[12px] text-warning">
+                  ★
+                </span>
+              ) : null}
               {urgencia && contentor.diasParado != null ? (
                 <span title={`Parado há ${contentor.diasParado} dias`} className={`shrink-0 text-[12px] ${URGENCIA_TEXT_CLASS[urgencia]}`}>
                   ⏳

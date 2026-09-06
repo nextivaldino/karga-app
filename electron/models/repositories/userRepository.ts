@@ -13,6 +13,7 @@ interface UserRow {
   pwa_auth_uid: string | null;
   avatar: string | null;
   login_sem_password: number;
+  contentor_padrao_id: string | null;
   created_at: string;
   updated_at: string;
   sync_status: User['syncStatus'];
@@ -30,6 +31,7 @@ function fromRow(row: UserRow): User {
     pwaAuthUid: row.pwa_auth_uid,
     avatar: row.avatar,
     loginSemPassword: row.login_sem_password === 1,
+    contentorPadraoId: row.contentor_padrao_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     syncStatus: row.sync_status,
@@ -57,6 +59,7 @@ function create(input: CreateUserInput): User {
     pwa_auth_uid: null,
     avatar: null,
     login_sem_password: 0,
+    contentor_padrao_id: null,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
@@ -149,6 +152,16 @@ function setLoginSemPassword(id: string, valor: boolean): User | null {
   return findById(id);
 }
 
+// Contentor padrão para envios PWA deste utilizador (null = usa o padrão
+// global do sistema). Só faz sentido para utilizadores com PWA habilitado,
+// mas não valida isso aqui — quem chama (userManagement) decide.
+function setContentorPadrao(id: string, contentorId: string | null): User | null {
+  const db = getDatabase();
+  if (!findById(id)) return null;
+  db.prepare(`UPDATE users SET contentor_padrao_id = ?, updated_at = ? WHERE id = ?`).run(contentorId, nowIso(), id);
+  return findById(id);
+}
+
 // Só o essencial (id/nome/avatar) para desenhar a grelha do ecrã de
 // login, ANTES de haver sessão — nunca expor email/role/password aqui.
 function listQuickLogin(): { id: string; name: string; avatar: string | null }[] {
@@ -171,5 +184,6 @@ export const userRepository = {
   setPwaStatus,
   setAvatar,
   setLoginSemPassword,
+  setContentorPadrao,
   listQuickLogin,
 };

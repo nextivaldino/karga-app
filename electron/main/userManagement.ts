@@ -167,7 +167,7 @@ export async function habilitarPwa(requestedByRole: UserRole, userId: string): P
     pwaEmail = await proximoEmailPwa();
     authUid = await criarUtilizadorPwaAuth(pwaEmail, PASSWORD_PWA_INICIAL);
   }
-  await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid });
+  await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid, contentorPadraoId: existing.contentorPadraoId });
 
   const updated = userRepository.setPwaStatus(userId, true, authUid);
   return { user: toPublicUser(updated), passwordTemporaria: PASSWORD_PWA_INICIAL, pwaEmail };
@@ -182,7 +182,7 @@ export async function desabilitarPwa(requestedByRole: UserRole, userId: string):
   if (existing.pwaAuthUid) {
     const pwaEmail = await obterEmailUtilizadorPwaAuth(existing.pwaAuthUid);
     await desativarUtilizadorPwaAuth(existing.pwaAuthUid);
-    await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: false, authUid: existing.pwaAuthUid });
+    await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: false, authUid: existing.pwaAuthUid, contentorPadraoId: existing.contentorPadraoId });
   }
 
   // Mantém pwa_auth_uid (não o limpa) — a conta no Supabase Auth só é
@@ -217,6 +217,37 @@ export function setLoginSemPassword(actor: { id: string; role: UserRole }, targe
   }
   const updated = userRepository.setLoginSemPassword(targetUserId, valor);
   if (!updated) throw new Error('Utilizador não encontrado.');
+  return toPublicUser(updated);
+}
+
+// Contentor padrão para onde as cargas deste utilizador PWA caem por
+// omissão (tem prioridade sobre o padrão global do sistema). Decisão do
+// Admin, não self-service — ao contrário de avatar/login-sem-password,
+// isto afeta onde os dados de negócio de outra pessoa vão parar.
+export async function setContentorPadraoPwa(
+  requestedByRole: UserRole,
+  targetUserId: string,
+  contentorId: string | null,
+): Promise<PublicUser> {
+  if (requestedByRole !== 'admin') throw new Error('Só um Admin pode definir o contentor padrão de um utilizador.');
+  const existing = userRepository.findById(targetUserId);
+  if (!existing) throw new Error('Utilizador não encontrado.');
+
+  const updated = userRepository.setContentorPadrao(targetUserId, contentorId);
+  if (!updated) throw new Error('Utilizador não encontrado.');
+
+  if (updated.pwaHabilitado && updated.pwaAuthUid) {
+    const pwaEmail = await obterEmailUtilizadorPwaAuth(updated.pwaAuthUid);
+    await upsertPwaUser({
+      id: updated.id,
+      nome: updated.name,
+      email: pwaEmail,
+      ativo: true,
+      authUid: updated.pwaAuthUid,
+      contentorPadraoId: updated.contentorPadraoId,
+    });
+  }
+
   return toPublicUser(updated);
 }
 

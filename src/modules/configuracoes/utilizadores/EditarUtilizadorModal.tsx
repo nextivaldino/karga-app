@@ -7,7 +7,7 @@ import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';
 import { PermissoesForm } from './PermissoesForm';
-import type { PermissaoInput, UsuarioComSessao } from '@/types';
+import type { Contentor, PermissaoInput, UsuarioComSessao } from '@/types';
 
 interface EditarUtilizadorModalProps {
   open: boolean;
@@ -26,6 +26,8 @@ export function EditarUtilizadorModal({
   const [email, setEmail] = useState('');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loginSemPassword, setLoginSemPassword] = useState(false);
+  const [contentorPadraoId, setContentorPadraoId] = useState<string | null>(null);
+  const [contentoresAbertos, setContentoresAbertos] = useState<Contentor[]>([]);
   const [permissoes, setPermissoes] = useState<PermissaoInput[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,11 @@ export function EditarUtilizadorModal({
     setEmail(utilizador.email);
     setAvatar(utilizador.avatar);
     setLoginSemPassword(utilizador.loginSemPassword);
+    setContentorPadraoId(utilizador.contentorPadraoId);
     setError(null);
+    if (utilizador.pwaHabilitado) {
+      void ipcService.contentores.list({ estado: 'aberto' }).then(setContentoresAbertos);
+    }
     void ipcService.permissoes.listPorUser(utilizador.id).then((rows) => {
       setPermissoes(
         rows.map((r) => ({
@@ -66,6 +72,18 @@ export function EditarUtilizadorModal({
     setLoginSemPassword(valor);
     try {
       await ipcService.users.setLoginSemPassword(utilizador.id, valor);
+      onSaved();
+    } catch (err) {
+      toast.error(cleanIpcError(err));
+    }
+  }
+
+  async function handleContentorPadraoChange(valor: string): Promise<void> {
+    if (!utilizador) return;
+    const novoId = valor || null;
+    setContentorPadraoId(novoId);
+    try {
+      await ipcService.users.setContentorPadrao(utilizador.id, novoId);
       onSaved();
     } catch (err) {
       toast.error(cleanIpcError(err));
@@ -136,6 +154,22 @@ export function EditarUtilizadorModal({
           </div>
           <Switch checked={loginSemPassword} onChange={(v) => void handleLoginSemPasswordChange(v)} />
         </div>
+
+        {utilizador?.pwaHabilitado ? (
+          <FloatingLabelInput
+            as="select"
+            label="Contentor padrão (PWA)"
+            value={contentorPadraoId ?? ''}
+            onChange={(e) => void handleContentorPadraoChange(e.target.value)}
+          >
+            <option value="">Usar padrão do sistema</option>
+            {contentoresAbertos.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.codigo} — {c.nome}
+              </option>
+            ))}
+          </FloatingLabelInput>
+        ) : null}
 
         <div>
           <h3 className="mb-sm text-[13px] font-semibold text-text-primary">Permissões</h3>

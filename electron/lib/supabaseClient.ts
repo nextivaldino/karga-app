@@ -52,6 +52,7 @@ interface ContentorDisponivel {
   nome: string;
   codigo: string;
   estado: string;
+  padraoGlobal: boolean;
 }
 
 // Fire-and-forget: falha em silêncio (sem internet, sem credenciais
@@ -69,6 +70,7 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
           nome: contentor.nome,
           codigo: contentor.codigo,
           estado: contentor.estado,
+          padrao_global: contentor.padraoGlobal,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' },
@@ -151,6 +153,7 @@ interface PwaUserInput {
   email: string;
   ativo: boolean;
   authUid: string | null;
+  contentorPadraoId: string | null;
 }
 
 export async function upsertPwaUser(input: PwaUserInput): Promise<void> {
@@ -162,6 +165,7 @@ export async function upsertPwaUser(input: PwaUserInput): Promise<void> {
       email: input.email,
       ativo: input.ativo,
       auth_uid: input.authUid,
+      contentor_padrao_id: input.contentorPadraoId,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' },

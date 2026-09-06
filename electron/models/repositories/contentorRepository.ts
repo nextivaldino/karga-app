@@ -22,6 +22,7 @@ interface ContentorRow {
   oculto: number;
   bloqueado: number;
   eh_lista: number;
+  padrao_global: number;
   created_at: string;
   updated_at: string;
   sync_status: Contentor['syncStatus'];
@@ -110,6 +111,7 @@ function fromRow(row: ContentorRowComTotais, limite: number): Contentor {
     oculto: row.oculto === 1,
     bloqueado: row.bloqueado === 1,
     ehLista: row.eh_lista === 1,
+    padraoGlobal: row.padrao_global === 1,
     diasParado: calcularDiasParado(row, limite),
     partindoEmBreve: calcularPartindoEmBreve(row),
     chegadaEmBreve: calcularChegadaEmBreve(row),
@@ -128,6 +130,7 @@ function syncDisponivel(contentor: Contentor): void {
     nome: contentor.nome,
     codigo: contentor.codigo,
     estado: contentor.estado,
+    padraoGlobal: contentor.padraoGlobal,
   });
 }
 
@@ -170,6 +173,7 @@ function create(input: CreateContentorInput): Contentor {
     oculto: 0,
     bloqueado: 0,
     eh_lista: input.ehLista ? 1 : 0,
+    padrao_global: 0,
     created_at: timestamp,
     updated_at: timestamp,
     sync_status: 'local',
@@ -350,6 +354,34 @@ function mostrar(id: string): Contentor | null {
   return setFlag(id, 'oculto', false);
 }
 
+// Mutuamente exclusivo (ao contrário de setFlag/bloquear/ocultar) — só um
+// contentor pode ser o padrão global de cada vez. Sincroniza só os dois
+// contentores cujo padrao_global realmente mudou (o antigo e o novo), não
+// a tabela toda, já que os restantes já estavam a false na Supabase.
+function definirPadraoGlobal(id: string): Contentor | null {
+  const novo = findById(id);
+  if (!novo) return null;
+
+  const db = getDatabase();
+  const antigoRow = db
+    .prepare<[], { id: string }>(`SELECT id FROM contentores WHERE padrao_global = 1`)
+    .get();
+
+  const transacao = db.transaction(() => {
+    db.prepare(`UPDATE contentores SET padrao_global = 0 WHERE padrao_global = 1`).run();
+    db.prepare(`UPDATE contentores SET padrao_global = 1, updated_at = ? WHERE id = ?`).run(nowIso(), id);
+  });
+  transacao();
+
+  if (antigoRow && antigoRow.id !== id) {
+    const antigo = findById(antigoRow.id);
+    if (antigo) syncDisponivel(antigo);
+  }
+  const atualizado = findById(id)!;
+  syncDisponivel(atualizado);
+  return atualizado;
+}
+
 function eliminar(id: string): void {
   const contentor = findById(id);
   if (!contentor) return;
@@ -445,6 +477,7 @@ export const contentorRepository = {
   desbloquear,
   ocultar,
   mostrar,
+  definirPadraoGlobal,
   eliminar,
   fechar,
   marcarEmTransito,

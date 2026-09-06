@@ -231,6 +231,12 @@ function runMigrations(database: Database.Database): void {
   // Código-base opcional por contacto — permite agrupar várias cargas do
   // mesmo emissor sob um único código (ex: "TF010", "TF010-A", "TF010-B").
   addColumnIfMissing(database, 'contactos', 'codigo_base', 'TEXT');
+  // Contentor padrão para envios PWA: um só contentor pode ter
+  // padrao_global=1 de cada vez (mutuamente exclusivo, ver
+  // contentorRepository.definirPadraoGlobal); contentor_padrao_id em
+  // users é a atribuição por utilizador, tem prioridade sobre o global.
+  addColumnIfMissing(database, 'contentores', 'padrao_global', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing(database, 'users', 'contentor_padrao_id', 'TEXT');
 }
 
 function addColumnIfMissing(database: Database.Database, table: string, column: string, definition: string): void {

@@ -246,7 +246,12 @@ export function Contentores(): React.JSX.Element {
         />
 
         <div className="absolute left-1/2 top-1/2 z-40 -translate-x-1/2" style={{ marginTop: -18 }}>
-          <SincronizacaoCargaCard contentoresAbertos={contentoresAbertos} selectedContentorId={selectedContentorId} onImported={refresh} />
+          <SincronizacaoCargaCard
+            contentoresAbertos={contentoresAbertos}
+            selectedContentorId={selectedContentorId}
+            onImported={refresh}
+            onSelectContentor={selectContentor}
+          />
         </div>
 
         <div className="ml-auto flex items-center gap-3">

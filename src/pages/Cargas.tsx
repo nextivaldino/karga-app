@@ -176,6 +176,7 @@ export function Cargas(): React.JSX.Element {
             contentoresAbertos={contentoresAbertos}
             selectedContentorId={selectedContentorId}
             onImported={refreshCargas}
+            onSelectContentor={selectContentor}
           />
         </div>
 

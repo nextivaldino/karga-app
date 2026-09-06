@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowsClockwise,
   CaretDown,
+  Check,
   ListPlus,
   CheckCircle,
   Stack,
@@ -28,6 +29,11 @@ interface SincronizacaoCargaCardProps {
   contentoresAbertos: Contentor[];
   selectedContentorId: string | null;
   onImported?: () => void;
+  // Muda o contentor "ativo" da página (mesma função que o
+  // ContainerPickerButton usa) — só é preciso quando não há nada por
+  // sincronizar, já que aí o pill deixa de ter uma ação de sync para
+  // oferecer e passa a servir de seletor de contentor.
+  onSelectContentor?: (id: string) => void;
 }
 
 const AVATAR_CORES = ['#ef4444', '#38bdf8', '#a78bfa', '#fb923c', '#34d399', '#f472b6', '#818cf8', '#4ade80'];
@@ -71,6 +77,7 @@ export function SincronizacaoCargaCard({
   contentoresAbertos,
   selectedContentorId,
   onImported,
+  onSelectContentor,
 }: SincronizacaoCargaCardProps): React.JSX.Element | null {
   const { navigate } = useNavigation();
   const avatarPorUsuario = useAvatarPorUsuario();
@@ -168,16 +175,20 @@ export function SincronizacaoCargaCard({
   if (total === 0) {
     const selecionadoAtual = contentoresAbertos.find((c) => c.id === selectedContentorId) ?? null;
     if (!selecionadoAtual) return null;
-    // Determine header background based on theme
-    const headerBg = HEADER_BG; // Keep original header background in collapsed state
     return (
-      <div className="relative z-40 flex flex-col items-center justify-center">
-        <div 
-          className="flex flex-col overflow-hidden shadow-lg shadow-black/20 transition-all duration-300 rounded-full"
-          style={{ backgroundColor: headerBg, border: `1px solid ${DIVIDER}`, minWidth: 310 }}
+      <div ref={ref} className="relative z-40 flex flex-col items-center justify-center">
+        <div
+          className={`flex flex-col overflow-hidden shadow-lg shadow-black/20 transition-all duration-300 ${open ? 'rounded-2xl' : 'rounded-full'}`}
+          style={{ backgroundColor: open && theme === 'dark' ? INVERT_BG : BASE_BG, border: `1px solid ${DIVIDER}`, minWidth: open ? 350 : 310 }}
         >
-          <div className="flex items-center gap-1.5 p-1.5" style={{ backgroundColor: headerBg }}>
-            <div className="flex h-8 items-center gap-2 rounded-full pl-2 pr-3">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            disabled={contentoresAbertos.length === 0}
+            className="flex w-full items-center gap-1.5 p-1.5 text-left transition-colors hover:bg-white/5 disabled:cursor-default disabled:hover:bg-transparent"
+            style={{ backgroundColor: HEADER_BG }}
+          >
+            <div className="flex h-8 flex-1 items-center gap-2 rounded-full pl-2 pr-1">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#38bdf8] text-white shadow-sm">
                 <CheckCircle size={14} weight="bold" />
               </span>
@@ -192,10 +203,56 @@ export function SincronizacaoCargaCard({
                 </span>
               </span>
             </div>
-            <div className="ml-auto flex shrink-0 items-center pr-4 pl-2 text-[12px] font-medium text-slate-400">
+            <div className="flex shrink-0 items-center pr-2 pl-2 text-[12px] font-medium text-slate-400">
               {selecionadoAtual.totalCargas} {selecionadoAtual.totalCargas === 1 ? 'carga' : 'cargas'}
               <span className="mx-2 opacity-40">•</span>
               {formatValorResumido(selecionadoAtual.valorTotal)}
+            </div>
+            {contentoresAbertos.length > 0 ? (
+              <CaretDown
+                size={14}
+                className={`mr-1 shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
+                style={{ color: INK_SOFT }}
+              />
+            ) : null}
+          </button>
+
+          <div
+            className="grid transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+          >
+            <div className="overflow-hidden">
+              <div style={{ borderTop: `1px solid ${DIVIDER}` }}>
+                <div className="px-4 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-wide" style={{ color: INK_SOFT }}>
+                  Escolher contentor
+                </div>
+                <div className="max-h-[220px] overflow-y-auto pb-1.5">
+                  {contentoresAbertos.map((c) => {
+                    const isSelected = c.id === selectedContentorId;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          onSelectContentor?.(c.id);
+                          setOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 truncate px-4 py-2.5 text-left text-[13px] font-medium transition-colors hover:bg-white/5"
+                        style={{ color: isSelected ? '#38bdf8' : INK }}
+                      >
+                        <Stack
+                          size={16}
+                          weight={isSelected ? 'fill' : 'duotone'}
+                          className="shrink-0"
+                          style={{ color: isSelected ? '#38bdf8' : INK_SOFT }}
+                        />
+                        <span className="min-w-0 flex-1 truncate">{c.codigo} — {c.nome}</span>
+                        {isSelected ? <Check size={14} weight="bold" style={{ color: '#38bdf8' }} /> : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>

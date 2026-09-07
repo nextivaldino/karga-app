@@ -10,6 +10,7 @@ if (typeof globalThis.WebSocket === 'undefined') {
 }
 
 let client: SupabaseClient | null | undefined;
+let postoIdPromise: Promise<string | null> | null = null;
 
 // Cliente com a Service Role Key — só usado no processo principal, para
 // operações que precisam de ignorar RLS (ex: upsert de contentores_disponiveis
@@ -56,6 +57,24 @@ interface ContentorDisponivel {
   padraoGlobal: boolean;
 }
 
+async function obterPostoId(supabase: SupabaseClient): Promise<string | null> {
+  const configurado = process.env.KARGA_POSTO_ID?.trim();
+  if (configurado) return configurado;
+  if (!postoIdPromise) {
+    postoIdPromise = Promise.resolve(
+      supabase.from('postos').select('id').eq('estado', 'ativo').limit(2),
+    )
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('[sync] Não foi possível resolver o Posto:', error.message);
+          return null;
+        }
+        return data?.length === 1 ? data[0].id : null;
+      });
+  }
+  return postoIdPromise;
+}
+
 // Fire-and-forget: falha em silêncio (sem internet, sem credenciais
 // configuradas, etc.) — não é crítico manter isto 100% atualizado ao segundo
 // (doc 16 §2). Nunca deve bloquear nem rebentar o fluxo local do Desktop.
@@ -64,8 +83,8 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    Promise.resolve(
-      supabase.from('contentores_disponiveis').upsert(
+    obterPostoId(supabase)
+      .then((postoId) => supabase.from('contentores_disponiveis').upsert(
         {
           id: contentor.id,
           nome: contentor.nome,
@@ -73,11 +92,11 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
           estado: contentor.estado,
           bloqueado: contentor.bloqueado,
           padrao_global: contentor.padraoGlobal,
+          ...(postoId ? { posto_id: postoId } : {}),
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'id' },
-      ),
-    )
+      ))
       .then(({ error }) => {
         if (error) console.warn('[sync] Falha ao atualizar contentores_disponiveis:', error.message);
       })

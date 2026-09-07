@@ -193,8 +193,10 @@ function vazioParaNull(v: string | null): string | null {
   return v && v.trim() ? v.trim() : null;
 }
 
-export async function enviarCargasPendentes(userId: string, items: NovaCargaPendenteInput[]): Promise<void> {
+export async function enviarCargasPendentes(userId: string, postoId: string | null, items: NovaCargaPendenteInput[]): Promise<void> {
+  if (!postoId) throw new Error('Este utilizador ainda não está associado a um Posto. Contacta o administrador.');
   const rows = items.map((item) => ({
+    posto_id: postoId,
     contentor_id: item.contentorId,
     inserido_por_user_id: userId,
     emissor_nome: item.emissorNome.trim(),

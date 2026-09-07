@@ -40,7 +40,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
     let falhas = 0;
     for (const registo of pendentes) {
       try {
-        await enviarCargasPendentes(pwaUser.id, [registo.item]);
+        await enviarCargasPendentes(pwaUser.id, pwaUser.postoId, [registo.item]);
         await removerDaFila(registo.id);
         enviados += 1;
       } catch (err) {
@@ -79,7 +79,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
       }
 
       try {
-        await enviarCargasPendentes(pwaUser.id, itens);
+        await enviarCargasPendentes(pwaUser.id, pwaUser.postoId, itens);
         return 'enviado';
       } catch {
         // Falha a meio (ex: rede caiu entre o navigator.onLine e o pedido

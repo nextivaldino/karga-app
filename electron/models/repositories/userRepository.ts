@@ -82,6 +82,12 @@ function findByEmail(email: string): User | null {
   return row ? fromRow(row) : null;
 }
 
+function findByName(name: string): User | null {
+  const db = getDatabase();
+  const row = db.prepare<[string], UserRow>('SELECT * FROM users WHERE lower(name) = lower(?)').get(name);
+  return row ? fromRow(row) : null;
+}
+
 function findById(id: string): User | null {
   const db = getDatabase();
   const row = db.prepare<[string], UserRow>('SELECT * FROM users WHERE id = ?').get(id);
@@ -194,6 +200,7 @@ function listQuickLogin(): { id: string; name: string; avatar: string | null }[]
 export const userRepository = {
   create,
   findByEmail,
+  findByName,
   findById,
   list,
   count,

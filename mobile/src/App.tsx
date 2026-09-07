@@ -17,9 +17,10 @@ import { HomePage } from '@/pages/HomePage';
 import { CargasPage } from '@/pages/CargasPage';
 import { MensagensPage } from '@/pages/MensagensPage';
 import { DefinicoesPage } from '@/pages/DefinicoesPage';
+import { RootPanelPage } from '@/pages/RootPanelPage';
 
 function AppShell(): React.JSX.Element {
-  const { loading, session, mustChangePassword } = useAuth();
+  const { loading, session, mustChangePassword, pwaUser } = useAuth();
   const { page } = useNavigation();
   const [trocarPasswordAberto, setTrocarPasswordAberto] = useState(false);
 
@@ -32,6 +33,12 @@ function AppShell(): React.JSX.Element {
   if (trocarPasswordAberto) {
     return <TrocarPasswordPage onCancel={() => setTrocarPasswordAberto(false)} onDone={() => setTrocarPasswordAberto(false)} />;
   }
+
+  if (mustChangePassword) {
+    return <TrocarPasswordPage onCancel={() => undefined} onDone={() => undefined} />;
+  }
+
+  if (pwaUser?.tipoAcesso === 'root') return <RootPanelPage />;
 
   return (
     <div className="flex h-full flex-col">
@@ -53,6 +60,10 @@ function AppShell(): React.JSX.Element {
 }
 
 export default function App(): React.JSX.Element {
+  if (new URLSearchParams(window.location.search).get('root') === 'demo') {
+    return <RootPanelPage demo />;
+  }
+
   return (
     <ThemeProvider>
       <AuthProvider>

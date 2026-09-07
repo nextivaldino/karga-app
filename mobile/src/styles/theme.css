@@ -136,3 +136,40 @@ textarea {
     box-shadow: var(--shadow-soft);
   }
 }
+
+@media (max-width: 767px) {
+  .root-panel-sidebar {
+    display: none;
+  }
+}
+
+/* O painel Root segue os tokens do Configuracoes.tsx do Desktop, sem
+   alterar a paleta touch do restante da PWA. */
+.root-panel-theme {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #eff6ff;
+  --color-primary-rgb: 59 130 246;
+  --color-success: #16a34a;
+  --color-success-rgb: 22 163 74;
+  --color-error: #dc2626;
+  --color-error-rgb: 220 38 38;
+  --color-warning: #d97706;
+  --color-warning-rgb: 217 119 6;
+  --bg-app: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-header: rgba(248, 250, 252, 0.88);
+  --bg-input: #f8fafc;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary: #94a3b8;
+  --border: #e2e8f0;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-medium: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --radius-control: 9px;
+  --radius-surface: 12px;
+}
+
+.root-panel-theme .card-surface {
+  box-shadow: var(--shadow-soft);
+}

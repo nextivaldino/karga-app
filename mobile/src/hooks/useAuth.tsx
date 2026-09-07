@@ -30,6 +30,9 @@ async function fetchPwaUser(authUid: string): Promise<PwaUser | null> {
     ativo: data.ativo,
     authUid: data.auth_uid,
     contentorPadraoId: data.contentor_padrao_id,
+    postoId: data.posto_id ?? null,
+    username: data.username ?? null,
+    tipoAcesso: data.tipo_acesso ?? 'user',
   };
 }
 

@@ -52,8 +52,11 @@ export async function completeSetup(input: SetupInput): Promise<PublicUser> {
   return currentUser;
 }
 
-export async function login(email: string, password: string): Promise<PublicUser> {
-  const user = userRepository.findByEmail(email.toLowerCase().trim());
+export async function login(identifier: string, password: string): Promise<PublicUser> {
+  const normalizedIdentifier = identifier.trim();
+  const user = normalizedIdentifier.includes('@')
+    ? userRepository.findByEmail(normalizedIdentifier.toLowerCase())
+    : userRepository.findByName(normalizedIdentifier);
   if (!user || !user.active) {
     throw new Error('Credenciais inválidas.');
   }

@@ -130,6 +130,7 @@ function syncDisponivel(contentor: Contentor): void {
     nome: contentor.nome,
     codigo: contentor.codigo,
     estado: contentor.estado,
+    bloqueado: contentor.bloqueado,
     padraoGlobal: contentor.padraoGlobal,
   });
 }
@@ -335,7 +336,9 @@ function setFlag(id: string, coluna: 'bloqueado' | 'oculto', valor: boolean): Co
   if (!existing) return null;
 
   db.prepare(`UPDATE contentores SET ${coluna} = ?, updated_at = ? WHERE id = ?`).run(valor ? 1 : 0, nowIso(), id);
-  return findById(id);
+  const updated = findById(id);
+  if (updated) syncDisponivel(updated);
+  return updated;
 }
 
 function bloquear(id: string): Contentor | null {

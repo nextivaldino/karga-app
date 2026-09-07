@@ -1,5 +1,5 @@
 appId: com.nextlab.kragadesktop
-productName: Kraga Desktop
+productName: KragaDesktop
 directories:
   output: release
   buildResources: build
@@ -20,7 +20,14 @@ win:
   icon: icons/karga.icns
 linux:
   target:
-    - AppImage
     - deb
   category: Office
+  executableName: kraga-desktop
+  packageCategory: utility
   icon: icons/karga.icns
+  desktop:
+    Name: Kraga Desktop
+    Comment: Gestão de cargas consolidadas e expedições marítimas
+    Terminal: false
+    Type: Application
+    Categories: Office;

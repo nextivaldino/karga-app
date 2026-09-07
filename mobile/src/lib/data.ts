@@ -1,12 +1,63 @@
 import { supabase } from './supabase';
 import { guardarCache, lerCacheCargas, lerCacheContentores } from './offlineQueue';
-import type { CargaPendente, ContentorDisponivel, Mensagem, NovaCargaPendenteInput } from '@/types';
+import type { CargaPendente, ContentorDisponivel, EstadoPosto, Mensagem, NovaCargaPendenteInput, Posto } from '@/types';
+
+interface PostoRow {
+  id: string;
+  nome: string;
+  pais: string;
+  estado: EstadoPosto;
+  codigo_ativacao: string | null;
+  codigo_usado: boolean;
+  ativado_em: string | null;
+  installation_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function mapPosto(row: PostoRow): Posto {
+  return {
+    id: row.id,
+    nome: row.nome,
+    pais: row.pais,
+    estado: row.estado,
+    codigoAtivacao: row.codigo_ativacao,
+    codigoUsado: row.codigo_usado,
+    ativadoEm: row.ativado_em,
+    installationId: row.installation_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function listarPostosRoot(): Promise<Posto[]> {
+  const { data, error } = await supabase.from('postos').select('*').order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapPosto(row as PostoRow));
+}
+
+export async function criarPostoRoot(nome: string, pais: string): Promise<Posto> {
+  const codigoAtivacao = `KG-${crypto.randomUUID().slice(0, 4).toUpperCase()}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`;
+  const { data, error } = await supabase
+    .from('postos')
+    .insert({ nome: nome.trim(), pais: pais.trim(), codigo_ativacao: codigoAtivacao })
+    .select('*')
+    .single();
+  if (error || !data) throw new Error(error?.message ?? 'Não foi possível criar o Posto.');
+  return mapPosto(data as PostoRow);
+}
+
+export async function alterarEstadoPostoRoot(id: string, estado: Extract<EstadoPosto, 'ativo' | 'suspenso' | 'bloqueado'>): Promise<void> {
+  const { error } = await supabase.from('postos').update({ estado, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
 
 interface ContentorRow {
   id: string;
   nome: string;
   codigo: string;
   estado: string;
+  bloqueado: boolean;
   padrao_global: boolean;
   updated_at: string;
 }
@@ -17,6 +68,7 @@ function mapContentor(row: ContentorRow): ContentorDisponivel {
     nome: row.nome,
     codigo: row.codigo,
     estado: row.estado,
+    bloqueado: row.bloqueado,
     padraoGlobal: row.padrao_global,
     updatedAt: row.updated_at,
   };
@@ -27,6 +79,7 @@ async function buscarContentoresDoServidor(): Promise<ContentorDisponivel[]> {
     .from('contentores_disponiveis')
     .select('*')
     .eq('estado', 'aberto')
+    .eq('bloqueado', false)
     .order('codigo', { ascending: true });
   if (error) throw new Error(error.message);
   const contentores = (data ?? []).map(mapContentor);

@@ -52,6 +52,7 @@ interface ContentorDisponivel {
   nome: string;
   codigo: string;
   estado: string;
+  bloqueado: boolean;
   padraoGlobal: boolean;
 }
 
@@ -70,6 +71,7 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
           nome: contentor.nome,
           codigo: contentor.codigo,
           estado: contentor.estado,
+          bloqueado: contentor.bloqueado,
           padrao_global: contentor.padraoGlobal,
           updated_at: new Date().toISOString(),
         },

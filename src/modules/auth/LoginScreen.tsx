@@ -141,8 +141,8 @@ export function LoginScreen(): React.JSX.Element {
           >
             <div className="flex flex-col gap-3">
               <FloatingLabelInput
-                label="Email"
-                type="email"
+                label="Email ou nome"
+                type="text"
                 icon={<EnvelopeSimple size={16} />}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

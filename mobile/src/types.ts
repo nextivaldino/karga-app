@@ -104,10 +104,19 @@ export interface Posto {
 // Cargas enquanto está na fila offline (doc 19 §6).
 export type EstadoItemFila = 'fila' | 'erro';
 
+// 'transitorio' — vale a pena tentar sozinho outra vez (rede, erro
+// desconhecido); 'permanente' — repetir sozinho nunca vai resolver
+// (sessão expirada, sem posto, contentor inexistente), precisa de ação
+// humana. null enquanto o item nunca falhou.
+export type TipoErroFila = 'transitorio' | 'permanente';
+
 export interface ItemFilaOffline {
   id: string;
   item: NovaCargaPendenteInput;
   estado: EstadoItemFila;
   criadoEm: string;
   ultimoErro: string | null;
+  tentativas: number;
+  ultimaTentativaEm: string | null;
+  tipoErro: TipoErroFila | null;
 }

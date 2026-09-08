@@ -248,7 +248,7 @@ function GrupoContactoHeader({
 export function CargasPage(): React.JSX.Element {
   const { theme } = useTheme();
   const { abrir } = useNovaCargaOverlay();
-  const { fila, removerItem, processarFila } = useFilaOffline();
+  const { fila, removerItem, reenviarItem } = useFilaOffline();
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -363,7 +363,7 @@ export function CargasPage(): React.JSX.Element {
   function acoesPara(l: LinhaCarga): AcaoLinhaCarga[] {
     if (l.estado === 'fila' || l.estado === 'erro') {
       return [
-        { label: 'Enviar', icon: Send, onClick: () => void processarFila() },
+        { label: 'Enviar', icon: Send, onClick: () => l.filaId && void reenviarItem(l.filaId) },
         { label: 'Editar', icon: Pencil, onClick: () => void handleEditar(l) },
         { label: 'Eliminar', icon: Trash2, destrutiva: true, onClick: () => l.filaId && void removerItem(l.filaId) },
       ];

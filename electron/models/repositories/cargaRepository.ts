@@ -4,7 +4,7 @@ import { computeNextCode } from '../codeSequence';
 import { settingsRepository } from './settingsRepository';
 import { contentorRepository } from './contentorRepository';
 import { contactoRepository } from './contactoRepository';
-import type { Carga, CargaComEmissor, CreateCargaBatchItem, CreateCargaInput } from '../../../src/types';
+import type { Carga, CargaComEmissor, CargaComPapel, CreateCargaBatchItem, CreateCargaInput } from '../../../src/types';
 
 interface CargaRow {
   id: string;
@@ -189,6 +189,60 @@ function list(filters: ListFilters = {}): CargaComEmissor[] {
   const cargas = rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
   const destinatariosPorCarga = listDestinatariosPorCarga(cargas.map((c) => c.id));
   return cargas.map((c) => ({ ...c, destinatarios: destinatariosPorCarga[c.id] ?? [] }));
+}
+
+interface ListPorContactoFilters {
+  contentorId?: string | null;
+  incluirArquivadas?: boolean;
+}
+
+// Cargas onde o contacto é emissor OU destinatário — usado por Faturação
+// e pelo link "Ver cargas" a partir de Contactos, para cobrir os dois
+// "donos" possíveis de uma carga (quem envia e quem recebe).
+function listarPorContacto(contactoId: string, filtros: ListPorContactoFilters = {}): CargaComPapel[] {
+  const db = getDatabase();
+  const clauses: string[] = [
+    '(cargas.emissor_id = @contactoId OR EXISTS (SELECT 1 FROM carga_destinatarios cd WHERE cd.carga_id = cargas.id AND cd.contacto_id = @contactoId))',
+  ];
+  const params: Record<string, unknown> = { contactoId };
+
+  if (!filtros.incluirArquivadas) {
+    clauses.push(`cargas.estado != 'arquivada'`);
+  }
+  if (filtros.contentorId !== undefined) {
+    if (filtros.contentorId === null) {
+      clauses.push('cargas.contentor_id IS NULL');
+    } else {
+      clauses.push('cargas.contentor_id = @contentorId');
+      params.contentorId = filtros.contentorId;
+    }
+  }
+
+  const where = `WHERE ${clauses.join(' AND ')}`;
+  const rows = db
+    .prepare<
+      Record<string, unknown>,
+      CargaRow & { emissor_nome: string }
+    >(
+      `SELECT DISTINCT cargas.*, contactos.nome as emissor_nome FROM cargas
+       JOIN contactos ON contactos.id = cargas.emissor_id
+       ${where} ORDER BY cargas.created_at DESC`,
+    )
+    .all(params);
+
+  const cargas = rows.map((row) => ({ ...fromRow(row), emissorNome: row.emissor_nome }));
+  const destinatariosPorContactoId = db
+    .prepare<[string], { carga_id: string }>('SELECT carga_id FROM carga_destinatarios WHERE contacto_id = ?')
+    .all(contactoId)
+    .reduce<Set<string>>((set, row) => set.add(row.carga_id), new Set());
+  const destinatariosPorCarga = listDestinatariosPorCarga(cargas.map((c) => c.id));
+
+  return cargas.map((c) => {
+    const papeis: ('emissor' | 'recetor')[] = [];
+    if (c.emissorId === contactoId) papeis.push('emissor');
+    if (destinatariosPorContactoId.has(c.id)) papeis.push('recetor');
+    return { ...c, destinatarios: destinatariosPorCarga[c.id] ?? [], papeis };
+  });
 }
 
 function update(id: string, changes: Partial<CreateCargaInput>): Carga | null {
@@ -564,6 +618,7 @@ export const cargaRepository = {
   createBatch,
   findById,
   list,
+  listarPorContacto,
   update,
   archive,
   moverEmLote,

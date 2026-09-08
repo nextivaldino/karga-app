@@ -8,6 +8,10 @@ import type { Contentor } from '@/types';
 interface FaturacaoPageProps {
   contentorId: string | null;
   contentoresAbertos: Contentor[];
+  // Pré-seleciona um cliente ao montar — usado pelo link "Ver cargas" a
+  // partir de Contactos (Configurações). Só lido no mount (ver useState
+  // abaixo); esta página é sempre remontada de raiz ao navegar para cá.
+  initialClienteId?: string | null;
 }
 
 // Página mestre-detalhe: coluna esquerda com todos os clientes
@@ -15,7 +19,7 @@ interface FaturacaoPageProps {
 // selecionado — cargas, ações em linha e em lote, envio de recibo,
 // fatura PDF e edição dos dados do cliente. Substitui tanto a antiga
 // aba "Faturação" (só relatório) como o painel lateral "Contactos".
-export function FaturacaoPage({ contentorId, contentoresAbertos }: FaturacaoPageProps): React.JSX.Element {
+export function FaturacaoPage({ contentorId, contentoresAbertos, initialClienteId }: FaturacaoPageProps): React.JSX.Element {
   const {
     clientes,
     totalClientes,
@@ -32,7 +36,7 @@ export function FaturacaoPage({ contentorId, contentoresAbertos }: FaturacaoPage
     refresh,
   } = useFaturacaoClientes(contentorId);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialClienteId ?? null);
   const [criarClienteAberto, setCriarClienteAberto] = useState(false);
   const selected = clientes.find((c) => c.id === selectedId) ?? null;
 

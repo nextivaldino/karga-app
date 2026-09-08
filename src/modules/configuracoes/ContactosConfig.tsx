@@ -7,6 +7,7 @@ import {
   ChatCircle as MessageCircle,
   PencilSimple as Pencil,
   Plus,
+  Receipt,
   MagnifyingGlass as Search,
   SquaresFour,
   ListBullets,
@@ -20,6 +21,7 @@ import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { formatRelativeTime } from '@/lib/formatRelativeTime';
 import { buildWhatsAppUrl } from '@/lib/whatsapp';
+import { useNavigation } from '@/hooks/useNavigation';
 import { ipcService } from '@/services/ipcService';
 import { ContactoFormModal } from '@/modules/contactos/ContactoFormModal';
 import { TagPicker } from '@/modules/faturacao/TagPicker';
@@ -33,13 +35,23 @@ function AcoesContacto({
   c,
   onEditar,
   onArquivar,
+  onVerCargas,
 }: {
   c: Contacto;
   onEditar: () => void;
   onArquivar: () => void;
+  onVerCargas: () => void;
 }): React.JSX.Element {
   return (
     <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={onVerCargas}
+        title="Ver cargas e enviar recibo"
+        className="flex h-7 w-7 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-bg-app"
+      >
+        <Receipt size={15} />
+      </button>
       {c.telefone ? (
         <button
           type="button"
@@ -81,6 +93,7 @@ function AcoesContacto({
 }
 
 export function ContactosConfig(): React.JSX.Element {
+  const { navigate } = useNavigation();
   const [contactos, setContactos] = useState<Contacto[]>([]);
   const [etiquetasPorContacto, setEtiquetasPorContacto] = useState<Record<string, Etiqueta[]>>({});
   const [todasEtiquetas, setTodasEtiquetas] = useState<Etiqueta[]>([]);
@@ -304,7 +317,12 @@ export function ContactosConfig(): React.JSX.Element {
                   </div>
                 </div>
                 <TagPicker contactoId={c.id} etiquetasDoContacto={etiquetasPorContacto[c.id] ?? []} todasEtiquetas={todasEtiquetas} onChange={() => void carregarEtiquetas(contactos.map((x) => x.id))} />
-                <AcoesContacto c={c} onEditar={() => setEditingContacto(c)} onArquivar={() => setArquivando(c)} />
+                <AcoesContacto
+                  c={c}
+                  onEditar={() => setEditingContacto(c)}
+                  onArquivar={() => setArquivando(c)}
+                  onVerCargas={() => navigate('cargas', { contactoId: c.id })}
+                />
               </div>
             ))}
           </div>
@@ -340,7 +358,12 @@ export function ContactosConfig(): React.JSX.Element {
                 </p>
                 <div className="mt-auto flex items-center justify-between border-t border-border pt-2">
                   <TagPicker contactoId={c.id} etiquetasDoContacto={etiquetasPorContacto[c.id] ?? []} todasEtiquetas={todasEtiquetas} onChange={() => void carregarEtiquetas(contactos.map((x) => x.id))} />
-                  <AcoesContacto c={c} onEditar={() => setEditingContacto(c)} onArquivar={() => setArquivando(c)} />
+                  <AcoesContacto
+                  c={c}
+                  onEditar={() => setEditingContacto(c)}
+                  onArquivar={() => setArquivando(c)}
+                  onVerCargas={() => navigate('cargas', { contactoId: c.id })}
+                />
                 </div>
               </div>
             ))}

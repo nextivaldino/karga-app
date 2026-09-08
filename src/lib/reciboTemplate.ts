@@ -1,4 +1,5 @@
 import { formatValor } from '@/lib/formatValor';
+import { calcularTotaisCargas } from '@/lib/cargaTotais';
 import type { CargaComEmissor } from '@/types';
 
 export interface DadosEmpresaRecibo {
@@ -42,8 +43,7 @@ export function buildReciboTexto(input: {
   const { nomeContacto, cargas, empresa, opcoes } = input;
   const colunas = input.colunas ?? COLUNAS_PADRAO;
   const moeda = cargas[0]?.moeda ?? 'EUR';
-  const totalValor = cargas.reduce((sum, c) => sum + (c.valor ?? 0), 0);
-  const totalDevido = cargas.reduce((sum, c) => sum + (c.estadoPagamento === 'devido' ? (c.valor ?? 0) : 0), 0);
+  const { totalGeral: totalValor, totalDevido } = calcularTotaisCargas(cargas);
   const linhas = cargas.map((c) => {
     let linha = `📦 ${c.codigo} — ${c.nome}`;
     if (colunas.valor) linha += ` — ${formatValor(c.valor, c.moeda)}`;

@@ -1,9 +1,11 @@
+import { calcularTotaisCargas } from '../../src/lib/cargaTotais';
+
 interface FaturaCargaLinha {
   codigo: string;
   nome: string;
   data: string;
   valor: number | null;
-  estado: 'pago' | 'devido';
+  estadoPagamento: 'pago' | 'devido';
 }
 
 interface BuildFaturaHtmlParams {
@@ -30,13 +32,7 @@ function formatData(iso: string): string {
 }
 
 export function buildFaturaHtml(params: BuildFaturaHtmlParams): string {
-  const totalGeral = params.cargas.reduce((sum, c) => sum + (c.valor ?? 0), 0);
-  const totalPago = params.cargas
-    .filter((c) => c.estado === 'pago')
-    .reduce((sum, c) => sum + (c.valor ?? 0), 0);
-  const totalDevido = params.cargas
-    .filter((c) => c.estado === 'devido')
-    .reduce((sum, c) => sum + (c.valor ?? 0), 0);
+  const { totalGeral, totalPago, totalDevido } = calcularTotaisCargas(params.cargas);
 
   const linhas = params.cargas
     .map(
@@ -46,7 +42,7 @@ export function buildFaturaHtml(params: BuildFaturaHtmlParams): string {
           <td>${escapeHtml(c.nome)}</td>
           <td>${formatData(c.data)}</td>
           <td class="right">${formatMoeda(c.valor ?? 0, params.moeda)}</td>
-          <td class="${c.estado === 'pago' ? 'tag-pago' : 'tag-devido'}">${c.estado === 'pago' ? 'Pago' : 'Devido'}</td>
+          <td class="${c.estadoPagamento === 'pago' ? 'tag-pago' : 'tag-devido'}">${c.estadoPagamento === 'pago' ? 'Pago' : 'Devido'}</td>
         </tr>`,
     )
     .join('');

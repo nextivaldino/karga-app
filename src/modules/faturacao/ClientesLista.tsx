@@ -140,6 +140,14 @@ export function ClientesLista({
                   <span className={`truncate text-[15px] font-medium ${ativo ? 'text-primary' : 'text-text-primary'}`}>
                     {cliente.nome}
                   </span>
+                  {!cliente.papeis.includes('emissor') ? (
+                    <span
+                      className="shrink-0 rounded-pill bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                      title="Só recebe cargas, não é cobrado"
+                    >
+                      Recetor
+                    </span>
+                  ) : null}
                   <span className="ml-auto shrink-0 text-[11px] text-text-tertiary">{cliente.totalCargas} cargas</span>
                 </div>
                 <div className="flex items-center justify-between pl-[30px]">

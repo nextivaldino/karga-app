@@ -24,7 +24,7 @@ import { EnviarResumoModal } from '@/modules/cargas/EnviarResumoModal';
 import { FaturaPreviewModal } from '@/modules/cargas/FaturaPreviewModal';
 import { useCargaAcoesMenu } from '@/modules/cargas/useCargaAcoesMenu';
 import { TagPicker } from './TagPicker';
-import type { CargaComEmissor, ClienteFaturacao, Contentor, Etiqueta } from '@/types';
+import type { CargaComEmissor, CargaComPapel, ClienteFaturacao, Contentor, Etiqueta } from '@/types';
 
 interface ClientePainelProps {
   cliente: ClienteFaturacao;
@@ -65,7 +65,7 @@ export function ClientePainel({
   todasEtiquetas,
   onDataChanged,
 }: ClientePainelProps): React.JSX.Element {
-  const [cargas, setCargas] = useState<CargaComEmissor[]>([]);
+  const [cargas, setCargas] = useState<CargaComPapel[]>([]);
   const [contentoresPorId, setContentoresPorId] = useState<Record<string, Contentor>>({});
   const [colapsados, setColapsados] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -94,8 +94,7 @@ export function ClientePainel({
 
   async function carregar(): Promise<void> {
     setLoading(true);
-    const cargasPromise = ipcService.cargas.list({
-      emissorId: cliente.id,
+    const cargasPromise = ipcService.cargas.listarPorContacto(cliente.id, {
       contentorId: escopoTodos ? undefined : (contentorId ?? undefined),
     });
     const contentoresPromise = escopoTodos
@@ -162,15 +161,21 @@ export function ClientePainel({
 
   const grupos = escopoTodos
     ? Object.entries(
-        cargas.reduce<Record<string, CargaComEmissor[]>>((acc, c) => {
+        cargas.reduce<Record<string, CargaComPapel[]>>((acc, c) => {
           const key = c.contentorId ?? 'sem-contentor';
           (acc[key] ??= []).push(c);
           return acc;
         }, {}),
       ).sort(([a], [b]) => (contentoresPorId[a]?.codigo ?? '').localeCompare(contentoresPorId[b]?.codigo ?? ''))
-    : [[contentorId ?? 'sem-contentor', cargas] as [string, CargaComEmissor[]]];
+    : [[contentorId ?? 'sem-contentor', cargas] as [string, CargaComPapel[]]];
 
-  function renderLinhaCarga(carga: CargaComEmissor): React.JSX.Element {
+  const LABEL_PAPEL: Record<string, string> = {
+    emissor: 'Emissor',
+    recetor: 'Recetor',
+    'emissor,recetor': 'Emissor + Recetor',
+  };
+
+  function renderLinhaCarga(carga: CargaComPapel): React.JSX.Element {
     const numero = cargas.indexOf(carga) + 1;
     const tint = ROW_TINTS[(numero - 1) % ROW_TINTS.length];
     return (
@@ -191,7 +196,14 @@ export function ClientePainel({
           className="h-4 w-4"
         />
         <span className="truncate text-[12px]">{carga.codigo}</span>
-        <span className="truncate">{carga.nome}</span>
+        <span className="flex min-w-0 items-center gap-1.5 truncate">
+          <span className="truncate">{carga.nome}</span>
+          {carga.papeis.length > 0 ? (
+            <span className="shrink-0 rounded-pill bg-bg-app px-1.5 py-0.5 text-[10px] font-medium text-text-tertiary">
+              {LABEL_PAPEL[carga.papeis.join(',')] ?? carga.papeis.join(' + ')}
+            </span>
+          ) : null}
+        </span>
         <span>{formatValor(carga.valor, carga.moeda)}</span>
         <button
           type="button"

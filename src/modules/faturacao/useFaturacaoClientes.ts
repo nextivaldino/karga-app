@@ -43,6 +43,7 @@ export function useFaturacaoClientes(contentorId: string | null) {
             totalCargas: resumo.totalCargas,
             valorDevido: resumo.valorDevido,
             valorPago: resumo.valorPago,
+            papeis: resumo.papeis,
             etiquetas: etiquetasPorContacto[resumo.contactoId] ?? [],
           },
         ];

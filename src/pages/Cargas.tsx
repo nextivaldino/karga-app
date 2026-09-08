@@ -47,6 +47,7 @@ export function Cargas(): React.JSX.Element {
   const [editingCarga, setEditingCarga] = useState<CargaComEmissor | null>(null);
   const [modoEditor, setModoEditor] = useState(false);
   const [subAba, setSubAba] = useState<SubAba>('lista');
+  const [contactoIdFaturacao, setContactoIdFaturacao] = useState<string | null>(null);
   const [origensPwa, setOrigensPwa] = useState<OrigemPwaLinha[]>([]);
   const [exportando, setExportando] = useState<Contentor | null>(null);
 
@@ -84,9 +85,12 @@ export function Cargas(): React.JSX.Element {
       setSubAba('lista');
       setModoEditor(false);
       handleOpenNovaCarga();
+    } else if (params?.contactoId) {
+      setSubAba('faturacao');
+      setContactoIdFaturacao(params.contactoId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, params?.entidadeId, params?.contentorId, params?.novaCarga, params?.modoEditor]);
+  }, [page, params?.entidadeId, params?.contentorId, params?.novaCarga, params?.modoEditor, params?.contactoId]);
 
   const filtroAtivo = PAGAMENTO_FILTROS.find((f) => f.value === estadoPagamento);
   const usuariosPorId = useUsuariosPorId();
@@ -226,7 +230,11 @@ export function Cargas(): React.JSX.Element {
 
       <div className="min-h-0 flex-1">
         {subAba === 'faturacao' ? (
-          <FaturacaoPage contentorId={selectedContentorId} contentoresAbertos={contentoresAbertos} />
+          <FaturacaoPage
+            contentorId={selectedContentorId}
+            contentoresAbertos={contentoresAbertos}
+            initialClienteId={contactoIdFaturacao}
+          />
         ) : modoEditor ? (
           <CargasEditorGrid contentorId={selectedContentorId} contentoresAbertos={contentoresAbertos} onDataChanged={refreshCargas} />
         ) : (

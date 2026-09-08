@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChatCircle as MessageCircle, PaperPlaneTilt as Send } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTopBarSlot } from '@/hooks/useTopBarSlot';
@@ -6,8 +6,42 @@ import { enviarMensagem, listMensagens, marcarMensagemLida } from '@/lib/data';
 import { EMPRESA_SENTINEL_ID } from '@/lib/constants';
 import { toast } from '@/components/ui/Toast';
 import { PullToRefresh } from '@/components/PullToRefresh';
-import { formatRelativo } from '@/lib/formatRelativo';
 import type { Mensagem } from '@/types';
+
+function mesmoDia(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function rotuloDia(iso: string): string {
+  const data = new Date(iso);
+  const hoje = new Date();
+  if (mesmoDia(data, hoje)) return 'Hoje';
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (mesmoDia(data, ontem)) return 'Ontem';
+  return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(data);
+}
+
+function formatHora(iso: string): string {
+  return new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+}
+
+interface GrupoDia {
+  chave: string;
+  rotulo: string;
+  mensagens: Mensagem[];
+}
+
+function agruparPorDia(mensagens: Mensagem[]): GrupoDia[] {
+  const grupos: GrupoDia[] = [];
+  for (const m of mensagens) {
+    const chave = new Date(m.createdAt).toDateString();
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.chave === chave) ultimo.mensagens.push(m);
+    else grupos.push({ chave, rotulo: rotuloDia(m.createdAt), mensagens: [m] });
+  }
+  return grupos;
+}
 
 export function MensagensPage(): React.JSX.Element {
   const { pwaUser } = useAuth();
@@ -29,6 +63,14 @@ export function MensagensPage(): React.JSX.Element {
   useEffect(() => {
     void recarregar().finally(() => setLoading(false));
   }, []);
+
+  // listMensagens vem mais recente primeiro (para o feed antigo) — a
+  // conversa em bolhas lê-se do mais antigo para o mais recente.
+  const ordenadas = useMemo(
+    () => [...mensagens].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    [mensagens],
+  );
+  const grupos = useMemo(() => agruparPorDia(ordenadas), [ordenadas]);
 
   async function handleAbrir(m: Mensagem): Promise<void> {
     if (m.lida || m.paraUserId !== pwaUser?.id) return;
@@ -65,26 +107,40 @@ export function MensagensPage(): React.JSX.Element {
             <p className="text-[14px] text-text-tertiary">Ainda não há mensagens.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
-            {mensagens.map((m) => {
-              const recebida = m.paraUserId === pwaUser?.id;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => void handleAbrir(m)}
-                  className={`flex min-h-touch flex-col items-start gap-1 rounded-control border border-border p-3 text-left ${
-                    recebida && !m.lida ? 'bg-primary-light' : 'bg-bg-surface'
-                  }`}
-                >
-                  <span className="text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
-                    {recebida ? 'Recebida' : 'Enviada'}
+          <div className="flex flex-col gap-1">
+            {grupos.map((grupo) => (
+              <div key={grupo.chave} className="flex flex-col gap-1">
+                <div className="my-2 flex justify-center">
+                  <span className="rounded-pill bg-bg-surface px-2.5 py-0.5 text-[11px] font-medium text-text-tertiary">
+                    {grupo.rotulo}
                   </span>
-                  <span className="text-[15px] text-text-primary">{m.texto}</span>
-                  <span className="text-[12px] text-text-tertiary">{formatRelativo(m.createdAt)}</span>
-                </button>
-              );
-            })}
+                </div>
+                {grupo.mensagens.map((m) => {
+                  const recebida = m.paraUserId === pwaUser?.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => void handleAbrir(m)}
+                      className={`flex min-h-touch w-full ${recebida ? 'justify-start' : 'justify-end'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-3 py-2 text-left ${
+                          recebida
+                            ? `rounded-bl-md border border-border text-text-primary ${!m.lida ? 'bg-primary-light' : 'bg-bg-surface'}`
+                            : 'rounded-br-md bg-primary text-white'
+                        }`}
+                      >
+                        <p className="text-[15px] whitespace-pre-wrap">{m.texto}</p>
+                        <p className={`mt-0.5 text-[11px] ${recebida ? 'text-text-tertiary' : 'text-white/70'}`}>
+                          {formatHora(m.createdAt)}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
       </PullToRefresh>

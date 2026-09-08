@@ -1,6 +1,6 @@
 import { requireSupabaseClient } from './supabaseClient';
 import { userRepository } from '../models/repositories/userRepository';
-import type { Mensagem, ThreadMensagemNaoLida } from '../../src/types';
+import type { ConversaResumo, Mensagem } from '../../src/types';
 
 // Mesmo valor fixo usado no Mobile (mobile/src/lib/constants.ts) — não é
 // um pwa_user real, é só o "remetente/destinatário" combinado para
@@ -72,27 +72,50 @@ export async function marcarLidas(pwaUserId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-// Quem tem mensagens por ler — o `de_user_id` é sempre um `users.id`
-// local (o mesmo utilizador PWA-habilitado gerido em "Utilizadores"),
-// por isso o nome vem do SQLite local, não do Supabase.
-export async function listarThreadsComNaoLidas(): Promise<ThreadMensagemNaoLida[]> {
+// Lista "estilo WhatsApp": todos os utilizadores PWA-habilitados (com ou
+// sem histórico), última mensagem trocada e contagem de não lidas — para
+// o sino poder mostrar sempre quem existe, não só quem tem algo por ler.
+export async function listarConversas(): Promise<ConversaResumo[]> {
   const supabase = requireSupabaseClient();
+  const pwaUsers = userRepository.list().filter((u) => u.pwaHabilitado);
+
   const { data, error } = await supabase
     .from('mensagens')
-    .select('de_user_id')
-    .eq('para_user_id', EMPRESA_SENTINEL_ID)
-    .eq('lida', false);
+    .select('*')
+    .or(`de_user_id.eq.${EMPRESA_SENTINEL_ID},para_user_id.eq.${EMPRESA_SENTINEL_ID}`)
+    .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
-  const contagem = new Map<string, number>();
+  // Mais recente primeiro (query já vem ordenada DESC) — a primeira linha
+  // encontrada por contraparte é sempre a última mensagem trocada com ela.
+  const porContraparte = new Map<string, { ultima: MensagemRow; naoLidas: number }>();
   for (const row of data ?? []) {
-    contagem.set(row.de_user_id, (contagem.get(row.de_user_id) ?? 0) + 1);
+    const contraparteId = row.de_user_id === EMPRESA_SENTINEL_ID ? row.para_user_id : row.de_user_id;
+    const naoLida = row.para_user_id === EMPRESA_SENTINEL_ID && !row.lida;
+    const atual = porContraparte.get(contraparteId);
+    if (!atual) {
+      porContraparte.set(contraparteId, { ultima: row, naoLidas: naoLida ? 1 : 0 });
+    } else if (naoLida) {
+      atual.naoLidas += 1;
+    }
   }
 
-  const threads: ThreadMensagemNaoLida[] = [];
-  for (const [userId, total] of contagem) {
-    const user = userRepository.findById(userId);
-    threads.push({ userId, nome: user?.name ?? 'Utilizador removido', total });
-  }
-  return threads.sort((a, b) => b.total - a.total);
+  return pwaUsers
+    .map((u): ConversaResumo => {
+      const agregado = porContraparte.get(u.id);
+      return {
+        userId: u.id,
+        nome: u.name,
+        ultimaMensagemTexto: agregado?.ultima.texto ?? null,
+        ultimaMensagemEm: agregado?.ultima.created_at ?? null,
+        ultimaMensagemDeEmpresa: agregado ? agregado.ultima.de_user_id === EMPRESA_SENTINEL_ID : false,
+        naoLidas: agregado?.naoLidas ?? 0,
+      };
+    })
+    .sort((a, b) => {
+      if (!a.ultimaMensagemEm && !b.ultimaMensagemEm) return a.nome.localeCompare(b.nome);
+      if (!a.ultimaMensagemEm) return 1;
+      if (!b.ultimaMensagemEm) return -1;
+      return b.ultimaMensagemEm.localeCompare(a.ultimaMensagemEm);
+    });
 }

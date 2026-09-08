@@ -1,35 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CaretLeft, Envelope, PaperPlaneTilt as Send } from '@phosphor-icons/react';
+import { CaretLeft, Envelope, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { toast } from '@/components/ui/Toast';
-import { cleanIpcError } from '@/lib/cleanIpcError';
+import { ChatConversa } from '@/modules/mensagens/ChatConversa';
 import { ipcService } from '@/services/ipcService';
 import { useAvatarPorUsuario } from '@/hooks/useAvatarPorUsuario';
-import type { Mensagem, ThreadMensagemNaoLida } from '@/types';
+import type { ConversaResumo } from '@/types';
 
-function formatHora(iso: string): string {
-  return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(iso));
+function mesmoDia(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-// Envelope simples com badge vermelho — sem texto ao lado, para não
-// competir por espaço com o resto do cabeçalho (era um pill grande com
-// "N mensagens" escrito). Clicar expande a lista de conversas por ler;
-// clicar numa conversa não navega para lado nenhum — o mesmo dropdown
-// vira o chat, com histórico e campo de resposta, para responder sem
+// Hora se for hoje, "Ontem", ou dia/mês curto — estilo WhatsApp na lista
+// de conversas (diferente do separador de data dentro da conversa, que
+// mostra o rótulo completo).
+function formatHoraLista(iso: string): string {
+  const data = new Date(iso);
+  const hoje = new Date();
+  if (mesmoDia(data, hoje)) {
+    return new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' }).format(data);
+  }
+  const ontem = new Date(hoje);
+  ontem.setDate(hoje.getDate() - 1);
+  if (mesmoDia(data, ontem)) return 'Ontem';
+  return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit' }).format(data);
+}
+
+// Envelope com badge vermelho — sempre visível (mesmo sem nada por ler,
+// para se poder iniciar uma conversa proativamente). Clicar abre a lista
+// de conversas estilo WhatsApp (todos os utilizadores PWA, última
+// mensagem, hora, não lidas); clicar numa conversa vira chat inline, sem
 // perder o contexto de onde se estava na app.
-export function MensagensBell(): React.JSX.Element | null {
+export function MensagensBell(): React.JSX.Element {
   const [total, setTotal] = useState(0);
-  const [threads, setThreads] = useState<ThreadMensagemNaoLida[] | null>(null);
+  const [conversas, setConversas] = useState<ConversaResumo[] | null>(null);
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
-  const [conversaCom, setConversaCom] = useState<ThreadMensagemNaoLida | null>(null);
-  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [carregandoConversa, setCarregandoConversa] = useState(false);
-  const [texto, setTexto] = useState('');
-  const [enviando, setEnviando] = useState(false);
+  const [conversaCom, setConversaCom] = useState<ConversaResumo | null>(null);
+  const [busca, setBusca] = useState('');
   const ref = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const avatarPorUsuario = useAvatarPorUsuario();
 
   async function carregarTotal(): Promise<void> {
@@ -37,10 +46,17 @@ export function MensagensBell(): React.JSX.Element | null {
     setTotal(n);
   }
 
+  function carregarConversas(): void {
+    void ipcService.mensagens.listarConversas().then(setConversas);
+  }
+
   useEffect(() => {
     void carregarTotal();
     const interval = setInterval(() => void carregarTotal(), 60_000);
-    const onAtualizada = (): void => void carregarTotal();
+    const onAtualizada = (): void => {
+      void carregarTotal();
+      carregarConversas();
+    };
     window.addEventListener('mensagens:atualizada', onAtualizada);
     return () => {
       clearInterval(interval);
@@ -73,155 +89,114 @@ export function MensagensBell(): React.JSX.Element | null {
     return () => window.removeEventListener('resize', updatePos);
   }, [open]);
 
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [mensagens]);
-
   function handleToggle(): void {
     const next = !open;
     setOpen(next);
     if (next) {
       setConversaCom(null);
-      void ipcService.mensagens.listarThreadsComNaoLidas().then(setThreads);
+      setBusca('');
+      carregarConversas();
     }
   }
 
-  function abrirConversa(thread: ThreadMensagemNaoLida): void {
-    setConversaCom(thread);
-    setTexto('');
-    setCarregandoConversa(true);
-    ipcService.mensagens
-      .listarConversa(thread.userId)
-      .then(setMensagens)
-      .catch((err: unknown) => toast.error(cleanIpcError(err)))
-      .finally(() => setCarregandoConversa(false));
-    // Abrir a conversa já conta como "ler" — desconta na hora, sem
-    // esperar pelo próximo poll de 60s, e atualiza a lista de threads.
-    void ipcService.mensagens.marcarLidas(thread.userId).then(() => {
-      window.dispatchEvent(new Event('mensagens:atualizada'));
-      void ipcService.mensagens.listarThreadsComNaoLidas().then(setThreads);
-    });
+  function voltarLista(): void {
+    setConversaCom(null);
+    carregarConversas();
   }
 
-  async function handleEnviar(): Promise<void> {
-    if (!conversaCom || !texto.trim()) return;
-    setEnviando(true);
-    try {
-      await ipcService.mensagens.enviar(conversaCom.userId, texto);
-      setTexto('');
-      const dados = await ipcService.mensagens.listarConversa(conversaCom.userId);
-      setMensagens(dados);
-    } catch (err) {
-      toast.error(cleanIpcError(err));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  if (total === 0) return null;
+  const termo = busca.trim().toLowerCase();
+  const conversasFiltradas = (conversas ?? []).filter((c) => !termo || c.nome.toLowerCase().includes(termo));
 
   return (
     <div ref={ref} className="relative z-[90]">
       <button
         type="button"
         onClick={handleToggle}
-        title={`${total} mensagem${total === 1 ? '' : 's'} por ler`}
+        title={total > 0 ? `${total} mensagem${total === 1 ? '' : 's'} por ler` : 'Mensagens'}
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
       >
         <Envelope size={18} weight="bold" />
-        <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
-          {total > 99 ? '99+' : total}
-        </span>
+        {total > 0 ? (
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
+            {total > 99 ? '99+' : total}
+          </span>
+        ) : null}
       </button>
 
       {open && dropdownPos ? createPortal(
         <div
           id="mensagens-portal"
-          className="fixed z-[100] flex w-80 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg"
+          className="fixed z-[100] flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg"
           style={{ top: dropdownPos.top, right: dropdownPos.right }}
         >
           {conversaCom ? (
             <>
-              <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+              <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
                 <button
                   type="button"
-                  onClick={() => setConversaCom(null)}
+                  onClick={voltarLista}
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-bg-app"
                 >
                   <CaretLeft size={15} />
                 </button>
-                <UserAvatar avatar={avatarPorUsuario.get(conversaCom.userId)} size={22} />
+                <UserAvatar avatar={avatarPorUsuario.get(conversaCom.userId)} size={26} />
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-primary">{conversaCom.nome}</span>
               </div>
-
-              <div ref={listRef} className="flex max-h-72 min-h-[160px] flex-col gap-2 overflow-y-auto p-3">
-                {carregandoConversa ? (
-                  <p className="text-[13px] text-text-tertiary">A carregar...</p>
-                ) : mensagens.length === 0 ? (
-                  <p className="text-[13px] text-text-tertiary">Ainda não há mensagens com {conversaCom.nome}.</p>
-                ) : (
-                  mensagens.map((m) => {
-                    const enviadaPelaEmpresa = m.deUserId !== conversaCom.userId;
-                    return (
-                      <div key={m.id} className={`flex ${enviadaPelaEmpresa ? 'justify-end' : 'justify-start'}`}>
-                        <div
-                          className={`max-w-[80%] rounded-control px-3 py-2 text-[13px] ${
-                            enviadaPelaEmpresa ? 'bg-primary text-white' : 'bg-bg-app text-text-primary'
-                          }`}
-                        >
-                          <p>{m.texto}</p>
-                          <p className={`mt-0.5 text-[10px] ${enviadaPelaEmpresa ? 'text-white/70' : 'text-text-tertiary'}`}>
-                            {formatHora(m.createdAt)}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 border-t border-border p-2">
-                <input
-                  value={texto}
-                  onChange={(e) => setTexto(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void handleEnviar();
-                  }}
-                  placeholder="Escreve uma mensagem..."
-                  className="min-h-[36px] flex-1 rounded-control border border-border bg-bg-input px-2.5 text-[13px] text-text-primary outline-none focus:border-primary"
-                />
-                <button
-                  type="button"
-                  disabled={enviando || !texto.trim()}
-                  onClick={() => void handleEnviar()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-primary text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
+              <ChatConversa contraparteId={conversaCom.userId} nome={conversaCom.nome} className="flex-1" />
             </>
           ) : (
             <>
-              <div className="border-b border-border px-3 py-2 text-[13px] font-semibold text-text-primary">Mensagens por ler</div>
-              <div className="max-h-72 overflow-y-auto py-1">
-                {threads == null ? (
+              <div className="shrink-0 border-b border-border p-2.5">
+                <div className="flex h-8 items-center gap-2 rounded-control border border-border bg-bg-input px-2.5">
+                  <Search size={13} className="shrink-0 text-text-tertiary" />
+                  <input
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    placeholder="Pesquisar conversas..."
+                    className="h-full flex-1 bg-transparent text-[12px] text-text-primary outline-none placeholder:text-text-tertiary"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto py-1">
+                {conversas == null ? (
                   <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">A carregar...</p>
-                ) : threads.length === 0 ? (
-                  <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">Nada por ler.</p>
+                ) : conversasFiltradas.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">
+                    {termo ? `Nenhuma conversa com "${busca}".` : 'Nenhum utilizador com acesso PWA.'}
+                  </p>
                 ) : (
-                  threads.map((t) => (
+                  conversasFiltradas.map((c) => (
                     <button
-                      key={t.userId}
+                      key={c.userId}
                       type="button"
-                      onClick={() => abrirConversa(t)}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-bg-app"
+                      onClick={() => setConversaCom(c)}
+                      className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-bg-app"
                     >
-                      <UserAvatar avatar={avatarPorUsuario.get(t.userId)} size={22} />
-                      <span className="min-w-0 flex-1 truncate text-[13px] text-text-primary">{t.nome}</span>
-                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-pill bg-error px-1 text-[10px] font-semibold text-white">
-                        {t.total}
-                      </span>
+                      <UserAvatar avatar={avatarPorUsuario.get(c.userId)} size={36} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-semibold text-text-primary">{c.nome}</p>
+                        <p className="truncate text-[12px] text-text-tertiary">
+                          {c.ultimaMensagemTexto ? (
+                            <>
+                              {c.ultimaMensagemDeEmpresa ? 'Tu: ' : ''}
+                              {c.ultimaMensagemTexto}
+                            </>
+                          ) : (
+                            <span className="italic">Iniciar conversa</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {c.ultimaMensagemEm ? (
+                          <span className="text-[10px] text-text-tertiary">{formatHoraLista(c.ultimaMensagemEm)}</span>
+                        ) : null}
+                        {c.naoLidas > 0 ? (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-pill bg-primary px-1 text-[10px] font-semibold text-white">
+                            {c.naoLidas}
+                          </span>
+                        ) : null}
+                      </div>
                     </button>
                   ))
                 )}

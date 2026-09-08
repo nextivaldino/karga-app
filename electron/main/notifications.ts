@@ -2,6 +2,7 @@ import { BrowserWindow, Notification } from 'electron';
 import { notificacaoRepository } from '../models/repositories/notificacaoRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
 import { settingsRepository } from '../models/repositories/settingsRepository';
+import { diagnosticoPosto } from '../lib/supabaseClient';
 import type { TipoNotificacao } from '../../src/types';
 
 // Categorias configuráveis em Definições → Notificações — cada uma tem a
@@ -97,10 +98,41 @@ export function verificarContentores(): void {
   }
 }
 
+// Sem `categoria` — este é um erro de configuração crítico (pode levar a
+// misturar/perder cargas entre postos), não deve poder ser silenciado nas
+// preferências de notificações como as categorias normais.
+export async function verificarPostoConfigurado(): Promise<void> {
+  const diagnostico = await diagnosticoPosto();
+  if (diagnostico.estado === 'ok') return;
+
+  const titulo =
+    diagnostico.estado === 'ambiguo'
+      ? 'Vários postos ativos — escolhe o posto desta instalação'
+      : 'Sincronização multi-posto não configurada';
+
+  if (notificacaoRepository.existeSemelhanteRecente(titulo, 'posto-config', JANELA_DEDUPE_HORAS)) return;
+
+  criarNotificacao({
+    tipo: 'erro',
+    titulo,
+    mensagem:
+      diagnostico.estado === 'ambiguo'
+        ? 'Existe mais de um posto ativo no Supabase e esta instalação ainda não tem um posto escolhido. Define-o em Configurações → Sincronização para garantir que só vês as cargas do teu posto.'
+        : 'Não foi possível determinar o posto desta instalação (sem posto ativo ou sem ligação ao Supabase). A sincronização de contentores e utilizadores PWA pode não funcionar corretamente.',
+    linkModulo: 'configuracoes',
+    linkEntidadeId: 'posto-config',
+    nativa: true,
+  });
+}
+
 let intervalo: ReturnType<typeof setInterval> | null = null;
 
 export function iniciarVerificacaoPeriodica(intervaloMs = 30 * 60 * 1000): void {
   verificarContentores();
+  void verificarPostoConfigurado();
   if (intervalo) clearInterval(intervalo);
-  intervalo = setInterval(verificarContentores, intervaloMs);
+  intervalo = setInterval(() => {
+    verificarContentores();
+    void verificarPostoConfigurado();
+  }, intervaloMs);
 }

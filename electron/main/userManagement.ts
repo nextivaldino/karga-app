@@ -8,6 +8,7 @@ import {
   desativarUtilizadorPwaAuth,
   obterEmailUtilizadorPwaAuth,
   reativarUtilizadorPwaAuth,
+  resolverPostoId,
   upsertPwaUser,
 } from '../lib/supabaseClient';
 import type { CreateUserInput, HabilitarPwaResult, PermissaoInput, PublicUser, UserRole, UsuarioComSessao } from '../../src/types';
@@ -89,6 +90,7 @@ export async function editarUsuario(
       ativo: true,
       authUid: updated.pwaAuthUid,
       contentorPadraoId: updated.contentorPadraoId,
+      postoId: await resolverPostoId(),
     });
   }
 
@@ -186,7 +188,7 @@ export async function habilitarPwa(requestedByRole: UserRole, userId: string): P
   } else {
     authUid = await criarUtilizadorPwaAuth(pwaEmail, PASSWORD_PWA_INICIAL);
   }
-  await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid, contentorPadraoId: existing.contentorPadraoId });
+  await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: true, authUid, contentorPadraoId: existing.contentorPadraoId, postoId: await resolverPostoId() });
 
   const updated = userRepository.setPwaStatus(userId, true, authUid);
   return { user: toPublicUser(updated), passwordTemporaria: PASSWORD_PWA_INICIAL, pwaEmail };
@@ -201,7 +203,7 @@ export async function desabilitarPwa(requestedByRole: UserRole, userId: string):
   if (existing.pwaAuthUid) {
     const pwaEmail = await obterEmailUtilizadorPwaAuth(existing.pwaAuthUid);
     await desativarUtilizadorPwaAuth(existing.pwaAuthUid);
-    await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: false, authUid: existing.pwaAuthUid, contentorPadraoId: existing.contentorPadraoId });
+    await upsertPwaUser({ id: existing.id, nome: existing.name, email: pwaEmail, ativo: false, authUid: existing.pwaAuthUid, contentorPadraoId: existing.contentorPadraoId, postoId: await resolverPostoId() });
   }
 
   // Mantém pwa_auth_uid (não o limpa) — a conta no Supabase Auth só é
@@ -264,6 +266,7 @@ export async function setContentorPadraoPwa(
       ativo: true,
       authUid: updated.pwaAuthUid,
       contentorPadraoId: updated.contentorPadraoId,
+      postoId: await resolverPostoId(),
     });
   }
 

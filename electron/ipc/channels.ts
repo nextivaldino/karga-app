@@ -56,6 +56,7 @@ export const IPC_CHANNELS = [
   'contactosNotificados:registar',
   'contactosNotificados:listPorContentor',
   'cargas:list',
+  'cargas:listarPorContacto',
   'cargas:create',
   'cargas:update',
   'cargas:archive',
@@ -109,11 +110,13 @@ export const IPC_CHANNELS = [
   'sync:revisarCarga',
   'sync:importarCarga',
   'sync:rejeitarCarga',
+  'sync:listarPostos',
+  'sync:diagnosticoPosto',
   'mensagens:listarConversa',
   'mensagens:enviar',
   'mensagens:contarNaoLidas',
   'mensagens:marcarLidas',
-  'mensagens:listarThreadsComNaoLidas',
+  'mensagens:listarConversas',
 ] as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[number];

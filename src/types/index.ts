@@ -215,6 +215,12 @@ export interface CargaComEmissor extends Carga {
   destinatarios: string[];
 }
 
+export type PapelContacto = 'emissor' | 'recetor';
+
+export interface CargaComPapel extends CargaComEmissor {
+  papeis: PapelContacto[];
+}
+
 export interface CreateCargaInput {
   codigo: string;
   nome: string;
@@ -287,6 +293,7 @@ export interface ResumoCliente {
   totalCargas: number;
   valorDevido: number;
   valorPago: number;
+  papeis: PapelContacto[];
 }
 
 export interface ClienteFaturacao extends Contacto {
@@ -294,6 +301,7 @@ export interface ClienteFaturacao extends Contacto {
   valorDevido: number;
   valorPago: number;
   etiquetas: Etiqueta[];
+  papeis: PapelContacto[];
 }
 
 export interface HomeResumo {
@@ -416,6 +424,18 @@ export interface RevisaoCargaPendente {
   sugestoes: SugestaoContacto[];
 }
 
+export interface PostoDisponivel {
+  id: string;
+  nome: string;
+  pais: string | null;
+  estado: string;
+}
+
+export interface DiagnosticoPosto {
+  estado: 'ok' | 'ambiguo' | 'indisponivel';
+  postosAtivos: number;
+}
+
 export interface Mensagem {
   id: string;
   deUserId: string;
@@ -425,10 +445,13 @@ export interface Mensagem {
   createdAt: string;
 }
 
-export interface ThreadMensagemNaoLida {
+export interface ConversaResumo {
   userId: string;
   nome: string;
-  total: number;
+  ultimaMensagemTexto: string | null;
+  ultimaMensagemEm: string | null;
+  ultimaMensagemDeEmpresa: boolean;
+  naoLidas: number;
 }
 
 export interface ImportarCargaInput {

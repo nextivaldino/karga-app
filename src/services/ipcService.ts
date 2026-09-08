@@ -3,6 +3,7 @@ import type {
   AuditoriaEntry,
   CanalContacto,
   CargaComEmissor,
+  CargaComPapel,
   Carga,
   ColunaExportacao,
   Contacto,
@@ -30,6 +31,8 @@ import type {
   Permissao,
   PermissaoInput,
   PeriodoFiltro,
+  PostoDisponivel,
+  DiagnosticoPosto,
   PublicUser,
   QuickLoginUser,
   RelatorioCargaPendenteLinha,
@@ -43,7 +46,7 @@ import type {
   SearchResultItem,
   SetupInput,
   Sessao,
-  ThreadMensagemNaoLida,
+  ConversaResumo,
   UsuarioComSessao,
 } from '@/types';
 
@@ -126,6 +129,8 @@ export const ipcService = {
       origemPwaUserId?: string;
       incluirArquivadas?: boolean;
     }) => invoke<CargaComEmissor[]>('cargas:list', filters),
+    listarPorContacto: (contactoId: string, filtros?: { contentorId?: string | null; incluirArquivadas?: boolean }) =>
+      invoke<CargaComPapel[]>('cargas:listarPorContacto', contactoId, filtros),
     create: (input: CreateCargaInput) => invoke<Carga>('cargas:create', input),
     update: (id: string, changes: Partial<CreateCargaInput>) => invoke<Carga | null>('cargas:update', id, changes),
     archive: (id: string) => invoke<Carga | null>('cargas:archive', id),
@@ -251,12 +256,14 @@ export const ipcService = {
     importarCarga: (input: ImportarCargaInput) => invoke<Carga>('sync:importarCarga', input),
     rejeitarCarga: (pendenteId: string, motivo: string) => invoke<void>('sync:rejeitarCarga', pendenteId, motivo),
     listarHistorico: (limit?: number) => invoke<CargaPendente[]>('sync:listarHistorico', limit),
+    listarPostos: () => invoke<PostoDisponivel[]>('sync:listarPostos'),
+    diagnosticoPosto: () => invoke<DiagnosticoPosto>('sync:diagnosticoPosto'),
   },
   mensagens: {
     listarConversa: (pwaUserId: string) => invoke<Mensagem[]>('mensagens:listarConversa', pwaUserId),
     enviar: (paraUserId: string, texto: string) => invoke<void>('mensagens:enviar', paraUserId, texto),
     contarNaoLidas: () => invoke<number>('mensagens:contarNaoLidas'),
     marcarLidas: (pwaUserId: string) => invoke<void>('mensagens:marcarLidas', pwaUserId),
-    listarThreadsComNaoLidas: () => invoke<ThreadMensagemNaoLida[]>('mensagens:listarThreadsComNaoLidas'),
+    listarConversas: () => invoke<ConversaResumo[]>('mensagens:listarConversas'),
   },
 };

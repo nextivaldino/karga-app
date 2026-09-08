@@ -112,6 +112,7 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_cargas_contentor ON cargas(contentor_id);
     CREATE INDEX IF NOT EXISTS idx_cargas_emissor ON cargas(emissor_id);
     CREATE INDEX IF NOT EXISTS idx_carga_destinatarios_carga ON carga_destinatarios(carga_id);
+    CREATE INDEX IF NOT EXISTS idx_carga_destinatarios_contacto ON carga_destinatarios(contacto_id);
   `);
 
   // Etiquetas — rotular/agrupar clientes (many-to-many), usadas para

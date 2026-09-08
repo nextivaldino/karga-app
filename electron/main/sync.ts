@@ -1,4 +1,11 @@
-import { requireSupabaseClient } from '../lib/supabaseClient';
+import {
+  requireSupabaseClient,
+  resolverPostoId,
+  listarPostosDisponiveis,
+  diagnosticoPosto,
+  type DiagnosticoPosto,
+  type PostoDisponivelRow,
+} from '../lib/supabaseClient';
 import { sugerirContacto } from '../lib/textMatch';
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { cargaRepository } from '../models/repositories/cargaRepository';
@@ -71,12 +78,29 @@ function mapPendenteRow(row: CargaPendenteRow): CargaPendente {
   };
 }
 
+// Como o Desktop usa a Service Role Key (ignora RLS), tem de aplicar
+// explicitamente o filtro por posto que a RLS já impõe a um cliente normal
+// — senão, com 2+ postos ativos, cada instalação passaria a ver/importar
+// cargas de outros postos. Falha de forma visível (não devolve tudo sem
+// filtro, nem uma lista vazia que pareceria "tudo sincronizado").
+async function exigirPostoId(): Promise<string> {
+  const postoId = await resolverPostoId();
+  if (!postoId) {
+    throw new Error(
+      'Posto desta instalação não está configurado — define-o em Configurações → Sincronização.',
+    );
+  }
+  return postoId;
+}
+
 export async function listarPendentes(): Promise<CargaPendente[]> {
   const supabase = requireSupabaseClient();
+  const postoId = await exigirPostoId();
   const { data, error } = await supabase
     .from('cargas_pendentes')
     .select('*, pwa_users(nome)')
     .eq('estado', 'pendente')
+    .eq('posto_id', postoId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
   return ((data ?? []) as CargaPendenteRow[]).map(mapPendenteRow);
@@ -87,14 +111,24 @@ export async function listarPendentes(): Promise<CargaPendente[]> {
 // cargas_pendentes (doc 19 §7).
 export async function listarHistorico(limit = 100): Promise<CargaPendente[]> {
   const supabase = requireSupabaseClient();
+  const postoId = await exigirPostoId();
   const { data, error } = await supabase
     .from('cargas_pendentes')
     .select('*, pwa_users(nome)')
     .in('estado', ['importada', 'rejeitada'])
+    .eq('posto_id', postoId)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
   return ((data ?? []) as CargaPendenteRow[]).map(mapPendenteRow);
+}
+
+export async function listarPostos(): Promise<PostoDisponivelRow[]> {
+  return listarPostosDisponiveis();
+}
+
+export async function obterDiagnosticoPosto(): Promise<DiagnosticoPosto> {
+  return diagnosticoPosto();
 }
 
 async function obterPendente(id: string): Promise<CargaPendente> {

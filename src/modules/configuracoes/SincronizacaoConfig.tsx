@@ -22,7 +22,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { toast } from '@/components/ui/Toast';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';
-import type { CargaPendente, UsuarioComSessao } from '@/types';
+import type { CargaPendente, DiagnosticoPosto, PostoDisponivel, UsuarioComSessao } from '@/types';
 
 // ─── Formatters ────────────────────────────────────────────────────────────
 
@@ -373,6 +373,108 @@ function PainelCargasUser({ utilizador, onClose }: PainelCargasUserProps): React
   );
 }
 
+// ─── Card "Posto desta instalação" ──────────────────────────────────────────
+// Só aparece se existirem postos no Supabase — instalações que ainda não
+// usam a arquitetura multi-posto não veem nada aqui.
+
+interface PostoInstalacaoCardProps {
+  postos: PostoDisponivel[];
+  postoAtual: string | null;
+  diagnostico: DiagnosticoPosto | null;
+  onGuardado: (postoId: string) => void;
+}
+
+function PostoInstalacaoCard({
+  postos,
+  postoAtual,
+  diagnostico,
+  onGuardado,
+}: PostoInstalacaoCardProps): React.JSX.Element {
+  const [selecionado, setSelecionado] = useState(postoAtual ?? '');
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    setSelecionado(postoAtual ?? '');
+  }, [postoAtual]);
+
+  async function handleGuardar(): Promise<void> {
+    if (!selecionado) return;
+    setGuardando(true);
+    try {
+      await ipcService.settings.set('posto_id', selecionado);
+      toast.success('Posto desta instalação atualizado.');
+      onGuardado(selecionado);
+    } catch (err) {
+      toast.error(cleanIpcError(err));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  const configurado = diagnostico?.estado === 'ok';
+
+  return (
+    <div className="rounded-surface border border-border bg-bg-surface p-4">
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${
+            configurado ? 'bg-success/15' : 'bg-warning/15'
+          }`}
+        >
+          {configurado ? (
+            <CheckCircle size={18} weight="fill" className="text-success" />
+          ) : (
+            <WarningCircle size={18} weight="fill" className="text-warning" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-[14px] font-semibold text-text-primary">Posto desta instalação</p>
+            <span
+              className={`shrink-0 rounded-pill px-2 py-0.5 text-[10px] font-medium ${
+                configurado ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning'
+              }`}
+            >
+              {configurado ? 'Configurado' : 'Escolhe o posto'}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[12px] text-text-tertiary">
+            {configurado
+              ? 'A sincronização de cargas, contentores e utilizadores PWA está limitada a este posto.'
+              : 'Existe mais de um posto ativo (ou nenhum) — escolhe manualmente a que posto esta instalação pertence.'}
+          </p>
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select
+              value={selecionado}
+              onChange={(e) => setSelecionado(e.target.value)}
+              className="w-full rounded-control border border-border bg-bg-app px-3 py-2 text-[13px] text-text-primary sm:max-w-[320px]"
+            >
+              <option value="" disabled>
+                Seleciona um posto...
+              </option>
+              {postos.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                  {p.pais ? ` — ${p.pais}` : ''} ({p.estado})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={guardando || !selecionado || selecionado === postoAtual}
+              onClick={() => void handleGuardar()}
+              className="shrink-0 rounded-control bg-primary px-3.5 py-2 text-[13px] font-medium text-white transition-colors hover:brightness-95 disabled:opacity-50"
+            >
+              {guardando ? 'A guardar...' : 'Guardar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Card de utilizador PWA ─────────────────────────────────────────────────
 
 interface UserPwaCardProps {
@@ -492,6 +594,9 @@ export function SincronizacaoConfig(): React.JSX.Element {
   const [aceitarMap, setAceitarMap] = useState<Record<string, boolean>>({});
   const [pendentesMap, setPendentesMap] = useState<Record<string, number>>({});
   const [userAberto, setUserAberto] = useState<UsuarioComSessao | null>(null);
+  const [postos, setPostos] = useState<PostoDisponivel[]>([]);
+  const [postoAtual, setPostoAtual] = useState<string | null>(null);
+  const [diagnosticoPosto, setDiagnosticoPosto] = useState<DiagnosticoPosto | null>(null);
 
   async function carregar(): Promise<void> {
     setLoading(true);
@@ -517,6 +622,21 @@ export function SincronizacaoConfig(): React.JSX.Element {
         setPendentesMap(contagem);
       } catch {
         // Silencioso — contagem de pendentes é opcional
+      }
+
+      // Posto desta instalação — só relevante se o Supabase já tiver a
+      // tabela `postos` populada (arquitetura multi-posto em uso).
+      try {
+        const [lista, atual, diag] = await Promise.all([
+          ipcService.sync.listarPostos(),
+          ipcService.settings.get('posto_id'),
+          ipcService.sync.diagnosticoPosto(),
+        ]);
+        setPostos(lista);
+        setPostoAtual(atual);
+        setDiagnosticoPosto(diag);
+      } catch {
+        setPostos([]);
       }
     } catch (err) {
       toast.error(cleanIpcError(err));
@@ -578,6 +698,19 @@ export function SincronizacaoConfig(): React.JSX.Element {
             <ArrowsClockwise size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
+
+        {/* Posto desta instalação (só aparece se multi-posto estiver em uso) */}
+        {postos.length > 0 ? (
+          <PostoInstalacaoCard
+            postos={postos}
+            postoAtual={postoAtual}
+            diagnostico={diagnosticoPosto}
+            onGuardado={(id) => {
+              setPostoAtual(id);
+              void ipcService.sync.diagnosticoPosto().then(setDiagnosticoPosto);
+            }}
+          />
+        ) : null}
 
         {/* Banner de resumo */}
         <div className="flex flex-wrap gap-3">

@@ -201,6 +201,14 @@ export function registerIpcHandlers(): void {
     return cargaRepository.list(filters);
   });
 
+  ipcMain.handle(
+    'cargas:listarPorContacto',
+    (_event, contactoId: string, filtros?: Parameters<typeof cargaRepository.listarPorContacto>[1]) => {
+      requirePermissao('cargas', 'ver');
+      return cargaRepository.listarPorContacto(contactoId, filtros);
+    },
+  );
+
   ipcMain.handle('cargas:create', (_event, input: CreateCargaInput) => {
     const session = requirePermissao('cargas', 'criar');
     const carga = cargaRepository.create(input, session.id);
@@ -526,7 +534,7 @@ export function registerIpcHandlers(): void {
         nome: c.nome,
         data: c.createdAt,
         valor: c.valor,
-        estado: c.estadoPagamento,
+        estadoPagamento: c.estadoPagamento,
       })),
     });
 
@@ -688,6 +696,16 @@ export function registerIpcHandlers(): void {
     return sync.listarHistorico(limit);
   });
 
+  ipcMain.handle('sync:listarPostos', () => {
+    requirePermissao('configuracoes', 'ver');
+    return sync.listarPostos();
+  });
+
+  ipcMain.handle('sync:diagnosticoPosto', () => {
+    requirePermissao('configuracoes', 'ver');
+    return sync.obterDiagnosticoPosto();
+  });
+
   ipcMain.handle('mensagens:listarConversa', (_event, pwaUserId: string) => {
     requirePermissao('configuracoes', 'ver');
     return mensagens.listarConversa(pwaUserId);
@@ -709,8 +727,8 @@ export function registerIpcHandlers(): void {
     await mensagens.marcarLidas(pwaUserId);
   });
 
-  ipcMain.handle('mensagens:listarThreadsComNaoLidas', () => {
+  ipcMain.handle('mensagens:listarConversas', () => {
     requirePermissao('configuracoes', 'ver');
-    return mensagens.listarThreadsComNaoLidas();
+    return mensagens.listarConversas();
   });
 }

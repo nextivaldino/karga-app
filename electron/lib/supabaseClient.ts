@@ -1,5 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
+import { settingsRepository } from '../models/repositories/settingsRepository';
+
+const SETTING_POSTO_ID = 'posto_id';
 
 // O processo principal do Electron corre num runtime Node mais antigo, sem
 // WebSocket nativo — o @supabase/supabase-js precisa de um global WebSocket
@@ -57,9 +60,23 @@ interface ContentorDisponivel {
   padraoGlobal: boolean;
 }
 
-async function obterPostoId(supabase: SupabaseClient): Promise<string | null> {
+// Resolução do posto desta instalação, por ordem de prioridade:
+// 1) KARGA_POSTO_ID (env, override avançado)
+// 2) valor persistido localmente (Configurações → Sincronização, ou
+//    auto-detetado numa execução anterior — ver nível 3)
+// 3) auto-deteção: só decide sozinho se houver exatamente 1 posto `ativo`
+//    no Supabase; nesse caso persiste o resultado para não repetir a
+//    heurística. Com 0 ou 2+ postos ativos devolve null — não adivinha.
+export async function resolverPostoId(): Promise<string | null> {
   const configurado = process.env.KARGA_POSTO_ID?.trim();
   if (configurado) return configurado;
+
+  const local = settingsRepository.get(SETTING_POSTO_ID);
+  if (local) return local;
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
   if (!postoIdPromise) {
     postoIdPromise = Promise.resolve(
       supabase.from('postos').select('id').eq('estado', 'ativo').limit(2),
@@ -69,10 +86,59 @@ async function obterPostoId(supabase: SupabaseClient): Promise<string | null> {
           console.warn('[sync] Não foi possível resolver o Posto:', error.message);
           return null;
         }
-        return data?.length === 1 ? data[0].id : null;
+        if (data?.length === 1) {
+          settingsRepository.set(SETTING_POSTO_ID, data[0].id);
+          return data[0].id;
+        }
+        return null;
       });
   }
   return postoIdPromise;
+}
+
+export interface PostoDisponivelRow {
+  id: string;
+  nome: string;
+  pais: string | null;
+  estado: string;
+}
+
+// Usado pela UI de Configurações → Sincronização para o Admin escolher
+// manualmente o posto desta instalação (necessário quando há 2+ postos
+// ativos e a auto-deteção não consegue decidir sozinha).
+export async function listarPostosDisponiveis(): Promise<PostoDisponivelRow[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('postos')
+    .select('id,nome,pais,estado')
+    .order('nome');
+  if (error) {
+    console.warn('[sync] Não foi possível listar Postos:', error.message);
+    return [];
+  }
+  return (data ?? []) as PostoDisponivelRow[];
+}
+
+export interface DiagnosticoPosto {
+  estado: 'ok' | 'ambiguo' | 'indisponivel';
+  postosAtivos: number;
+}
+
+// Reporta o estado da resolução de posto sem depender de já haver um valor
+// persistido — usado pela verificação periódica de notificações e pela UI.
+export async function diagnosticoPosto(): Promise<DiagnosticoPosto> {
+  const resolvido = await resolverPostoId();
+  if (resolvido) return { estado: 'ok', postosAtivos: 1 };
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return { estado: 'indisponivel', postosAtivos: 0 };
+
+  const { data, error } = await supabase.from('postos').select('id').eq('estado', 'ativo');
+  if (error) return { estado: 'indisponivel', postosAtivos: 0 };
+
+  const count = data?.length ?? 0;
+  return { estado: count > 1 ? 'ambiguo' : 'indisponivel', postosAtivos: count };
 }
 
 // Fire-and-forget: falha em silêncio (sem internet, sem credenciais
@@ -83,7 +149,7 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    obterPostoId(supabase)
+    resolverPostoId()
       .then((postoId) => supabase.from('contentores_disponiveis').upsert(
         {
           id: contentor.id,
@@ -171,6 +237,7 @@ interface PwaUserInput {
   ativo: boolean;
   authUid: string | null;
   contentorPadraoId: string | null;
+  postoId: string | null;
 }
 
 export async function upsertPwaUser(input: PwaUserInput): Promise<void> {
@@ -183,6 +250,7 @@ export async function upsertPwaUser(input: PwaUserInput): Promise<void> {
       ativo: input.ativo,
       auth_uid: input.authUid,
       contentor_padrao_id: input.contentorPadraoId,
+      posto_id: input.postoId,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' },

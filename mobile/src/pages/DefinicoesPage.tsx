@@ -9,7 +9,7 @@ function Grupo({ titulo, children }: { titulo?: string; children: ReactNode }): 
   return (
     <div className="flex flex-col gap-1.5">
       {titulo ? <p className="px-4 text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">{titulo}</p> : null}
-      <div className="overflow-hidden rounded-surface border border-border bg-bg-surface">{children}</div>
+      <div className="card-surface overflow-hidden">{children}</div>
     </div>
   );
 }
@@ -60,7 +60,7 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
     <div className="flex flex-col gap-5 px-4 py-4">
       <div className="flex flex-col items-center gap-2 py-2 text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Ship size={26} />
+          <Ship size={26} weight="duotone" />
         </span>
         <div>
           <p className="text-[15px] font-bold tracking-wide text-text-primary">KARGA</p>

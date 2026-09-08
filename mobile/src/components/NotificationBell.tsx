@@ -50,6 +50,19 @@ export function NotificationBell(): React.JSX.Element {
   // `cargaNotificacaoVista` depois de marcar uma notificação como vista.
   const [, setVistasBump] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  // O sino nem sempre está encostado ao canto direito do ecrã (na Home
+  // divide a barra com o seletor de contentor) — um popup `absolute
+  // right-0` ancorado ao botão ficava, nesses casos, a abrir mais para a
+  // esquerda do que cabia no ecrã, escondendo as opções. `fixed` +
+  // `right-4` prende sempre ao canto do ecrã; só o `top` precisa de ser
+  // calculado (a barra de topo tem alturas diferentes consoante a página).
+  const [popupTop, setPopupTop] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) setPopupTop(rect.bottom + 8);
+  }, [open]);
 
   const carregar = useCallback(() => {
     listMinhasCargasPendentes()
@@ -136,11 +149,11 @@ export function NotificationBell(): React.JSX.Element {
         ) : null}
       </button>
 
-      {open ? (
+      {open && popupTop != null ? (
         <div
           data-theme={temaInvertido}
-          style={estiloTema(temaInvertido)}
-          className="absolute right-0 top-11 z-50 flex max-h-[70vh] w-72 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium"
+          style={{ top: popupTop, ...estiloTema(temaInvertido) }}
+          className="fixed right-4 z-50 flex max-h-[70vh] w-72 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-border px-3.5 py-2.5">
             <span className="text-[13px] font-semibold text-text-primary">Notificações</span>

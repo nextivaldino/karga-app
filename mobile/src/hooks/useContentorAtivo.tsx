@@ -16,18 +16,23 @@ interface ContentorAtivoContextValue {
   ligado: boolean;
   aLigar: boolean;
   tentarLigar: () => Promise<void>;
+  selecionarContentor: (id: string) => void;
 }
 
 const ContentorAtivoContext = createContext<ContentorAtivoContextValue | null>(null);
 
-// Estado partilhado do "contentor ativo" da app — resolvido sempre pelo
-// servidor (atribuído pelo Admin > padrão global > primeiro aberto),
-// nunca uma escolha do utilizador PWA. A Home e a Nova Carga leem daqui
-// para nunca divergirem entre si.
+// Estado partilhado do "contentor ativo" da app — por omissão resolvido
+// pelo servidor (atribuído pelo Admin > padrão global > primeiro aberto),
+// mas o utilizador pode substituir essa escolha manualmente
+// (selecionarContentor) quando há mais do que 1 contentor aberto — com
+// vários contentores concorrentes em produção, adivinhar sempre 1 só
+// deixava de chegar. A Home e a Nova Carga leem daqui para nunca
+// divergirem entre si.
 export function ContentorAtivoProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const { pwaUser } = useAuth();
   const [contentores, setContentores] = useState<ContentorDisponivel[]>([]);
   const [contentorAtivoId, setContentorAtivoId] = useState<string | null>(null);
+  const [contentorSelecionadoManual, setContentorSelecionadoManual] = useState<string | null>(null);
   const [ligado, setLigado] = useState(true);
   const [aLigar, setALigar] = useState(false);
 
@@ -37,15 +42,25 @@ export function ContentorAtivoProvider({ children }: { children: ReactNode }): R
       const { contentores: cs, ligado: ok } = await listContentoresDisponiveisComEstado();
       setContentores(cs);
       setLigado(ok);
+      const manualAindaValido = contentorSelecionadoManual != null && cs.some((c) => c.id === contentorSelecionadoManual);
       const doProprioUser = pwaUser?.contentorPadraoId;
-      setContentorAtivoId(cs.find((c) => c.id === doProprioUser)?.id ?? cs.find((c) => c.padraoGlobal)?.id ?? cs[0]?.id ?? null);
+      setContentorAtivoId(
+        manualAindaValido
+          ? contentorSelecionadoManual
+          : (cs.find((c) => c.id === doProprioUser)?.id ?? cs.find((c) => c.padraoGlobal)?.id ?? cs[0]?.id ?? null),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Falha ao carregar contentores.');
       setLigado(false);
     } finally {
       setALigar(false);
     }
-  }, [pwaUser?.contentorPadraoId]);
+  }, [pwaUser?.contentorPadraoId, contentorSelecionadoManual]);
+
+  const selecionarContentor = useCallback((id: string) => {
+    setContentorSelecionadoManual(id);
+    setContentorAtivoId(id);
+  }, []);
 
   useEffect(() => {
     void tentarLigar();
@@ -65,8 +80,8 @@ export function ContentorAtivoProvider({ children }: { children: ReactNode }): R
   }, [ligado, tentarLigar]);
 
   const value = useMemo<ContentorAtivoContextValue>(
-    () => ({ contentores, contentorAtivoId, ligado, aLigar, tentarLigar }),
-    [contentores, contentorAtivoId, ligado, aLigar, tentarLigar],
+    () => ({ contentores, contentorAtivoId, ligado, aLigar, tentarLigar, selecionarContentor }),
+    [contentores, contentorAtivoId, ligado, aLigar, tentarLigar, selecionarContentor],
   );
 
   return <ContentorAtivoContext.Provider value={value}>{children}</ContentorAtivoContext.Provider>;

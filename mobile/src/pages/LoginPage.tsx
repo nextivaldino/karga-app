@@ -31,7 +31,7 @@ export function LoginPage(): React.JSX.Element {
 
       <div className="relative flex w-full max-w-sm flex-col gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-primary text-white shadow-medium">
+          <div className="flex h-16 w-16 items-center justify-center rounded-surface bg-primary text-white shadow-medium">
             <Package size={32} weight="duotone" />
           </div>
           <div>

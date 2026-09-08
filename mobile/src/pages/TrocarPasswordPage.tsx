@@ -50,7 +50,7 @@ export function TrocarPasswordPage({ onCancel, onDone }: TrocarPasswordPageProps
       ) : null}
 
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-warning/15 text-warning shadow-soft">
+        <div className="flex h-16 w-16 items-center justify-center rounded-surface bg-warning/15 text-warning shadow-soft">
           <KeyRound size={32} weight="duotone" />
         </div>
         <h1 className="text-[20px] font-bold tracking-tight text-text-primary">Definir nova password</h1>

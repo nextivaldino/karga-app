@@ -8,6 +8,7 @@ import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { PhoneField } from '@/components/ui/PhoneField';
 import { Switch } from '@/components/ui/Switch';
 import { toast } from '@/components/ui/Toast';
+import { ContentorPickerSheet } from '@/components/ContentorPickerSheet';
 import { guardarSugestaoCarga, guardarSugestaoNome, listarSugestoesCargas, listarSugestoesNomes } from '@/lib/contactSuggestions';
 import { PAISES_EMISSOR, PAISES_RECETOR } from '@/lib/paisesIndicativo';
 import { CargaListHeader, CargaListRow, type AcaoLinhaCarga } from '@/components/CargaListRow';
@@ -51,7 +52,8 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
   const { aberto, prefill, fechar } = useNovaCargaOverlay();
   const { pwaUser } = useAuth();
   const { enviarOuEnfileirar } = useFilaOffline();
-  const { contentores, contentorAtivoId } = useContentorAtivo();
+  const { contentores, contentorAtivoId, selecionarContentor } = useContentorAtivo();
+  const [seletorContentorAberto, setSeletorContentorAberto] = useState(false);
   const [form, setForm] = useState<NovaCargaPendenteInput>(CAMPOS_VAZIOS);
   const [lote, setLote] = useState<NovaCargaPendenteInput[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -233,13 +235,15 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
         <button type="button" onClick={fechar} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-text-secondary active:bg-bg-app">
           <X size={20} />
         </button>
-        <div
+        <button
+          type="button"
+          onClick={() => setSeletorContentorAberto(true)}
           className={`flex min-w-0 flex-1 items-center justify-center truncate rounded-control border bg-bg-input px-2 py-1.5 text-center text-[13px] font-medium text-text-primary ${
             tentouEnviar && !form.contentorId ? 'border-error' : 'border-border/60'
           }`}
         >
-          {contentorAtual ? `${contentorAtual.codigo} — ${contentorAtual.nome}` : 'Sem contentor atribuído'}
-        </div>
+          {contentorAtual ? `${contentorAtual.codigo} — ${contentorAtual.nome}` : 'Sem contentor atribuído — toca para escolher'}
+        </button>
         <div title="Agrupar cargas deste emissor sob a mesma referência">
           <Switch checked={codigoUnicoEmissor} onChange={setCodigoUnicoEmissor} />
         </div>
@@ -248,7 +252,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
       <div className="flex-1 overflow-y-auto p-3">
         <div className="flex flex-col gap-2">
           {/* Emissor — azul + seta a sair, em todo o sistema identifica quem envia */}
-          <section className="flex flex-col gap-1.5 rounded-2xl border border-primary/20 bg-primary/[0.035] p-2">
+          <section className="flex flex-col gap-1.5 rounded-surface border border-primary/20 bg-primary/[0.035] p-2">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
@@ -310,7 +314,7 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
           </datalist>
 
           {/* Recetor — verde + seta a entrar, em todo o sistema identifica quem recebe */}
-          <section className="flex flex-col gap-1.5 rounded-2xl border border-success/20 bg-success/[0.035] p-2">
+          <section className="flex flex-col gap-1.5 rounded-surface border border-success/20 bg-success/[0.035] p-2">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <FloatingLabelInput
@@ -469,6 +473,17 @@ export function NovaCargaOverlay(): React.JSX.Element | null {
           )}
         </button>
       </div>
+
+      <ContentorPickerSheet
+        open={seletorContentorAberto}
+        onClose={() => setSeletorContentorAberto(false)}
+        contentores={contentores}
+        contentorAtivoId={form.contentorId}
+        onSelecionar={(id) => {
+          selecionarContentor(id);
+          update('contentorId', id);
+        }}
+      />
     </div>
   );
 }

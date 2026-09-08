@@ -10,7 +10,26 @@ import { sugerirContacto } from '../lib/textMatch';
 import { contactoRepository } from '../models/repositories/contactoRepository';
 import { cargaRepository } from '../models/repositories/cargaRepository';
 import { contentorRepository } from '../models/repositories/contentorRepository';
+import { notificacaoRepository } from '../models/repositories/notificacaoRepository';
+import { criarNotificacao } from './notifications';
 import type { Carga, CargaPendente, ImportarCargaInput, RevisaoCargaPendente, SugestaoContacto } from '../../src/types';
+
+// Falhas de importação/rejeição só apareciam como toast (desaparece ao
+// fechar) — passam também a ficar registadas no sino, sem categoria (não
+// pode ser silenciado, é um erro que pode implicar carga duplicada/perdida).
+// Janela de dedupe mais curta que os avisos de contentor (1h vs 24h): um
+// erro de sync pode precisar de atenção mais rápida.
+function notificarFalhaSync(titulo: string, mensagem: string, pendenteId: string): void {
+  if (notificacaoRepository.existeSemelhanteRecente(titulo, pendenteId, 1)) return;
+  criarNotificacao({
+    tipo: 'erro',
+    titulo,
+    mensagem,
+    linkModulo: 'sync',
+    linkEntidadeId: pendenteId,
+    nativa: true,
+  });
+}
 
 interface CargaPendenteRow {
   id: string;
@@ -215,27 +234,43 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
     throw new Error(`Já existe uma carga com o código "${codigoManual}".`);
   }
   const codigo = codigoManual || cargaRepository.nextCodigo();
-  const carga = cargaRepository.create({
-    codigo,
-    nome: input.nome,
-    comprimentoCm: input.comprimentoCm,
-    larguraCm: input.larguraCm,
-    alturaCm: input.alturaCm,
-    pesoKg: input.pesoKg,
-    valor: input.valor,
-    estadoPagamento: input.pago ? 'pago' : 'devido',
-    contentorId: input.contentorId,
-    emissorId,
-    origemPwaUserId: pendente.inseridoPorUserId,
-  });
-  cargaRepository.addDestinatario(carga.id, recetorId);
 
-  const supabase = requireSupabaseClient();
-  const { error } = await supabase
-    .from('cargas_pendentes')
-    .update({ estado: 'importada', carga_local_id: carga.id, importado_em: new Date().toISOString() })
-    .eq('id', input.pendenteId);
-  if (error) throw new Error(error.message);
+  // create + addDestinatario numa única transação local (nunca fica uma
+  // carga sem o seu destinatário); a confirmação remota vem depois, fora
+  // da transação (não dá para awaitar rede dentro de uma transação
+  // síncrona do better-sqlite3) — se falhar, desfazemos a escrita local
+  // em vez de deixar a carga órfã e a pendente reimportável em duplicado.
+  const carga = cargaRepository.criarComDestinatario(
+    {
+      codigo,
+      nome: input.nome,
+      comprimentoCm: input.comprimentoCm,
+      larguraCm: input.larguraCm,
+      alturaCm: input.alturaCm,
+      pesoKg: input.pesoKg,
+      valor: input.valor,
+      estadoPagamento: input.pago ? 'pago' : 'devido',
+      contentorId: input.contentorId,
+      emissorId,
+      origemPwaUserId: pendente.inseridoPorUserId,
+    },
+    null,
+    recetorId,
+  );
+
+  try {
+    const supabase = requireSupabaseClient();
+    const { error } = await supabase
+      .from('cargas_pendentes')
+      .update({ estado: 'importada', carga_local_id: carga.id, importado_em: new Date().toISOString() })
+      .eq('id', input.pendenteId);
+    if (error) throw new Error(error.message);
+  } catch (err) {
+    cargaRepository.reverterImportacaoFalhada(carga.id);
+    const mensagem = err instanceof Error ? err.message : 'Erro desconhecido';
+    notificarFalhaSync('Falha ao importar carga', `"${pendente.nomeCarga}": ${mensagem}`, input.pendenteId);
+    throw err instanceof Error ? err : new Error(mensagem);
+  }
 
   return carga;
 }
@@ -246,7 +281,10 @@ export async function rejeitarCarga(pendenteId: string, motivo: string): Promise
     .from('cargas_pendentes')
     .update({ estado: 'rejeitada', motivo_rejeicao: motivo })
     .eq('id', pendenteId);
-  if (error) throw new Error(error.message);
+  if (error) {
+    notificarFalhaSync('Falha ao rejeitar carga', error.message, pendenteId);
+    throw new Error(error.message);
+  }
 }
 
 // O aviso de "cargas novas da PWA" já não passa pelo sino genérico de

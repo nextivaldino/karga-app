@@ -498,6 +498,33 @@ function addDestinatario(cargaId: string, contactoId: string): void {
   ).run(randomUUID(), cargaId, contactoId, nowIso());
 }
 
+// Usada pelo sync (importarCarga) — cria a carga e associa o destinatário
+// numa única transação, para nunca ficar uma carga sem o seu destinatário
+// se a segunda escrita falhar a meio.
+function criarComDestinatario(input: CreateCargaInput, criadoPorUserId: string | null, recetorId: string): Carga {
+  const db = getDatabase();
+  const run = db.transaction(() => {
+    const carga = create(input, criadoPorUserId);
+    addDestinatario(carga.id, recetorId);
+    return carga;
+  });
+  return run();
+}
+
+// Desfaz uma importação cuja confirmação remota falhou depois da escrita
+// local já ter acontecido — delete físico deliberado: esta carga nunca
+// chegou a ser um dado de negócio confirmado (a pendente remota continua
+// 'pendente'), é o desfazer de uma escrita inválida, não uma eliminação
+// de dados reais. Só chamada internamente por sync.ts, nunca via IPC.
+function reverterImportacaoFalhada(cargaId: string): void {
+  const db = getDatabase();
+  const run = db.transaction(() => {
+    db.prepare('DELETE FROM carga_destinatarios WHERE carga_id = ?').run(cargaId);
+    db.prepare('DELETE FROM cargas WHERE id = ?').run(cargaId);
+  });
+  run();
+}
+
 function listDestinatariosPorCarga(cargaIds: string[]): Record<string, string[]> {
   if (cargaIds.length === 0) return {};
   const db = getDatabase();
@@ -633,6 +660,8 @@ export const cargaRepository = {
   sumValorDevido,
   listUltimasSincronizadas,
   addDestinatario,
+  criarComDestinatario,
+  reverterImportacaoFalhada,
   listDestinatariosPorCarga,
   listOrigensPwa,
   countPorContentorParaUsuario,

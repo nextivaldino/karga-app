@@ -81,7 +81,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
       try {
         await enviarCargasPendentes(pwaUser.id, pwaUser.postoId, itens);
         return 'enviado';
-      } catch {
+      } catch (err) {
         // Falha a meio (ex: rede caiu entre o navigator.onLine e o pedido
         // real) — não perde os dados, cai para a fila em vez de rebentar.
         for (const item of itens) await adicionarAFila(item);

@@ -10,6 +10,9 @@ export function mensagemErroAmigavel(err: unknown): string {
   if (texto.includes('jwt') || texto.includes('session') || texto.includes('sessão') || texto.includes('token')) {
     return 'A tua sessão expirou. Inicia sessão novamente.';
   }
+  if (texto.includes('posto') || texto.includes('row-level security') || texto.includes('rls') || texto.includes('violates row-level')) {
+    return 'Este utilizador não está associado a um Posto ativo. Contacta o administrador.';
+  }
   if (texto.includes('contentor') && (texto.includes('not found') || texto.includes('não encontrado') || texto.includes('foreign key'))) {
     return 'Este contentor já não está disponível. Escolhe outro.';
   }

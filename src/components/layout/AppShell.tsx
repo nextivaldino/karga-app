@@ -1,4 +1,4 @@
-import { ModuleIcon } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { MainTabs } from './MainTabs';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderUserMenu } from './HeaderUserMenu';
@@ -59,7 +59,7 @@ export function AppShell(): React.JSX.Element {
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         <div className="flex min-w-0 items-center gap-2 overflow-hidden" style={{ paddingLeft: IS_MAC ? 70 : 0 }}>
-          <ModuleIcon module="kraga" size={15} className="shrink-0 opacity-90" />
+          <KargaLogo size={15} className="shrink-0" />
           <span className="truncate text-[12px] font-bold tracking-[0.08em] text-text-secondary uppercase">Karga</span>
         </div>
 

@@ -3,6 +3,7 @@ import { LockKey } from '@phosphor-icons/react';
 import { usePinLock } from '@/hooks/usePinLock';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/Toast';
+import { LoginBackdrop } from './LoginBackdrop';
 
 // Ecrã de desbloqueio rápido — só aparece quando há sessão Supabase já
 // válida e o utilizador configurou um PIN neste dispositivo (ver
@@ -27,7 +28,12 @@ export function PinUnlockPage(): React.JSX.Element {
 
   return (
     <div className="relative flex h-full flex-col items-center justify-center overflow-hidden px-6">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 scale-105 opacity-[0.6] blur-md">
+          <LoginBackdrop />
+        </div>
+        <div className="absolute inset-0 bg-bg-app/35" />
+      </div>
 
       <div className="relative flex w-full max-w-sm flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
@@ -35,14 +41,14 @@ export function PinUnlockPage(): React.JSX.Element {
             <LockKey size={30} weight="duotone" />
           </span>
           <div>
-            <h1 className="text-[20px] font-bold tracking-tight text-text-primary">
+            <h1 className="text-[20px] font-bold tracking-tight text-text-primary drop-shadow-sm">
               Bem-vindo de volta{pwaUser ? `, ${pwaUser.nome}` : ''}
             </h1>
-            <p className="text-[14px] text-text-tertiary">Introduz o teu PIN para continuar</p>
+            <p className="text-[14px] text-text-tertiary drop-shadow-sm">Introduz o teu PIN para continuar</p>
           </div>
         </div>
 
-        <div className="card-surface flex w-full flex-col gap-3 p-5">
+        <div className="flex w-full flex-col gap-3">
           <input
             type="password"
             inputMode="numeric"
@@ -65,7 +71,7 @@ export function PinUnlockPage(): React.JSX.Element {
           </button>
         </div>
 
-        <button type="button" onClick={() => void logout()} className="text-[13px] font-medium text-text-tertiary">
+        <button type="button" onClick={() => void logout()} className="text-[13px] font-medium text-text-tertiary drop-shadow-sm">
           Sair e usar password
         </button>
       </div>

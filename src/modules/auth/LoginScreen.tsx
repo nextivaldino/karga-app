@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { EnvelopeSimple, Lock } from '@phosphor-icons/react';
-import { ModuleIcon } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 import { toast } from '@/components/ui/Toast';
@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cleanIpcError } from '@/lib/cleanIpcError';
 import { ipcService } from '@/services/ipcService';
 import { useAuth } from './AuthContext';
+import { LoginBackdrop } from './LoginBackdrop';
 import type { QuickLoginUser } from '@/types';
 
 export function LoginScreen(): React.JSX.Element {
@@ -74,29 +75,20 @@ export function LoginScreen(): React.JSX.Element {
 
   return (
     <div className="relative flex h-full items-center justify-center overflow-hidden px-6" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-      {/* Cenário ao estilo "ecrã de bloqueio" — a mesma identidade de cor
-          da app como pano de fundo suave (só gradientes, sem filtros de
-          blur no ecrã inteiro — pesado a mais para o compositor), com o
-          vidro fosco concentrado só no cartão de login, ao estilo Aero
-          Glass do Windows 7. */}
-      <div
-        className="pointer-events-none absolute inset-0 bg-bg-app"
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--color-primary) 32%, transparent) 0%, transparent 45%),' +
-            'radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--color-purple) 26%, transparent) 0%, transparent 42%),' +
-            'radial-gradient(circle at 15% 90%, color-mix(in srgb, var(--color-success) 26%, transparent) 0%, transparent 48%),' +
-            'radial-gradient(circle at 90% 85%, color-mix(in srgb, var(--color-warning) 24%, transparent) 0%, transparent 45%)',
-        }}
-      >
-        <ModuleIcon module="kraga" size={560} className="absolute -bottom-24 -right-24 opacity-[0.05]" />
+      {/* Fundo: silhueta desfocada e amortecida da Home, só decorativa
+          (dados estáticos, nunca reais — não há sessão antes do login).
+          Dá profundidade ao ecrã sem competir com os campos, que já não
+          vivem dentro de um cartão — ficam diretamente sobre este fundo. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 scale-105 opacity-[0.6] blur-md">
+          <LoginBackdrop />
+        </div>
+        <div className="absolute inset-0 bg-bg-app/35" />
       </div>
 
       <div className="relative w-full max-w-[380px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <div className="mb-lg flex flex-col items-center gap-2 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-white/40 bg-white/20 shadow-lg backdrop-blur-md">
-            <ModuleIcon module="kraga" size={34} />
-          </span>
+          <KargaLogo size={64} />
           <div>
             <h1 className="text-[26px] font-bold tracking-wide text-text-primary drop-shadow-sm">KARGA</h1>
             <p className="text-[11px] font-medium uppercase tracking-wider text-text-secondary">
@@ -109,7 +101,7 @@ export function LoginScreen(): React.JSX.Element {
         </div>
 
         {mostrarGrelha ? (
-          <div className="rounded-[22px] border border-white/40 bg-white/25 p-xl shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/25">
+          <div>
             <div className="grid grid-cols-3 gap-3">
               {quickLogin!.map((u) => (
                 <button
@@ -117,10 +109,10 @@ export function LoginScreen(): React.JSX.Element {
                   type="button"
                   disabled={entrandoComoId != null}
                   onClick={() => void handleQuickLogin(u.id)}
-                  className="flex flex-col items-center gap-1.5 rounded-control p-2 text-center transition-colors hover:bg-white/30 disabled:opacity-50 dark:hover:bg-white/10"
+                  className="flex flex-col items-center gap-1.5 rounded-control p-2 text-center transition-colors hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
                 >
                   <UserAvatar avatar={u.avatar} size={56} />
-                  <span className="line-clamp-1 text-[12px] font-medium text-text-primary">
+                  <span className="line-clamp-1 text-[12px] font-medium text-text-primary drop-shadow-sm">
                     {entrandoComoId === u.id ? 'A entrar...' : u.name}
                   </span>
                 </button>
@@ -135,10 +127,7 @@ export function LoginScreen(): React.JSX.Element {
             </button>
           </div>
         ) : (
-          <form
-            onSubmit={handleSubmit}
-            className="rounded-[22px] border border-white/40 bg-white/25 p-xl shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-black/25"
-          >
+          <form onSubmit={handleSubmit}>
             <div className="flex flex-col gap-3">
               <FloatingLabelInput
                 label="Email ou nome"
@@ -174,7 +163,7 @@ export function LoginScreen(): React.JSX.Element {
                 setEsqueciEmail(email);
                 setEsqueciOpen(true);
               }}
-              className="mt-md w-full text-center text-[12px] font-medium text-text-secondary"
+              className="mt-md w-full text-center text-[12px] font-medium text-text-secondary drop-shadow-sm"
             >
               Esqueci-me da password
             </button>
@@ -183,7 +172,7 @@ export function LoginScreen(): React.JSX.Element {
               <button
                 type="button"
                 onClick={() => setUsarPassword(false)}
-                className="mt-md w-full text-center text-[12px] font-medium text-text-secondary"
+                className="mt-md w-full text-center text-[12px] font-medium text-text-secondary drop-shadow-sm"
               >
                 ‹ Voltar
               </button>

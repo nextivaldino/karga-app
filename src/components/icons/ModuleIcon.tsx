@@ -1,11 +1,12 @@
-import { Boat, Gear, House, Package, Stack, Wallet, ArrowsClockwise, DeviceMobile, type Icon } from '@phosphor-icons/react';
+import { Gear, House, Package, Stack, Wallet, ArrowsClockwise, DeviceMobile, type Icon } from '@phosphor-icons/react';
 
 // Cor + pictograma de identidade por módulo — ver docs/08-DESIGN-SYSTEM.md
 // secção de ícones. Usado nos 5 locais de destaque (abas, cards da Home,
 // cards de contentor na vista Ícones, Boxed List de Configurações, ícone
-// principal no ecrã de Login) sempre em peso "duotone".
+// principal no ecrã de Login) sempre em peso "duotone". A marca em si
+// (logo Karga) não vive aqui — ver KargaLogo, um vetor próprio, não
+// tintável por este sistema de cor-por-módulo.
 export const MODULE_ICON: Record<ModuleIconName, { icon: Icon; color: string }> = {
-  kraga: { icon: Boat, color: '#ffb400' },
   home: { icon: House, color: '#3584e4' },
   cargas: { icon: Package, color: '#ffb400' },
   contentores: { icon: Stack, color: '#2ec27e' },
@@ -16,7 +17,6 @@ export const MODULE_ICON: Record<ModuleIconName, { icon: Icon; color: string }> 
 };
 
 export type ModuleIconName =
-  | 'kraga'
   | 'home'
   | 'cargas'
   | 'contentores'

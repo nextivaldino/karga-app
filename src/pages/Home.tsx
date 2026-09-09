@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowUpRight, CheckCircle as CheckCircle2, Package, Plus, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { ModuleIcon, type ModuleIconName } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { ContextToolbar } from '@/components/layout/ContextToolbar';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { ContainerPickerButton } from '@/components/ui/ContainerPickerButton';
@@ -135,9 +136,7 @@ export function Home(): React.JSX.Element {
       <div className="relative h-full overflow-y-auto p-xl">
         <div className="mx-auto flex max-w-[860px] flex-col gap-xl">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <ModuleIcon module="kraga" size={22} />
-            </span>
+            <KargaLogo size={40} className="shrink-0" />
             <div>
               <h1 className="text-[17px] font-semibold text-text-primary">
                 {saudacao()}{user ? `, ${user.name.split(' ')[0]}` : ''}

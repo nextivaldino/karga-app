@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Database, HardDrive, Key, SignOut } from '@phosphor-icons/react';
-import { ModuleIcon } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { toast, ToastContainer } from '@/components/ui/Toast';
 import { ipcService } from '@/services/ipcService';
 import { useAuth } from '@/modules/auth/AuthContext';
@@ -50,7 +50,7 @@ export function RootMaintenanceShell(): React.JSX.Element {
         } as React.CSSProperties}
       >
         <div className="flex items-center gap-2 text-[13px] font-semibold text-text-primary">
-          <ModuleIcon module="kraga" size={16} /> Kraga Desktop — Manutenção (Root)
+          <KargaLogo size={16} /> Kraga Desktop — Manutenção (Root)
         </div>
         <button
           type="button"

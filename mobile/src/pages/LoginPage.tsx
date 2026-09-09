@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Package } from '@phosphor-icons/react';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from '@/hooks/useAuth';
+import { LoginBackdrop } from './LoginBackdrop';
 
 export function LoginPage(): React.JSX.Element {
   const { login, deactivatedMessage, clearDeactivatedMessage } = useAuth();
@@ -26,21 +26,26 @@ export function LoginPage(): React.JSX.Element {
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center overflow-hidden p-6">
-      <div className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-56 w-56 rounded-full bg-purple/15 blur-3xl" />
+      {/* Fundo: silhueta desfocada e amortecida da Home, só decorativa —
+          os campos já não vivem dentro de um cartão, ficam diretamente
+          sobre este fundo. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-0 scale-105 opacity-[0.6] blur-md">
+          <LoginBackdrop />
+        </div>
+        <div className="absolute inset-0 bg-bg-app/35" />
+      </div>
 
       <div className="relative flex w-full max-w-sm flex-col gap-8">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-surface bg-primary text-white shadow-medium">
-            <Package size={32} weight="duotone" />
-          </div>
+          <img src="/karga-logo.svg" alt="" className="h-16 w-16" />
           <div>
-            <h1 className="text-[22px] font-bold tracking-tight text-text-primary">Kraga Mobile</h1>
-            <p className="mt-1 text-[14px] text-text-tertiary">Inicie sessão para continuar</p>
+            <h1 className="text-[22px] font-bold tracking-tight text-text-primary drop-shadow-sm">Kraga Mobile</h1>
+            <p className="mt-1 text-[14px] text-text-tertiary drop-shadow-sm">Inicie sessão para continuar</p>
           </div>
         </div>
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="card-surface flex flex-col gap-3 p-5">
+        <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-3">
           <FloatingLabelInput
             label="Email ou nome"
             autoComplete="username"

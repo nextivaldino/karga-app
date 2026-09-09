@@ -1,4 +1,4 @@
-import { ModuleIcon } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { HeaderBarModal } from '@/components/ui/HeaderBarModal';
 
 interface SobreModalProps {
@@ -10,9 +10,7 @@ export function SobreModal({ open, onClose }: SobreModalProps): React.JSX.Elemen
   return (
     <HeaderBarModal open={open} onClose={onClose} title="Sobre o Karga" widthClassName="max-w-[360px]">
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-bg-app">
-          <ModuleIcon module="kraga" size={34} />
-        </span>
+        <KargaLogo size={56} />
         <div>
           <p className="text-[18px] font-bold tracking-wide text-text-primary">KARGA</p>
           <p className="text-[12px] text-text-secondary">Sistema de Gestão de Cargas e Logística</p>

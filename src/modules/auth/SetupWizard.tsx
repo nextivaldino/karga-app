@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { EnvelopeSimple, Lock, User } from '@phosphor-icons/react';
-import { ModuleIcon } from '@/components/icons/ModuleIcon';
+import { KargaLogo } from '@/components/icons/KargaLogo';
 import { FloatingLabelInput } from '@/components/ui/FloatingLabelInput';
 import { useAuth } from './AuthContext';
 
@@ -49,9 +49,7 @@ export function SetupWizard(): React.JSX.Element {
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <div className="mb-lg flex flex-col items-center gap-2 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-surface bg-primary-light">
-            <ModuleIcon module="kraga" size={24} />
-          </div>
+          <KargaLogo size={44} />
           <h1 className="text-[20px] font-semibold text-text-primary">Bem-vindo ao Kraga Desktop</h1>
           <p className="text-[13px] text-text-secondary">
             Cria a conta técnica Root (manutenção do sistema) e a conta Admin (operação diária) para começar.

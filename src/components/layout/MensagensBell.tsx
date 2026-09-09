@@ -96,7 +96,7 @@ export function MensagensBell(): React.JSX.Element {
   return (
     <div ref={ref} className="relative z-[95] flex h-full items-stretch">
       {open ? (
-        <div className="absolute bottom-full right-0 mb-2 flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl">
+        <div className="absolute bottom-full right-0 flex h-[420px] w-96 flex-col overflow-hidden rounded-t-surface border border-b-0 border-border bg-bg-surface shadow-medium">
           {conversaCom ? (
             <>
               <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">

@@ -26,4 +26,9 @@ function set(chave: string, valor: string): void {
   ).run({ chave, valor, updated_at: nowIso() });
 }
 
-export const settingsRepository = { get, getAll, set };
+function remove(chave: string): void {
+  const db = getDatabase();
+  db.prepare('DELETE FROM settings WHERE chave = ?').run(chave);
+}
+
+export const settingsRepository = { get, getAll, set, remove };

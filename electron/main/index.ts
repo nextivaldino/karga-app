@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { registerIpcHandlers } from '../ipc';
 import { closeDatabase, getDatabase } from '../models/database';
 import { iniciarVerificacaoPeriodica } from './notifications';
+import { restaurarSessaoPersistida } from './auth';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,6 +45,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   getDatabase();
+  restaurarSessaoPersistida();
   registerIpcHandlers();
   createWindow();
   iniciarVerificacaoPeriodica();

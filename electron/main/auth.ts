@@ -1,8 +1,17 @@
 import bcrypt from 'bcryptjs';
 import { userRepository } from '../models/repositories/userRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
+import { settingsRepository } from '../models/repositories/settingsRepository';
 import { hashPassword, validarTamanhoPassword } from '../lib/passwordPolicy';
 import type { PublicUser, QuickLoginUser, SetupInput, User } from '../../src/types';
+
+// Sessão fica ativa até logout explícito — decisão do utilizador (não é
+// um esquecimento): app desktop de instalação única, dispositivo
+// confiável, prioridade é nunca obrigar a reautenticar à toa (sair do
+// repouso, reiniciar a app). Guardamos qual foi o último utilizador
+// autenticado para restaurar a sessão automaticamente em cada arranque
+// — só é limpo por um logout() explícito.
+const SETTING_SESSAO_USER_ID = 'sessao_user_id';
 
 let currentUser: PublicUser | null = null;
 let currentSessaoId: string | null = null;
@@ -10,6 +19,29 @@ let currentSessaoId: string | null = null;
 function toPublicUser(user: User): PublicUser {
   const { passwordHash: _passwordHash, ...publicUser } = user;
   return publicUser;
+}
+
+function iniciarSessao(user: User): PublicUser {
+  currentUser = toPublicUser(user);
+  currentSessaoId = sessaoRepository.iniciar(user.id).id;
+  settingsRepository.set(SETTING_SESSAO_USER_ID, user.id);
+  return currentUser;
+}
+
+// Chamado uma vez no arranque do processo principal (antes de a janela
+// carregar), para o ecrã de login nem chegar a aparecer se já havia
+// alguém autenticado da última vez que a app correu.
+export function restaurarSessaoPersistida(): void {
+  const userId = settingsRepository.get(SETTING_SESSAO_USER_ID);
+  if (!userId) return;
+
+  const user = userRepository.findById(userId);
+  if (!user || !user.active) {
+    settingsRepository.remove(SETTING_SESSAO_USER_ID);
+    return;
+  }
+
+  iniciarSessao(user);
 }
 
 export function setupNeeded(): boolean {
@@ -46,9 +78,7 @@ export async function completeSetup(input: SetupInput): Promise<PublicUser> {
     role: 'admin',
   });
 
-  currentUser = toPublicUser(admin);
-  currentSessaoId = sessaoRepository.iniciar(admin.id).id;
-  return currentUser;
+  return iniciarSessao(admin);
 }
 
 export async function login(identifier: string, password: string): Promise<PublicUser> {
@@ -65,9 +95,7 @@ export async function login(identifier: string, password: string): Promise<Publi
     throw new Error('Credenciais inválidas.');
   }
 
-  currentUser = toPublicUser(user);
-  currentSessaoId = sessaoRepository.iniciar(user.id).id;
-  return currentUser;
+  return iniciarSessao(user);
 }
 
 export function listQuickLogin(): QuickLoginUser[] {
@@ -83,9 +111,7 @@ export async function loginSemPassword(userId: string): Promise<PublicUser> {
     throw new Error('Este utilizador não tem login sem password ativado.');
   }
 
-  currentUser = toPublicUser(user);
-  currentSessaoId = sessaoRepository.iniciar(user.id).id;
-  return currentUser;
+  return iniciarSessao(user);
 }
 
 // Chamado a partir do ecrã de login, sem sessão — um Admin que se
@@ -102,6 +128,7 @@ export function logout(): void {
   if (currentSessaoId) sessaoRepository.terminar(currentSessaoId);
   currentUser = null;
   currentSessaoId = null;
+  settingsRepository.remove(SETTING_SESSAO_USER_ID);
 }
 
 export function getSession(): PublicUser | null {

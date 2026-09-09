@@ -7,6 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { estiloTema } from '@/lib/themeTokens';
 import { listMinhasCargasPendentes, listMensagens, marcarMensagemLida } from '@/lib/data';
 import { cargaNotificacaoVista, marcarCargaNotificacaoVista } from '@/lib/notificacoesVistas';
+import { lerPreferenciasNotificacoes } from '@/lib/preferenciasNotificacoes';
 import { formatRelativo } from '@/lib/formatRelativo';
 import type { CargaPendente, Mensagem } from '@/types';
 
@@ -87,10 +88,16 @@ export function NotificationBell(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 'carga_rejeitada' e 'fila_erro' nunca são filtrados — informação
+  // crítica que precisa de ação do próprio utilizador, não desligável.
+  const prefs = lerPreferenciasNotificacoes();
   const cargasResolvidas = cargas.filter(
-    (c) => (c.estado === 'importada' || c.estado === 'rejeitada') && !cargaNotificacaoVista(c.id),
+    (c) =>
+      (c.estado === 'importada' || c.estado === 'rejeitada') &&
+      !cargaNotificacaoVista(c.id) &&
+      (c.estado !== 'importada' || prefs.carga_importada),
   );
-  const mensagensNaoLidas = mensagens.filter((m) => !m.lida && m.paraUserId === pwaUser?.id);
+  const mensagensNaoLidas = prefs.mensagem ? mensagens.filter((m) => !m.lida && m.paraUserId === pwaUser?.id) : [];
   const filaComErro = fila.filter((f) => f.estado === 'erro');
 
   const itens: NotificacaoItem[] = [

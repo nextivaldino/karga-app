@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { PinLockProvider, usePinLock } from '@/hooks/usePinLock';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
 import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
@@ -18,9 +19,11 @@ import { CargasPage } from '@/pages/CargasPage';
 import { MensagensPage } from '@/pages/MensagensPage';
 import { DefinicoesPage } from '@/pages/DefinicoesPage';
 import { RootPanelPage } from '@/pages/RootPanelPage';
+import { PinUnlockPage } from '@/pages/PinUnlockPage';
 
 function AppShell(): React.JSX.Element {
   const { loading, session, mustChangePassword, pwaUser } = useAuth();
+  const { bloqueado } = usePinLock();
   const { page } = useNavigation();
   const [trocarPasswordAberto, setTrocarPasswordAberto] = useState(false);
 
@@ -29,6 +32,8 @@ function AppShell(): React.JSX.Element {
   }
 
   if (!session) return <LoginPage />;
+
+  if (bloqueado) return <PinUnlockPage />;
 
   if (trocarPasswordAberto) {
     return <TrocarPasswordPage onCancel={() => setTrocarPasswordAberto(false)} onDone={() => setTrocarPasswordAberto(false)} />;
@@ -67,18 +72,20 @@ export default function App(): React.JSX.Element {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <FilaOfflineProvider>
-          <ContentorAtivoProvider>
-            <NavigationProvider>
-              <NovaCargaOverlayProvider>
-                <TopBarSlotProvider>
-                  <AppShell />
-                  <ToastContainer />
-                </TopBarSlotProvider>
-              </NovaCargaOverlayProvider>
-            </NavigationProvider>
-          </ContentorAtivoProvider>
-        </FilaOfflineProvider>
+        <PinLockProvider>
+          <FilaOfflineProvider>
+            <ContentorAtivoProvider>
+              <NavigationProvider>
+                <NovaCargaOverlayProvider>
+                  <TopBarSlotProvider>
+                    <AppShell />
+                    <ToastContainer />
+                  </TopBarSlotProvider>
+                </NovaCargaOverlayProvider>
+              </NavigationProvider>
+            </ContentorAtivoProvider>
+          </FilaOfflineProvider>
+        </PinLockProvider>
       </AuthProvider>
     </ThemeProvider>
   );

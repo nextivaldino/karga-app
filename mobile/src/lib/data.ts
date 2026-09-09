@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { guardarCache, lerCacheCargas, lerCacheContentores } from './offlineQueue';
-import type { CargaPendente, ContentorDisponivel, EstadoPosto, Mensagem, NovaCargaPendenteInput, Posto } from '@/types';
+import type { CargaPendente, ContentorDisponivel, EstadoPosto, MeuPostoInfo, Mensagem, NovaCargaPendenteInput, Posto } from '@/types';
 
 interface PostoRow {
   id: string;
@@ -249,4 +249,14 @@ export async function enviarMensagem(deUserId: string, paraUserId: string, texto
 export async function marcarMensagemLida(id: string): Promise<void> {
   const { error } = await supabase.from('mensagens').update({ lida: true }).eq('id', id);
   if (error) throw new Error(error.message);
+}
+
+// Card "Posto" em Definições, só leitura. Função RPC dedicada em vez de
+// SELECT direto à tabela postos — essa nunca é legível por um utilizador
+// normal (tem colunas sensíveis como código de ativação).
+export async function obterMeuPosto(): Promise<MeuPostoInfo | null> {
+  const { data, error } = await supabase.rpc('meu_posto_info');
+  if (error) throw new Error(error.message);
+  const linha = data?.[0];
+  return linha ? { nome: linha.nome, pais: linha.pais ?? null } : null;
 }

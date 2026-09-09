@@ -82,6 +82,14 @@ export interface PwaUser {
   postoId: string | null;
   username: string | null;
   tipoAcesso: 'root' | 'admin' | 'user';
+  // Base64 (data:image/...) ou emoji, mesmo padrão do Desktop
+  // (UserAvatar.tsx) — nunca um URL remoto, não há Storage neste projeto.
+  avatar: string | null;
+}
+
+export interface MeuPostoInfo {
+  nome: string;
+  pais: string | null;
 }
 
 export type EstadoPosto = 'pendente' | 'ativo' | 'suspenso' | 'bloqueado';

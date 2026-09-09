@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { removerPin } from '@/lib/pinLocal';
 import type { PwaUser } from '@/types';
 
 const MENSAGEM_DESATIVADO = 'O seu acesso foi desativado. Contacte o administrador.';
@@ -16,6 +17,7 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
   clearDeactivatedMessage: () => void;
+  atualizarPerfil: (nome: string, avatar: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -33,6 +35,7 @@ async function fetchPwaUser(authUid: string): Promise<PwaUser | null> {
     postoId: data.posto_id ?? null,
     username: data.username ?? null,
     tipoAcesso: data.tipo_acesso ?? 'user',
+    avatar: data.avatar ?? null,
   };
 }
 
@@ -49,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     setSession(null);
     setPwaUser(null);
     setDeactivatedMessage(mensagem);
+    removerPin();
   }, []);
 
   const verificarAtivo = useCallback(
@@ -124,6 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     await supabase.auth.signOut();
     setSession(null);
     setPwaUser(null);
+    // Logout explícito limpa sempre o PIN local — nunca deve ficar um PIN
+    // órfão à espera que outra pessoa desbloqueie o dispositivo.
+    removerPin();
   }, []);
 
   const changePassword = useCallback(async (newPassword: string): Promise<void> => {
@@ -137,6 +144,16 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     }
   }, []);
 
+  // GRANT restrito a (nome, avatar) do lado do Supabase — mesmo tentando
+  // enviar outros campos aqui, a base de dados rejeitaria; não há
+  // escalada de privilégio possível por este caminho.
+  const atualizarPerfil = useCallback(async (nome: string, avatar: string | null): Promise<void> => {
+    if (!pwaUser) throw new Error('Sessão inválida.');
+    const { error } = await supabase.from('pwa_users').update({ nome, avatar }).eq('id', pwaUser.id);
+    if (error) throw new Error(error.message);
+    setPwaUser((prev) => (prev ? { ...prev, nome, avatar } : prev));
+  }, [pwaUser]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -149,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
         logout,
         changePassword,
         clearDeactivatedMessage: () => setDeactivatedMessage(null),
+        atualizarPerfil,
       }}
     >
       {children}

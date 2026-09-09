@@ -1,10 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import https from 'node:https';
+import { randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
 import { settingsRepository } from '../models/repositories/settingsRepository';
 
 const SETTING_POSTO_ID = 'posto_id';
+const SETTING_INSTALLATION_ID = 'installation_id';
 
 // O processo principal do Electron corre num runtime Node mais antigo, sem
 // WebSocket nativo — o @supabase/supabase-js precisa de um global WebSocket
@@ -180,6 +182,48 @@ export async function listarPostosDisponiveis(): Promise<PostoDisponivelRow[]> {
     return [];
   }
   return (data ?? []) as PostoDisponivelRow[];
+}
+
+function obterOuCriarInstallationId(): string {
+  const existente = settingsRepository.get(SETTING_INSTALLATION_ID);
+  if (existente) return existente;
+  const novo = randomUUID();
+  settingsRepository.set(SETTING_INSTALLATION_ID, novo);
+  return novo;
+}
+
+// Doc 23 §2 — em vez de o Admin escolher o posto à mão num dropdown (erro
+// humano fácil: bastaria escolher o posto errado para misturar dados
+// entre postos), o Root gera um código de utilização única em
+// criarPostoRoot() (Mobile) e o Admin resgata-o aqui, uma vez, na
+// instalação certa. Fica registado o installation_id desta máquina, para
+// auditoria de qual instalação ativou qual posto.
+export async function ativarPostoComCodigo(codigo: string): Promise<PostoDisponivelRow> {
+  const supabase = requireSupabaseClient();
+  const installationId = obterOuCriarInstallationId();
+  const codigoNormalizado = codigo.trim().toUpperCase();
+
+  const { data, error } = await supabase
+    .from('postos')
+    .update({
+      codigo_usado: true,
+      installation_id: installationId,
+      ativado_em: new Date().toISOString(),
+      estado: 'ativo',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('codigo_ativacao', codigoNormalizado)
+    .eq('codigo_usado', false)
+    .select('id,nome,pais,estado')
+    .single();
+
+  if (error || !data) {
+    throw new Error('Código de ativação inválido ou já utilizado.');
+  }
+
+  settingsRepository.set(SETTING_POSTO_ID, data.id);
+  postoIdPromise = null;
+  return data as PostoDisponivelRow;
 }
 
 export interface DiagnosticoPosto {

@@ -6,6 +6,7 @@ import {
   CubeFocus,
   DeviceMobile,
   Eye,
+  Key,
   Lock,
   MagnifyingGlass,
   Package,
@@ -373,6 +374,70 @@ function PainelCargasUser({ utilizador, onClose }: PainelCargasUserProps): React
   );
 }
 
+// ─── Card "Ativar posto por código" ─────────────────────────────────────────
+// Caminho recomendado (doc 23 §2): o Root gera um código de utilização
+// única por posto no painel Root (Mobile); o Admin resgata-o aqui, uma
+// vez, na instalação certa. Evita o erro humano de escolher o posto
+// errado no dropdown manual abaixo (que continua a existir como reserva).
+
+interface AtivarPostoCardProps {
+  onAtivado: (postoId: string) => void;
+}
+
+function AtivarPostoCard({ onAtivado }: AtivarPostoCardProps): React.JSX.Element {
+  const [codigo, setCodigo] = useState('');
+  const [ativando, setAtivando] = useState(false);
+
+  async function handleAtivar(): Promise<void> {
+    if (!codigo.trim()) return;
+    setAtivando(true);
+    try {
+      const posto = await ipcService.sync.ativarPosto(codigo.trim());
+      toast.success(`Instalação ligada ao posto "${posto.nome}".`);
+      setCodigo('');
+      onAtivado(posto.id);
+    } catch (err) {
+      toast.error(cleanIpcError(err));
+    } finally {
+      setAtivando(false);
+    }
+  }
+
+  return (
+    <div className="rounded-surface border border-border bg-bg-surface p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-primary/15">
+          <Key size={18} weight="fill" className="text-primary" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-text-primary">Ativar posto por código</p>
+          <p className="mt-0.5 text-[12px] text-text-tertiary">
+            Cola aqui o código de ativação gerado pelo Root para o posto desta instalação — evita ter de escolher o posto certo à mão.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="w-full sm:max-w-[320px]">
+              <FloatingLabelInput
+                label="Código de ativação"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                className="uppercase"
+              />
+            </div>
+            <button
+              type="button"
+              disabled={ativando || !codigo.trim()}
+              onClick={() => void handleAtivar()}
+              className="shrink-0 rounded-control bg-primary px-3.5 py-2 text-[13px] font-medium text-white transition-colors hover:brightness-95 disabled:opacity-50"
+            >
+              {ativando ? 'A ativar...' : 'Ativar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Card "Posto desta instalação" ──────────────────────────────────────────
 // Só aparece se existirem postos no Supabase — instalações que ainda não
 // usam a arquitetura multi-posto não veem nada aqui.
@@ -700,6 +765,14 @@ export function SincronizacaoConfig(): React.JSX.Element {
         </div>
 
         {/* Posto desta instalação (só aparece se multi-posto estiver em uso) */}
+        {postos.length > 0 ? (
+          <AtivarPostoCard
+            onAtivado={(id) => {
+              setPostoAtual(id);
+              void carregar();
+            }}
+          />
+        ) : null}
         {postos.length > 0 ? (
           <PostoInstalacaoCard
             postos={postos}

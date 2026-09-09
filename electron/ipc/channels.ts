@@ -111,6 +111,7 @@ export const IPC_CHANNELS = [
   'sync:importarCarga',
   'sync:rejeitarCarga',
   'sync:listarPostos',
+  'sync:ativarPosto',
   'sync:diagnosticoPosto',
   'mensagens:listarConversa',
   'mensagens:enviar',

@@ -2,6 +2,7 @@ import {
   requireSupabaseClient,
   resolverPostoId,
   listarPostosDisponiveis,
+  ativarPostoComCodigo,
   diagnosticoPosto,
   type DiagnosticoPosto,
   type PostoDisponivelRow,
@@ -144,6 +145,10 @@ export async function listarHistorico(limit = 100): Promise<CargaPendente[]> {
 
 export async function listarPostos(): Promise<PostoDisponivelRow[]> {
   return listarPostosDisponiveis();
+}
+
+export async function ativarPosto(codigo: string): Promise<PostoDisponivelRow> {
+  return ativarPostoComCodigo(codigo);
 }
 
 export async function obterDiagnosticoPosto(): Promise<DiagnosticoPosto> {

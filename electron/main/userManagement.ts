@@ -122,7 +122,12 @@ export function reativarUsuario(requestedByRole: UserRole, userId: string): Publ
   return toPublicUser(updated);
 }
 
-export function eliminarUsuario(requestedByRole: UserRole, userId: string): void {
+// Nome interno "desativar", não "eliminar": não há apagamento físico,
+// só active=false (soft delete — histórico de cargas/sessões preservado
+// por requisito de negócio, ver CLAUDE.md). O canal IPC e o botão na UI
+// continuam a dizer "Eliminar" para o utilizador final — a única
+// diferença é o nome desta função não fingir que apaga de verdade.
+export function desativarUsuario(requestedByRole: UserRole, userId: string): void {
   if (requestedByRole !== 'admin') throw new Error('Só um Admin pode eliminar utilizadores.');
   const existing = userRepository.findById(userId);
   if (!existing) throw new Error('Utilizador não encontrado.');

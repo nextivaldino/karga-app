@@ -257,6 +257,7 @@ export const ipcService = {
     rejeitarCarga: (pendenteId: string, motivo: string) => invoke<void>('sync:rejeitarCarga', pendenteId, motivo),
     listarHistorico: (limit?: number) => invoke<CargaPendente[]>('sync:listarHistorico', limit),
     listarPostos: () => invoke<PostoDisponivel[]>('sync:listarPostos'),
+    ativarPosto: (codigo: string) => invoke<PostoDisponivel>('sync:ativarPosto', codigo),
     diagnosticoPosto: () => invoke<DiagnosticoPosto>('sync:diagnosticoPosto'),
   },
   mensagens: {

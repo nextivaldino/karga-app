@@ -633,7 +633,7 @@ export function registerIpcHandlers(): void {
   );
 
   ipcMain.handle('users:eliminar', (_event, userId: string) =>
-    userManagement.eliminarUsuario(requireSession().role, userId),
+    userManagement.desativarUsuario(requireSession().role, userId),
   );
 
   ipcMain.handle('users:resetPasswordAdmin', (_event, targetUserId: string, newPassword: string) =>
@@ -744,6 +744,13 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('sync:listarPostos', () => {
     requirePermissao('configuracoes', 'ver');
     return sync.listarPostos();
+  });
+
+  ipcMain.handle('sync:ativarPosto', async (_event, codigo: string) => {
+    requirePermissao('configuracoes', 'editar');
+    const posto = await sync.ativarPosto(codigo);
+    registarAuditoria('ativou_posto_por_codigo', 'posto', posto.id);
+    return posto;
   });
 
   ipcMain.handle('sync:diagnosticoPosto', () => {

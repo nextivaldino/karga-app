@@ -150,9 +150,19 @@ export async function obterDiagnosticoPosto(): Promise<DiagnosticoPosto> {
   return diagnosticoPosto();
 }
 
+// Mesmo motivo do exigirPostoId() acima: Service Role Key ignora RLS, por
+// isso o filtro por posto tem de ser explícito também aqui — senão uma
+// instalação consegue rever/importar/rejeitar uma carga pendente de outro
+// posto só por saber o UUID (id não é segredo, aparece em notificações).
 async function obterPendente(id: string): Promise<CargaPendente> {
   const supabase = requireSupabaseClient();
-  const { data, error } = await supabase.from('cargas_pendentes').select('*, pwa_users(nome)').eq('id', id).single();
+  const postoId = await exigirPostoId();
+  const { data, error } = await supabase
+    .from('cargas_pendentes')
+    .select('*, pwa_users(nome)')
+    .eq('id', id)
+    .eq('posto_id', postoId)
+    .single();
   if (error || !data) throw new Error(error?.message ?? 'Carga pendente não encontrada.');
   return mapPendenteRow(data as CargaPendenteRow);
 }
@@ -260,11 +270,21 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
 
   try {
     const supabase = requireSupabaseClient();
-    const { error } = await supabase
+    const postoId = await exigirPostoId();
+    // .select().single() é essencial aqui, não só estilo: um UPDATE sem
+    // .select() volta sempre 204/sem erro mesmo quando 0 linhas
+    // correspondem ao filtro (comportamento normal do PostgREST) — sem
+    // isto, o filtro .eq('posto_id', postoId) não protegia nada de facto,
+    // só "funcionava" porque o obterPendente() anterior já validou o
+    // posto (esta chamada é defesa em profundidade, tem de poder falhar).
+    const { data, error } = await supabase
       .from('cargas_pendentes')
       .update({ estado: 'importada', carga_local_id: carga.id, importado_em: new Date().toISOString() })
-      .eq('id', input.pendenteId);
-    if (error) throw new Error(error.message);
+      .eq('id', input.pendenteId)
+      .eq('posto_id', postoId)
+      .select('id')
+      .single();
+    if (error || !data) throw new Error(error?.message ?? 'Carga pendente não encontrada ou já não pertence a este posto.');
   } catch (err) {
     cargaRepository.reverterImportacaoFalhada(carga.id);
     const mensagem = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -277,10 +297,19 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
 
 export async function rejeitarCarga(pendenteId: string, motivo: string): Promise<void> {
   const supabase = requireSupabaseClient();
-  const { error } = await supabase
+  const postoId = await exigirPostoId();
+  // Ver comentário equivalente em importarCarga: sem .select().single(),
+  // um UPDATE que não encontra nenhuma linha (ex: pendente de outro
+  // posto) devolve sucesso na mesma — esta é a única validação de posto
+  // que rejeitarCarga tem (não passa por obterPendente antes).
+  const { data, error: erroUpdate } = await supabase
     .from('cargas_pendentes')
     .update({ estado: 'rejeitada', motivo_rejeicao: motivo })
-    .eq('id', pendenteId);
+    .eq('id', pendenteId)
+    .eq('posto_id', postoId)
+    .select('id')
+    .single();
+  const error = erroUpdate || (!data ? { message: 'Carga pendente não encontrada ou já não pertence a este posto.' } : null);
   if (error) {
     notificarFalhaSync('Falha ao rejeitar carga', error.message, pendenteId);
     throw new Error(error.message);

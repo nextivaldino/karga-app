@@ -34,6 +34,19 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
   const tentarEnviarRegisto = useCallback(
     async (registo: ItemFilaOffline): Promise<boolean> => {
       if (!pwaUser) return false;
+      // Item foi enfileirado por outra conta (ex: telemóvel partilhado,
+      // logout com itens ainda por enviar) — nunca reenviar atribuído ao
+      // utilizador atual. Fica marcado como erro permanente (mesmo
+      // tratamento dos outros erros que exigem ação humana), até a conta
+      // original voltar a iniciar sessão.
+      if (registo.donoUserId !== pwaUser.id) {
+        await marcarErroNaFila(
+          registo.id,
+          `Carga criada por ${registo.donoNome} — inicia sessão com essa conta para a enviar.`,
+          'permanente',
+        );
+        return false;
+      }
       try {
         await enviarCargasPendentes(pwaUser.id, pwaUser.postoId, [registo.item]);
         await removerDaFila(registo.id);
@@ -99,7 +112,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
       if (!pwaUser) throw new Error('Sessão inválida.');
 
       if (!navigator.onLine) {
-        for (const item of itens) await adicionarAFila(item);
+        for (const item of itens) await adicionarAFila(item, pwaUser.id, pwaUser.nome);
         await refrescar();
         return 'offline';
       }
@@ -114,7 +127,7 @@ export function FilaOfflineProvider({ children }: { children: ReactNode }): Reac
         // sentido a fila parecer "vai enviar sozinho" quando nunca vai.
         const { mensagem, tipo } = classificarErro(err);
         for (const item of itens) {
-          const registo = await adicionarAFila(item);
+          const registo = await adicionarAFila(item, pwaUser.id, pwaUser.nome);
           if (tipo === 'permanente') await marcarErroNaFila(registo.id, mensagem, tipo);
         }
         await refrescar();

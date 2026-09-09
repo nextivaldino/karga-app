@@ -160,19 +160,23 @@ export function registerIpcHandlers(): void {
     return contacto;
   });
 
-  ipcMain.handle('contactos:search', (_event, texto: string, limit?: number) =>
-    contactoRepository.search(texto, limit),
-  );
+  ipcMain.handle('contactos:search', (_event, texto: string, limit?: number) => {
+    requirePermissao('contactos', 'ver');
+    return contactoRepository.search(texto, limit);
+  });
 
   ipcMain.handle(
     'contactos:buscarSimilares',
-    (_event, input: { nome?: string; telefone?: string; morada?: string }, excludeId?: string) =>
-      contactoRepository.buscarSimilares(input, excludeId),
+    (_event, input: { nome?: string; telefone?: string; morada?: string }, excludeId?: string) => {
+      requirePermissao('contactos', 'ver');
+      return contactoRepository.buscarSimilares(input, excludeId);
+    },
   );
 
-  ipcMain.handle('contactos:listPorContentor', (_event, contentorId: string) =>
-    contactoRepository.listPorContentor(contentorId),
-  );
+  ipcMain.handle('contactos:listPorContentor', (_event, contentorId: string) => {
+    requirePermissao('contactos', 'ver');
+    return contactoRepository.listPorContentor(contentorId);
+  });
 
   ipcMain.handle('contactos:archive', (_event, id: string) => {
     requirePermissao('contactos', 'eliminar');
@@ -227,13 +231,20 @@ export function registerIpcHandlers(): void {
     return carga;
   });
 
-  ipcMain.handle('cargas:nextCodigo', () => cargaRepository.nextCodigo());
+  ipcMain.handle('cargas:nextCodigo', () => {
+    requirePermissao('cargas', 'criar');
+    return cargaRepository.nextCodigo();
+  });
 
-  ipcMain.handle('cargas:nextCodigoAgrupado', (_event, emissorId: string, reservados?: string[]) =>
-    cargaRepository.nextCodigoAgrupado(emissorId, reservados),
-  );
+  ipcMain.handle('cargas:nextCodigoAgrupado', (_event, emissorId: string, reservados?: string[]) => {
+    requirePermissao('cargas', 'criar');
+    return cargaRepository.nextCodigoAgrupado(emissorId, reservados);
+  });
 
-  ipcMain.handle('cargas:codigoExiste', (_event, codigo: string) => cargaRepository.codigoExiste(codigo));
+  ipcMain.handle('cargas:codigoExiste', (_event, codigo: string) => {
+    requirePermissao('cargas', 'ver');
+    return cargaRepository.codigoExiste(codigo);
+  });
 
   ipcMain.handle('cargas:addDestinatario', (_event, cargaId: string, contactoId: string) => {
     requirePermissao('cargas', 'editar');
@@ -349,7 +360,10 @@ export function registerIpcHandlers(): void {
     return contentor;
   });
 
-  ipcMain.handle('contentores:nextCodigo', () => contentorRepository.nextCodigo());
+  ipcMain.handle('contentores:nextCodigo', () => {
+    requirePermissao('contentores', 'criar');
+    return contentorRepository.nextCodigo();
+  });
 
   ipcMain.handle('contentores:bloquear', (_event, id: string) => {
     requirePermissao('contentores', 'editar');
@@ -454,16 +468,23 @@ export function registerIpcHandlers(): void {
     return { path };
   });
 
-  ipcMain.handle('home:resumo', (): HomeResumo => ({
-    totalCargasMes: cargaRepository.countMesAtual(),
-    contentoresAbertos: contentorRepository.countAbertos(),
-    valorDevido: cargaRepository.sumValorDevido(),
-    entregues: cargaRepository.countEntreguesMesAtual(),
-  }));
+  ipcMain.handle('home:resumo', (): HomeResumo => {
+    requireSession();
+    return {
+      totalCargasMes: cargaRepository.countMesAtual(),
+      contentoresAbertos: contentorRepository.countAbertos(),
+      valorDevido: cargaRepository.sumValorDevido(),
+      entregues: cargaRepository.countEntreguesMesAtual(),
+    };
+  });
 
-  ipcMain.handle('home:ultimasSincronizadas', (_event, limit?: number) => cargaRepository.listUltimasSincronizadas(limit));
+  ipcMain.handle('home:ultimasSincronizadas', (_event, limit?: number) => {
+    requireSession();
+    return cargaRepository.listUltimasSincronizadas(limit);
+  });
 
   ipcMain.handle('search:global', (_event, texto: string): SearchResultItem[] => {
+    requireSession();
     if (!texto.trim()) return [];
 
     // `searchGlobal` de cada repositório cruza com as outras entidades
@@ -586,7 +607,10 @@ export function registerIpcHandlers(): void {
     },
   );
 
-  ipcMain.handle('users:list', () => userManagement.listUsuariosComSessao());
+  ipcMain.handle('users:list', () => {
+    requirePermissao('configuracoes', 'ver');
+    return userManagement.listUsuariosComSessao();
+  });
 
   ipcMain.handle('users:create', async (_event, input: CreateUserInput) => {
     const user = await userManagement.criarUsuario(requireSession().role, input);
@@ -620,7 +644,10 @@ export function registerIpcHandlers(): void {
     userManagement.resetPasswordUser(requireSession().role, targetUserId, newPassword),
   );
 
-  ipcMain.handle('users:listAdmins', () => userManagement.listAdmins());
+  ipcMain.handle('users:listAdmins', () => {
+    requireSession();
+    return userManagement.listAdmins();
+  });
 
   ipcMain.handle('users:habilitarPwa', async (_event, userId: string) => {
     const result = await userManagement.habilitarPwa(requireSession().role, userId);
@@ -646,22 +673,40 @@ export function registerIpcHandlers(): void {
     userManagement.setContentorPadraoPwa(requireSession().role, userId, contentorId),
   );
 
-  ipcMain.handle('permissoes:listPorUser', (_event, userId: string) => permissaoRepository.listPorUser(userId));
+  ipcMain.handle('permissoes:listPorUser', (_event, userId: string) => {
+    requirePermissao('configuracoes', 'ver');
+    return permissaoRepository.listPorUser(userId);
+  });
 
   ipcMain.handle('permissoes:set', (_event, userId: string, permissoes: PermissaoInput[]) => {
     userManagement.definirPermissoes(requireSession().role, userId, permissoes);
     return permissaoRepository.listPorUser(userId);
   });
 
-  ipcMain.handle('sessoes:listPorUser', (_event, userId: string) => sessaoRepository.listPorUser(userId));
+  ipcMain.handle('sessoes:listPorUser', (_event, userId: string) => {
+    requirePermissao('configuracoes', 'ver');
+    return sessaoRepository.listPorUser(userId);
+  });
 
-  ipcMain.handle('auditoria:list', (_event, limit?: number) => auditoriaRepository.list(limit));
+  ipcMain.handle('auditoria:list', (_event, limit?: number) => {
+    requirePermissao('configuracoes', 'ver');
+    return auditoriaRepository.list(limit);
+  });
 
-  ipcMain.handle('notificacoes:list', (_event, limit?: number) => notificacaoRepository.list(limit));
+  ipcMain.handle('notificacoes:list', (_event, limit?: number) => {
+    requireSession();
+    return notificacaoRepository.list(limit);
+  });
 
-  ipcMain.handle('notificacoes:marcarLida', (_event, id: string) => notificacaoRepository.marcarLida(id));
+  ipcMain.handle('notificacoes:marcarLida', (_event, id: string) => {
+    requireSession();
+    return notificacaoRepository.marcarLida(id);
+  });
 
-  ipcMain.handle('notificacoes:marcarTodasLidas', () => notificacaoRepository.marcarTodasLidas());
+  ipcMain.handle('notificacoes:marcarTodasLidas', () => {
+    requireSession();
+    return notificacaoRepository.marcarTodasLidas();
+  });
 
   ipcMain.handle('sync:listPendentes', () => {
     requirePermissao('configuracoes', 'ver');

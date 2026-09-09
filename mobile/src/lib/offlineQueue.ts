@@ -29,7 +29,11 @@ function getDb(): Promise<IDBPDatabase<KragaDB>> {
   return dbPromise;
 }
 
-export async function adicionarAFila(item: NovaCargaPendenteInput): Promise<ItemFilaOffline> {
+export async function adicionarAFila(
+  item: NovaCargaPendenteInput,
+  donoUserId: string,
+  donoNome: string,
+): Promise<ItemFilaOffline> {
   const db = await getDb();
   const registo: ItemFilaOffline = {
     id: crypto.randomUUID(),
@@ -40,6 +44,8 @@ export async function adicionarAFila(item: NovaCargaPendenteInput): Promise<Item
     tentativas: 0,
     ultimaTentativaEm: null,
     tipoErro: null,
+    donoUserId,
+    donoNome,
   };
   await db.put('fila', registo);
   return registo;

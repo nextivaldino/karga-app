@@ -1,5 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
+import https from 'node:https';
+import type { IncomingHttpHeaders } from 'node:http';
 import { settingsRepository } from '../models/repositories/settingsRepository';
 
 const SETTING_POSTO_ID = 'posto_id';
@@ -14,6 +16,59 @@ if (typeof globalThis.WebSocket === 'undefined') {
 
 let client: SupabaseClient | null | undefined;
 let postoIdPromise: Promise<string | null> | null = null;
+
+// O fetch global do runtime Electron pode falhar no processo principal
+// quando o serviço de rede/GPU do Chromium reinicia. O cliente Supabase só
+// precisa do contrato Fetch; usar HTTPS do Node torna o sync independente
+// desse serviço.
+//
+// init.headers pode chegar como instância de Headers (é o que o
+// supabase-js/postgrest-js envia) — https.request não sabe iterar isso
+// (não é um objeto simples), por isso um cast direto para
+// Record<string,string> descarta os headers em silêncio (fica só
+// host/connection, que o próprio Node acrescenta). Sem isto, apikey e
+// Authorization nunca chegavam a sair da máquina — qualquer pedido falharia
+// silenciosamente ou seria rejeitado pelo Supabase.
+function normalizarHeaders(headers: HeadersInit | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+  if (headers instanceof Headers) {
+    const obj: Record<string, string> = {};
+    headers.forEach((value, key) => { obj[key] = value; });
+    return obj;
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers);
+  return headers;
+}
+
+function nodeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const target = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
+    const request = https.request(
+      target,
+      {
+        method: init?.method ?? 'GET',
+        headers: normalizarHeaders(init?.headers),
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => {
+          const headers = new Headers();
+          for (const [key, value] of Object.entries(response.headers as IncomingHttpHeaders)) {
+            if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+          }
+          resolve(new Response(Buffer.concat(chunks), { status: response.statusCode ?? 500, headers }));
+        });
+      },
+    );
+    request.on('error', reject);
+    if (init?.signal) {
+      init.signal.addEventListener('abort', () => request.destroy(new Error('Request aborted')), { once: true });
+    }
+    if (init?.body) request.write(typeof init.body === 'string' ? init.body : JSON.stringify(init.body));
+    request.end();
+  });
+}
 
 // Cliente com a Service Role Key — só usado no processo principal, para
 // operações que precisam de ignorar RLS (ex: upsert de contentores_disponiveis
@@ -32,6 +87,7 @@ function getSupabaseClient(): SupabaseClient | null {
   try {
     client = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: nodeFetch },
     });
   } catch (err) {
     console.warn('[sync] Falha ao criar cliente Supabase:', err instanceof Error ? err.message : err);
@@ -90,6 +146,12 @@ export async function resolverPostoId(): Promise<string | null> {
           settingsRepository.set(SETTING_POSTO_ID, data[0].id);
           return data[0].id;
         }
+        // 0 ou 2+ postos ativos: não guarda o resultado em cache — se
+        // ficasse memoizado como null, resolver a ambiguidade mais tarde
+        // (ex: desativar o posto a mais) só teria efeito depois de
+        // reiniciar a app. Sem valor persistido, a próxima chamada volta
+        // a consultar o Supabase em vez de repetir o null antigo.
+        postoIdPromise = null;
         return null;
       });
   }

@@ -65,10 +65,6 @@ function AppShell(): React.JSX.Element {
 }
 
 export default function App(): React.JSX.Element {
-  if (new URLSearchParams(window.location.search).get('root') === 'demo') {
-    return <RootPanelPage demo />;
-  }
-
   return (
     <ThemeProvider>
       <AuthProvider>

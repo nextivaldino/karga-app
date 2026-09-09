@@ -127,4 +127,9 @@ export interface ItemFilaOffline {
   tentativas: number;
   ultimaTentativaEm: string | null;
   tipoErro: TipoErroFila | null;
+  // Dono no momento em que o item foi enfileirado — impede que, ao trocar
+  // de conta no mesmo aparelho com itens ainda por enviar, a fila os
+  // reenvie atribuídos ao utilizador errado (ver useFilaOffline).
+  donoUserId: string;
+  donoNome: string;
 }

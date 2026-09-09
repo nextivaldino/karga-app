@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ipcService } from '@/services/ipcService';
 import { useAuth } from '@/modules/auth/AuthContext';
+import { decidirPermissao } from '@/lib/permissoes';
 import type { ModuloPermissao, Permissao } from '@/types';
 
 interface PermissoesValue {
@@ -27,21 +28,7 @@ export function usePermissoes(): PermissoesValue {
 
   function pode(modulo: ModuloPermissao, acao: 'ver' | 'criar' | 'editar' | 'eliminar'): boolean {
     if (!user) return false;
-    if (user.role === 'admin') return true;
-    if (user.role === 'root') return false;
-
-    const linha = permissoes.find((p) => p.modulo === modulo);
-    if (!linha) return false;
-    switch (acao) {
-      case 'ver':
-        return linha.podeVer;
-      case 'criar':
-        return linha.podeCriar;
-      case 'editar':
-        return linha.podeEditar;
-      case 'eliminar':
-        return linha.podeEliminar;
-    }
+    return decidirPermissao(user.role, modulo, acao, permissoes);
   }
 
   return { loading, pode };

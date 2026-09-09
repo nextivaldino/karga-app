@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase, nowIso } from '../database';
-import type { ModuloPermissao, Permissao, PermissaoInput } from '../../../src/types';
+import type { ModuloPermissao, Permissao, PermissaoInput, UserRole } from '../../../src/types';
+import { decidirPermissao } from '../../../src/lib/permissoes';
 
 interface PermissaoRow {
   id: string;
@@ -63,29 +64,16 @@ function setBulk(userId: string, permissoes: PermissaoInput[]): Permissao[] {
 
 function podeAcesso(
   userId: string,
-  role: string,
+  role: UserRole,
   modulo: ModuloPermissao,
   acao: 'ver' | 'criar' | 'editar' | 'eliminar',
 ): boolean {
-  if (role === 'admin') return true;
-  if (role === 'root') return false;
-
-  const db = getDatabase();
-  const row = db
-    .prepare<[string, string], PermissaoRow>('SELECT * FROM permissoes WHERE user_id = ? AND modulo = ?')
-    .get(userId, modulo);
-  if (!row) return false;
-
-  switch (acao) {
-    case 'ver':
-      return row.pode_ver === 1;
-    case 'criar':
-      return row.pode_criar === 1;
-    case 'editar':
-      return row.pode_editar === 1;
-    case 'eliminar':
-      return row.pode_eliminar === 1;
-  }
+  // Delega na mesma função pura usada pelo cliente (src/lib/permissoes) —
+  // fonte única de verdade da matriz de decisão. Este é o lado que
+  // realmente protege os dados (chamado por cada handler IPC); o cliente
+  // só a usa para esconder/mostrar UI.
+  if (role === 'admin' || role === 'root') return decidirPermissao(role, modulo, acao, []);
+  return decidirPermissao(role, modulo, acao, listPorUser(userId));
 }
 
 export const permissaoRepository = { listPorUser, setBulk, podeAcesso };

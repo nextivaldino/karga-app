@@ -280,6 +280,28 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
   }
 }
 
+// contentorRepository.eliminar() só existe para contentores abertos e sem
+// cargas — nunca houve dados de negócio reais a perder aqui. Sem isto, a
+// linha em contentores_disponiveis (espelho para o PWA) ficava órfã para
+// sempre: o contentor deixava de existir no Desktop mas continuava a
+// aparecer na lista do Mobile indefinidamente.
+export function removerContentorDisponivel(id: string): void {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    Promise.resolve(supabase.from('contentores_disponiveis').delete().eq('id', id))
+      .then(({ error }) => {
+        if (error) console.warn('[sync] Falha ao remover de contentores_disponiveis:', error.message);
+      })
+      .catch((err: unknown) => {
+        console.warn('[sync] Falha ao remover de contentores_disponiveis:', err instanceof Error ? err.message : err);
+      });
+  } catch (err) {
+    console.warn('[sync] Falha ao remover de contentores_disponiveis:', err instanceof Error ? err.message : err);
+  }
+}
+
 export async function obterEmailUtilizadorPwaAuth(authUid: string): Promise<string> {
   const supabase = requireSupabaseClient();
   const { data, error } = await supabase.auth.admin.getUserById(authUid);

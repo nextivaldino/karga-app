@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getDatabase, nowIso } from '../database';
 import { computeNextCode } from '../codeSequence';
 import { settingsRepository } from './settingsRepository';
-import { upsertContentorDisponivel } from '../../lib/supabaseClient';
+import { upsertContentorDisponivel, removerContentorDisponivel } from '../../lib/supabaseClient';
 import type { Contentor, CreateContentorInput } from '../../../src/types';
 
 interface ContentorRow {
@@ -393,6 +393,7 @@ function eliminar(id: string): void {
   }
   const db = getDatabase();
   db.prepare('DELETE FROM contentores WHERE id = ?').run(id);
+  removerContentorDisponivel(id);
 }
 
 function fechar(id: string): Contentor {

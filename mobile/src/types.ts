@@ -93,6 +93,19 @@ export interface MeuPostoInfo {
 }
 
 export type EstadoPosto = 'pendente' | 'ativo' | 'suspenso' | 'bloqueado';
+export type TipoAcesso = 'root' | 'admin' | 'user';
+
+// Utilizador PWA visto pelo painel Root — não confundir com PwaUser (o
+// próprio utilizador autenticado). Usado só na gestão global de
+// identidades, por isso não traz avatar/PIN/etc.
+export interface UtilizadorRoot {
+  id: string;
+  nome: string;
+  email: string;
+  tipoAcesso: TipoAcesso;
+  ativo: boolean;
+  postoId: string | null;
+}
 
 export interface Posto {
   id: string;

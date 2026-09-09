@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { guardarCache, lerCacheCargas, lerCacheContentores } from './offlineQueue';
-import type { CargaPendente, ContentorDisponivel, EstadoPosto, MeuPostoInfo, Mensagem, NovaCargaPendenteInput, Posto } from '@/types';
+import type { CargaPendente, ContentorDisponivel, EstadoPosto, MeuPostoInfo, Mensagem, NovaCargaPendenteInput, Posto, TipoAcesso, UtilizadorRoot } from '@/types';
 
 interface PostoRow {
   id: string;
@@ -49,6 +49,49 @@ export async function criarPostoRoot(nome: string, pais: string): Promise<Posto>
 
 export async function alterarEstadoPostoRoot(id: string, estado: Extract<EstadoPosto, 'ativo' | 'suspenso' | 'bloqueado'>): Promise<void> {
   const { error } = await supabase.from('postos').update({ estado, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+interface UtilizadorRootRow {
+  id: string;
+  nome: string;
+  email: string;
+  tipo_acesso: TipoAcesso;
+  ativo: boolean;
+  posto_id: string | null;
+}
+
+// Só o Root chama isto — RLS ("root gere identidades", 20260907130000)
+// dá SELECT em pwa_users a qualquer tipo_acesso='root', sem restrição de
+// coluna (o GRANT restrito de 20260909110000 só limita UPDATE).
+export async function listarUtilizadoresRoot(): Promise<UtilizadorRoot[]> {
+  const { data, error } = await supabase.from('pwa_users').select('id,nome,email,tipo_acesso,ativo,posto_id').order('nome');
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: UtilizadorRootRow) => ({
+    id: row.id,
+    nome: row.nome,
+    email: row.email,
+    tipoAcesso: row.tipo_acesso,
+    ativo: row.ativo,
+    postoId: row.posto_id,
+  }));
+}
+
+// Passa por root_atualizar_pwa_user (RPC SECURITY DEFINER,
+// 20260909140000) em vez de um UPDATE direto — o GRANT restrito de
+// 20260909110000 só deixa authenticated escrever (nome, avatar) em
+// pwa_users, mesmo sendo root; a RPC contorna isso com a sua própria
+// verificação de meu_tipo_acesso()='root' lá dentro.
+export async function atualizarUtilizadorRoot(
+  userId: string,
+  alteracoes: { tipoAcesso?: TipoAcesso; postoId?: string; ativo?: boolean },
+): Promise<void> {
+  const { error } = await supabase.rpc('root_atualizar_pwa_user', {
+    p_user_id: userId,
+    p_tipo_acesso: alteracoes.tipoAcesso ?? null,
+    p_posto_id: alteracoes.postoId ?? null,
+    p_ativo: alteracoes.ativo ?? null,
+  });
   if (error) throw new Error(error.message);
 }
 

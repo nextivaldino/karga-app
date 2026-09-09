@@ -16,9 +16,9 @@ import {
   UsersThree,
   X,
 } from '@phosphor-icons/react';
-import { alterarEstadoPostoRoot, criarPostoRoot, listarPostosRoot } from '@/lib/data';
+import { alterarEstadoPostoRoot, atualizarUtilizadorRoot, criarPostoRoot, listarPostosRoot, listarUtilizadoresRoot } from '@/lib/data';
 import { useAuth } from '@/hooks/useAuth';
-import type { Posto as PostoRemoto } from '@/types';
+import type { Posto as PostoRemoto, TipoAcesso, UtilizadorRoot } from '@/types';
 
 type PostoEstado = 'ativo' | 'pendente' | 'suspenso';
 type Secao = 'rede' | 'postos' | 'utilizadores' | 'seguranca' | 'auditoria';
@@ -69,6 +69,7 @@ function converterPostoRemoto(posto: PostoRemoto): Posto {
 export function RootPanelPage({ demo = false }: { demo?: boolean }): React.JSX.Element {
   const { logout } = useAuth();
   const [postos, setPostos] = useState<Posto[]>(demo ? POSTOS_INICIAIS : []);
+  const [utilizadores, setUtilizadores] = useState<UtilizadorRoot[]>([]);
   const [secao, setSecao] = useState<Secao>('rede');
   const [pesquisa, setPesquisa] = useState('');
   const [novoAberto, setNovoAberto] = useState(false);
@@ -78,17 +79,50 @@ export function RootPanelPage({ demo = false }: { demo?: boolean }): React.JSX.E
   const [aCarregar, setACarregar] = useState(!demo);
   const postosFiltrados = useMemo(() => postos.filter((posto) => `${posto.nome} ${posto.pais}`.toLowerCase().includes(pesquisa.toLowerCase())), [postos, pesquisa]);
 
-  useEffect(() => {
+  // Contagem real de utilizadores por posto — antes disto existir, cada
+  // Posto mostrava sempre "0 utilizadores" (valor fixo, nunca lido de
+  // lado nenhum), incluindo nos cartões de resumo da Visão geral.
+  function aplicarContagens(postosBase: Posto[], listaUtilizadores: UtilizadorRoot[]): Posto[] {
+    const contagem = new Map<string, number>();
+    for (const u of listaUtilizadores) {
+      if (u.postoId) contagem.set(u.postoId, (contagem.get(u.postoId) ?? 0) + 1);
+    }
+    return postosBase.map((p) => ({ ...p, utilizadores: contagem.get(String(p.id)) ?? 0 }));
+  }
+
+  function carregarTudo(): void {
     if (demo) return;
-    void listarPostosRoot()
-      .then((resultado) => setPostos(resultado.map(converterPostoRemoto)))
-      .catch((error: unknown) => avisar(error instanceof Error ? error.message : 'Falha ao carregar Postos.'))
+    setACarregar(true);
+    Promise.all([listarPostosRoot(), listarUtilizadoresRoot()])
+      .then(([postosResultado, utilizadoresResultado]) => {
+        setUtilizadores(utilizadoresResultado);
+        setPostos(aplicarContagens(postosResultado.map(converterPostoRemoto), utilizadoresResultado));
+      })
+      .catch((error: unknown) => avisar(error instanceof Error ? error.message : 'Falha ao carregar dados.'))
       .finally(() => setACarregar(false));
+  }
+
+  useEffect(() => {
+    carregarTudo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demo]);
 
   function avisar(mensagem: string): void {
     setToast(mensagem);
     window.setTimeout(() => setToast(null), 2600);
+  }
+
+  async function handleAtualizarUtilizador(
+    userId: string,
+    alteracoes: { tipoAcesso?: TipoAcesso; postoId?: string; ativo?: boolean },
+  ): Promise<void> {
+    try {
+      await atualizarUtilizadorRoot(userId, alteracoes);
+      avisar('Utilizador atualizado.');
+      carregarTudo();
+    } catch (error) {
+      avisar(error instanceof Error ? error.message : 'Falha ao atualizar utilizador.');
+    }
   }
 
   async function criarPosto(e: React.FormEvent): Promise<void> {
@@ -121,7 +155,7 @@ export function RootPanelPage({ demo = false }: { demo?: boolean }): React.JSX.E
 
   const ativos = postos.filter((posto) => posto.estado === 'ativo').length;
   const pendentes = postos.filter((posto) => posto.estado === 'pendente').length;
-  const utilizadores = postos.reduce((total, posto) => total + posto.utilizadores, 0);
+  const totalUtilizadores = utilizadores.length;
   const titulo: Record<Secao, string> = { rede: 'Visão geral', postos: 'Postos', utilizadores: 'Utilizadores Mobile', seguranca: 'Segurança e Acesso', auditoria: 'Auditoria' };
 
   return (
@@ -136,9 +170,71 @@ export function RootPanelPage({ demo = false }: { demo?: boolean }): React.JSX.E
 
       <main className="min-w-0 flex-1"><header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-bg-header px-4 py-3 backdrop-blur-xl sm:px-7"><div className="flex items-center gap-2 text-[13px]"><span className="font-semibold text-text-primary">Configurações</span><CaretRight size={14} className="text-text-tertiary" /><span className="text-text-secondary">{titulo[secao]}</span></div><div className="flex items-center gap-1"><button type="button" title="Notificações" className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary hover:bg-bg-app"><Bell size={19} /></button><button type="button" title="Definições" onClick={() => setSecao('seguranca')} className="flex h-9 w-9 items-center justify-center rounded-control text-text-secondary hover:bg-bg-app"><Gear size={19} /></button></div></header>
         <div className="mx-auto max-w-[980px] px-4 pb-12 pt-7 sm:px-8 sm:pt-9"><div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="mb-1 text-[12px] text-text-tertiary">Configurações / {titulo[secao]}</p><h1 className="text-[24px] font-bold tracking-tight sm:text-[28px]">{titulo[secao]}</h1></div>{secao === 'postos' ? <button type="button" onClick={() => setNovoAberto(true)} className="flex min-h-touch items-center justify-center gap-2 rounded-control bg-[#f6c945] px-4 text-[13px] font-bold text-[#18232d] shadow-soft"><Plus size={17} weight="bold" /> Novo posto</button> : null}</div>
-          {secao === 'rede' ? <><section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="card-surface p-4"><Buildings size={20} className="mb-5 text-primary" /><p className="text-[25px] font-bold">{postos.length}</p><p className="text-[11px] text-text-tertiary">Postos registados</p></div><div className="card-surface p-4"><ArrowsClockwise size={20} className="mb-5 text-success" /><p className="text-[25px] font-bold">{ativos}</p><p className="text-[11px] text-text-tertiary">A operar agora</p></div><div className="card-surface p-4"><Key size={20} className="mb-5 text-warning" /><p className="text-[25px] font-bold">{pendentes}</p><p className="text-[11px] text-text-tertiary">A aguardar ativação</p></div><div className="card-surface p-4"><UsersThree size={20} className="mb-5 text-text-secondary" /><p className="text-[25px] font-bold">{utilizadores}</p><p className="text-[11px] text-text-tertiary">Utilizadores Mobile</p></div></section><section className="card-surface p-5 sm:p-6"><div className="mb-5 flex items-center justify-between"><div><h2 className="text-[15px] font-semibold">Rede de Postos</h2><p className="mt-1 text-[12px] text-text-tertiary">Estado atual das instalações KARGA</p></div><button type="button" onClick={() => setSecao('postos')} className="text-[12px] font-semibold text-primary">Ver todos</button></div><div className="space-y-1">{postos.map((posto) => <button key={posto.id} type="button" onClick={() => setSecao('postos')} className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left hover:bg-bg-app"><Buildings size={19} className="shrink-0 text-text-tertiary" /><span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{posto.nome}</span><span className="text-[11px] text-text-tertiary">{posto.pais} · {posto.utilizadores} utilizadores</span></span><EstadoBadge estado={posto.estado} /></button>)}</div></section></> : null}
+          {secao === 'rede' ? <><section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="card-surface p-4"><Buildings size={20} className="mb-5 text-primary" /><p className="text-[25px] font-bold">{postos.length}</p><p className="text-[11px] text-text-tertiary">Postos registados</p></div><div className="card-surface p-4"><ArrowsClockwise size={20} className="mb-5 text-success" /><p className="text-[25px] font-bold">{ativos}</p><p className="text-[11px] text-text-tertiary">A operar agora</p></div><div className="card-surface p-4"><Key size={20} className="mb-5 text-warning" /><p className="text-[25px] font-bold">{pendentes}</p><p className="text-[11px] text-text-tertiary">A aguardar ativação</p></div><div className="card-surface p-4"><UsersThree size={20} className="mb-5 text-text-secondary" /><p className="text-[25px] font-bold">{totalUtilizadores}</p><p className="text-[11px] text-text-tertiary">Utilizadores Mobile</p></div></section><section className="card-surface p-5 sm:p-6"><div className="mb-5 flex items-center justify-between"><div><h2 className="text-[15px] font-semibold">Rede de Postos</h2><p className="mt-1 text-[12px] text-text-tertiary">Estado atual das instalações KARGA</p></div><button type="button" onClick={() => setSecao('postos')} className="text-[12px] font-semibold text-primary">Ver todos</button></div><div className="space-y-1">{postos.map((posto) => <button key={posto.id} type="button" onClick={() => setSecao('postos')} className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left hover:bg-bg-app"><Buildings size={19} className="shrink-0 text-text-tertiary" /><span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-medium">{posto.nome}</span><span className="text-[11px] text-text-tertiary">{posto.pais} · {posto.utilizadores} utilizadores</span></span><EstadoBadge estado={posto.estado} /></button>)}</div></section></> : null}
           {secao === 'postos' ? <section className="card-surface p-5 sm:p-6"><div className="mb-5 flex items-center gap-2 rounded-control border border-border bg-bg-input px-2.5"><MagnifyingGlass size={16} className="text-text-tertiary" /><input value={pesquisa} onChange={(e) => setPesquisa(e.target.value)} className="h-11 min-w-0 flex-1 bg-transparent text-[13px] outline-none" placeholder="Pesquisar posto ou país" /></div>{aCarregar ? <p className="py-8 text-center text-[12px] text-text-tertiary">A carregar Postos...</p> : <div className="space-y-3">{postosFiltrados.map((posto) => <article key={posto.id} className="rounded-control border border-border p-4"><div className="flex flex-col gap-3 sm:flex-row sm:items-center"><div className="flex min-w-0 flex-1 items-center gap-3"><Buildings size={20} className="shrink-0 text-text-tertiary" /><div className="min-w-0"><h3 className="truncate text-[13px] font-semibold">{posto.nome}</h3><p className="text-[11px] text-text-tertiary">{posto.pais} · última atividade {posto.ultimaAtividade}</p></div></div><div className="flex items-center justify-between gap-3 sm:justify-end"><EstadoBadge estado={posto.estado} /><span className="text-[11px] text-text-tertiary">{posto.utilizadores} users</span>{posto.estado !== 'pendente' ? <button type="button" onClick={() => void alternarEstado(posto)} className="rounded-control border border-border px-3 py-2 text-[11px] font-medium text-text-secondary">{posto.estado === 'suspenso' ? 'Reativar' : 'Suspender'}</button> : <button type="button" onClick={() => avisar(`Código ${posto.codigo} copiado para teste.`)} className="flex items-center gap-1 rounded-control border border-border px-3 py-2 text-[11px] font-medium text-text-secondary"><Key size={14} /> Código</button>}</div></div>{posto.codigo ? <p className="mt-3 flex items-center gap-2 rounded-control bg-warning/10 px-3 py-2 text-[11px] text-warning"><Key size={14} /> Código de ativação: <strong>{posto.codigo}</strong></p> : null}</article>)}</div>}</section> : null}
-          {secao === 'utilizadores' ? <section className="card-surface p-5 sm:p-6"><div className="mb-5 flex items-center gap-3"><UsersThree size={23} className="text-warning" /><div><h2 className="text-[15px] font-semibold">Utilizadores Mobile</h2><p className="text-[12px] text-text-tertiary">Identidades geridas por cada Posto.</p></div></div><div className="space-y-2">{postos.filter((posto) => posto.estado === 'ativo').map((posto) => <div key={posto.id} className="flex items-center gap-3 rounded-control border border-border p-3"><Buildings size={18} className="text-text-tertiary" /><span className="flex-1 text-[13px]">{posto.nome}</span><span className="text-[12px] text-text-tertiary">{posto.utilizadores} utilizadores</span><CaretRight size={16} className="text-text-tertiary" /></div>)}</div></section> : null}
+          {secao === 'utilizadores' ? (
+            <section className="card-surface p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-3">
+                <UsersThree size={23} className="text-warning" />
+                <div>
+                  <h2 className="text-[15px] font-semibold">Utilizadores Mobile</h2>
+                  <p className="text-[12px] text-text-tertiary">Todas as identidades do sistema, geridas globalmente pelo Root.</p>
+                </div>
+              </div>
+              {demo ? (
+                <p className="py-8 text-center text-[12px] text-text-tertiary">Gestão de utilizadores não disponível no modo de teste.</p>
+              ) : aCarregar ? (
+                <p className="py-8 text-center text-[12px] text-text-tertiary">A carregar utilizadores...</p>
+              ) : utilizadores.length === 0 ? (
+                <p className="py-8 text-center text-[12px] text-text-tertiary">Ainda não existem utilizadores PWA registados.</p>
+              ) : (
+                <div className="space-y-2">
+                  {utilizadores.map((u) => (
+                    <div key={u.id} className="flex flex-col gap-3 rounded-control border border-border p-3 sm:flex-row sm:items-center">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium">{u.nome}</p>
+                        <p className="truncate text-[11px] text-text-tertiary">{u.email}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          value={u.tipoAcesso}
+                          onChange={(e) => void handleAtualizarUtilizador(u.id, { tipoAcesso: e.target.value as TipoAcesso })}
+                          className="h-9 rounded-control border border-border bg-bg-input px-2 text-[12px] outline-none"
+                        >
+                          <option value="user">Utilizador</option>
+                          <option value="admin">Admin</option>
+                          <option value="root">Root</option>
+                        </select>
+                        <select
+                          value={u.postoId ?? ''}
+                          onChange={(e) => e.target.value && void handleAtualizarUtilizador(u.id, { postoId: e.target.value })}
+                          className="h-9 max-w-[160px] rounded-control border border-border bg-bg-input px-2 text-[12px] outline-none"
+                        >
+                          <option value="" disabled>
+                            Sem posto
+                          </option>
+                          {postos.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nome}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => void handleAtualizarUtilizador(u.id, { ativo: !u.ativo })}
+                          className={`rounded-control border px-3 py-2 text-[11px] font-medium ${
+                            u.ativo ? 'border-border text-text-secondary' : 'border-error/40 bg-error/10 text-error'
+                          }`}
+                        >
+                          {u.ativo ? 'Ativo' : 'Inativo'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          ) : null}
           {secao === 'seguranca' ? <section className="card-surface max-w-[680px] p-5 sm:p-6"><div className="mb-6 flex items-center gap-3"><LockKey size={23} className="text-text-secondary" /><div><h2 className="text-[15px] font-semibold">Segurança e Acesso</h2><p className="text-[12px] text-text-tertiary">Proteções obrigatórias do painel Root.</p></div></div><div className="divide-y divide-border"><div className="flex items-center gap-3 py-4"><ShieldCheck size={21} className="text-warning" /><div className="flex-1"><p className="text-[13px] font-medium">Autenticação de dois fatores</p><p className="text-[11px] text-text-tertiary">Ainda não implementada — planeada para uma fase futura, fora do beta atual.</p></div><span className="text-[11px] font-semibold text-warning">Em breve</span></div><div className="flex items-center gap-3 py-4"><Key size={21} className="text-warning" /><div className="flex-1"><p className="text-[13px] font-medium">Códigos de ativação</p><p className="text-[11px] text-text-tertiary">Utilização única, associados a um Posto.</p></div><span className="text-[11px] text-text-tertiary">{pendentes} pendente{pendentes === 1 ? '' : 's'}</span></div></div></section> : null}
           {secao === 'auditoria' ? <section className="card-surface max-w-[760px] p-5 sm:p-6"><div className="mb-5 flex items-center gap-3"><SlidersHorizontal size={22} className="text-text-secondary" /><div><h2 className="text-[15px] font-semibold">Auditoria</h2><p className="text-[12px] text-text-tertiary">Registo das ações administrativas do Root.</p></div></div><p className="rounded-control border border-dashed border-border px-4 py-6 text-center text-[12px] text-text-tertiary">Auditoria real ainda não implementada — planeada para uma fase futura, fora do beta atual.</p></section> : null}
         </div>

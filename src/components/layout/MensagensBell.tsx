@@ -25,14 +25,14 @@ function formatHoraLista(iso: string): string {
   return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit' }).format(data);
 }
 
-// Balão flutuante fixo no canto inferior direito, inspirado no widget do
-// Messenger no facebook.com — sempre por cima do conteúdo, em vez de viver
-// dentro do cabeçalho. Em repouso é neutro; assim que há mensagens por
-// ler, fica com a cor de destaque + badge + um pulso subtil, para se notar
-// mesmo com a app a fazer outra coisa. Clicar abre a lista de conversas
-// estilo WhatsApp (todos os utilizadores PWA); clicar numa conversa vira
-// chat inline, que abre para cima do balão (não para baixo — já estamos
-// encostados ao fundo do ecrã).
+// Segmento da barra de estado, estilo bandeja do Windows 7 (relógio/rede/
+// volume) — em repouso é um item discreto de texto, igual aos outros da
+// barra; assim que há mensagens por ler, esse segmento fica azul, com
+// badge e um pequeno pulso, sem competir visualmente com o resto da app
+// (a versão anterior, um balão flutuante grande, não encaixava bem nesta
+// interface). Clicar abre a lista de conversas estilo WhatsApp (todos os
+// utilizadores PWA) a partir desse mesmo segmento, para cima; clicar numa
+// conversa vira chat inline.
 export function MensagensBell(): React.JSX.Element {
   const [total, setTotal] = useState(0);
   const [conversas, setConversas] = useState<ConversaResumo[] | null>(null);
@@ -94,9 +94,9 @@ export function MensagensBell(): React.JSX.Element {
   const temNaoLidas = total > 0;
 
   return (
-    <div ref={ref} className="fixed bottom-10 right-4 z-[95]">
+    <div ref={ref} className="relative z-[95] flex h-full items-stretch">
       {open ? (
-        <div className="absolute bottom-[calc(100%+12px)] right-0 flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl">
+        <div className="absolute bottom-full right-0 mb-2 flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl">
           {conversaCom ? (
             <>
               <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
@@ -177,19 +177,17 @@ export function MensagensBell(): React.JSX.Element {
         type="button"
         onClick={handleToggle}
         title={temNaoLidas ? `${total} mensagem${total === 1 ? '' : 's'} por ler` : 'Mensagens'}
-        className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-colors ${
-          temNaoLidas
-            ? 'bg-primary text-white'
-            : 'border border-border bg-bg-surface text-text-secondary hover:bg-bg-app'
+        className={`flex h-full w-96 items-center justify-center gap-1.5 px-3 text-[10.5px] tracking-wide transition-colors ${
+          temNaoLidas ? 'bg-primary text-white' : 'text-text-tertiary hover:bg-[var(--toolbar-hover)]'
         }`}
       >
-        {temNaoLidas ? <span className="absolute inset-0 animate-ping rounded-full bg-primary/50" /> : null}
-        <Envelope size={22} weight={temNaoLidas ? 'fill' : 'bold'} />
-        {temNaoLidas ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-error px-1 text-[10px] font-bold text-white">
-            {total > 99 ? '99+' : total}
-          </span>
-        ) : null}
+        <span className="relative flex shrink-0 items-center justify-center">
+          <Envelope size={12} weight={temNaoLidas ? 'fill' : 'regular'} />
+          {temNaoLidas ? (
+            <span className="absolute -right-1 -top-1 h-1.5 w-1.5 animate-pulse rounded-full bg-white shadow-[0_0_4px_1px_rgba(255,255,255,0.8)]" />
+          ) : null}
+        </span>
+        <span>{temNaoLidas ? `${total > 99 ? '99+' : total} mensagem${total === 1 ? '' : 's'}` : 'Mensagens'}</span>
       </button>
     </div>
   );

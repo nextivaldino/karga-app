@@ -2,7 +2,6 @@ import { ModuleIcon } from '@/components/icons/ModuleIcon';
 import { MainTabs } from './MainTabs';
 import { HeaderSearch } from './HeaderSearch';
 import { HeaderUserMenu } from './HeaderUserMenu';
-import { MensagensBell } from './MensagensBell';
 import { NotificacoesBell } from './NotificacoesBell';
 import { StatusBar } from './StatusBar';
 import { ToastContainer } from '@/components/ui/Toast';
@@ -88,7 +87,6 @@ export function AppShell(): React.JSX.Element {
       <StatusBar />
       <ToastContainer />
       <SincronizacaoLoginModal />
-      <MensagensBell />
     </div>
     </StatusBarProvider>
   );

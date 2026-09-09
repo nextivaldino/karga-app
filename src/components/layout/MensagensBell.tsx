@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { CaretLeft, Envelope, MagnifyingGlass as Search } from '@phosphor-icons/react';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { ChatConversa } from '@/modules/mensagens/ChatConversa';
@@ -26,16 +25,18 @@ function formatHoraLista(iso: string): string {
   return new Intl.DateTimeFormat('pt-PT', { day: '2-digit', month: '2-digit' }).format(data);
 }
 
-// Envelope com badge vermelho — sempre visível (mesmo sem nada por ler,
-// para se poder iniciar uma conversa proativamente). Clicar abre a lista
-// de conversas estilo WhatsApp (todos os utilizadores PWA, última
-// mensagem, hora, não lidas); clicar numa conversa vira chat inline, sem
-// perder o contexto de onde se estava na app.
+// Balão flutuante fixo no canto inferior direito, inspirado no widget do
+// Messenger no facebook.com — sempre por cima do conteúdo, em vez de viver
+// dentro do cabeçalho. Em repouso é neutro; assim que há mensagens por
+// ler, fica com a cor de destaque + badge + um pulso subtil, para se notar
+// mesmo com a app a fazer outra coisa. Clicar abre a lista de conversas
+// estilo WhatsApp (todos os utilizadores PWA); clicar numa conversa vira
+// chat inline, que abre para cima do balão (não para baixo — já estamos
+// encostados ao fundo do ecrã).
 export function MensagensBell(): React.JSX.Element {
   const [total, setTotal] = useState(0);
   const [conversas, setConversas] = useState<ConversaResumo[] | null>(null);
   const [open, setOpen] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const [conversaCom, setConversaCom] = useState<ConversaResumo | null>(null);
   const [busca, setBusca] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -67,26 +68,10 @@ export function MensagensBell(): React.JSX.Element {
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        const portal = document.getElementById('mensagens-portal');
-        if (portal && portal.contains(e.target as Node)) return;
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     window.addEventListener('mousedown', onClickOutside);
     return () => window.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function updatePos(): void {
-      const rect = ref.current?.getBoundingClientRect();
-      if (!rect) return;
-      setDropdownPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
-    }
-    updatePos();
-    window.addEventListener('resize', updatePos);
-    return () => window.removeEventListener('resize', updatePos);
   }, [open]);
 
   function handleToggle(): void {
@@ -106,30 +91,12 @@ export function MensagensBell(): React.JSX.Element {
 
   const termo = busca.trim().toLowerCase();
   const conversasFiltradas = (conversas ?? []).filter((c) => !termo || c.nome.toLowerCase().includes(termo));
+  const temNaoLidas = total > 0;
 
   return (
-    <div ref={ref} className="relative z-[90]">
-      <button
-        type="button"
-        onClick={handleToggle}
-        title={total > 0 ? `${total} mensagem${total === 1 ? '' : 's'} por ler` : 'Mensagens'}
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary transition-colors hover:bg-[var(--toolbar-hover)]"
-      >
-        <Envelope size={18} weight="bold" />
-        {total > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">
-            {total > 99 ? '99+' : total}
-          </span>
-        ) : null}
-      </button>
-
-      {open && dropdownPos ? createPortal(
-        <div
-          id="mensagens-portal"
-          className="fixed z-[100] flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-lg"
-          style={{ top: dropdownPos.top, right: dropdownPos.right }}
-        >
+    <div ref={ref} className="fixed bottom-10 right-4 z-[95]">
+      {open ? (
+        <div className="absolute bottom-[calc(100%+12px)] right-0 flex h-[420px] w-96 flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-2xl">
           {conversaCom ? (
             <>
               <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
@@ -203,9 +170,27 @@ export function MensagensBell(): React.JSX.Element {
               </div>
             </>
           )}
-        </div>,
-        document.body
+        </div>
       ) : null}
+
+      <button
+        type="button"
+        onClick={handleToggle}
+        title={temNaoLidas ? `${total} mensagem${total === 1 ? '' : 's'} por ler` : 'Mensagens'}
+        className={`relative flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-colors ${
+          temNaoLidas
+            ? 'bg-primary text-white'
+            : 'border border-border bg-bg-surface text-text-secondary hover:bg-bg-app'
+        }`}
+      >
+        {temNaoLidas ? <span className="absolute inset-0 animate-ping rounded-full bg-primary/50" /> : null}
+        <Envelope size={22} weight={temNaoLidas ? 'fill' : 'bold'} />
+        {temNaoLidas ? (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-bg-app bg-error px-1 text-[10px] font-bold text-white">
+            {total > 99 ? '99+' : total}
+          </span>
+        ) : null}
+      </button>
     </div>
   );
 }

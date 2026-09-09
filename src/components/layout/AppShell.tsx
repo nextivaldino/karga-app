@@ -73,7 +73,6 @@ export function AppShell(): React.JSX.Element {
             <HeaderSearch />
           </div>
 
-          <MensagensBell />
           <NotificacoesBell />
 
           <div className="mx-2 h-4 w-px shrink-0 bg-border/60" />
@@ -89,6 +88,7 @@ export function AppShell(): React.JSX.Element {
       <StatusBar />
       <ToastContainer />
       <SincronizacaoLoginModal />
+      <MensagensBell />
     </div>
     </StatusBarProvider>
   );

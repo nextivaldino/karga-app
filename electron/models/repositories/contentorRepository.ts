@@ -132,6 +132,7 @@ function syncDisponivel(contentor: Contentor): void {
     estado: contentor.estado,
     bloqueado: contentor.bloqueado,
     padraoGlobal: contentor.padraoGlobal,
+    oculto: contentor.oculto,
   });
 }
 

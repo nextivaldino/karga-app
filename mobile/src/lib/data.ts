@@ -80,6 +80,7 @@ async function buscarContentoresDoServidor(): Promise<ContentorDisponivel[]> {
     .select('*')
     .eq('estado', 'aberto')
     .eq('bloqueado', false)
+    .eq('oculto', false)
     .order('codigo', { ascending: true });
   if (error) throw new Error(error.message);
   const contentores = (data ?? []).map(mapContentor);

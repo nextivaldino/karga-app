@@ -116,6 +116,7 @@ interface ContentorDisponivel {
   estado: string;
   bloqueado: boolean;
   padraoGlobal: boolean;
+  oculto: boolean;
 }
 
 // Resolução do posto desta instalação, por ordem de prioridade:
@@ -263,6 +264,7 @@ export function upsertContentorDisponivel(contentor: ContentorDisponivel): void 
           codigo: contentor.codigo,
           estado: contentor.estado,
           bloqueado: contentor.bloqueado,
+          oculto: contentor.oculto,
           padrao_global: contentor.padraoGlobal,
           ...(postoId ? { posto_id: postoId } : {}),
           updated_at: new Date().toISOString(),

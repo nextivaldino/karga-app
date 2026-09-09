@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs';
 import { userRepository } from '../models/repositories/userRepository';
 import { permissaoRepository } from '../models/repositories/permissaoRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
@@ -11,9 +10,8 @@ import {
   resolverPostoId,
   upsertPwaUser,
 } from '../lib/supabaseClient';
+import { hashPassword, validarTamanhoPassword } from '../lib/passwordPolicy';
 import type { CreateUserInput, HabilitarPwaResult, PermissaoInput, PublicUser, UserRole, UsuarioComSessao } from '../../src/types';
-
-const SALT_ROUNDS = 10;
 
 function toPublicUser(user: Awaited<ReturnType<typeof userRepository.findById>>): PublicUser {
   if (!user) throw new Error('Utilizador não encontrado.');
@@ -44,7 +42,7 @@ export async function criarUsuario(
     throw new Error('Dados inválidos: nome e email são obrigatórios, password com pelo menos 6 caracteres.');
   }
 
-  const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+  const passwordHash = await hashPassword(input.password);
   const user = userRepository.create({
     name: input.name.trim(),
     email: input.email.toLowerCase().trim(),
@@ -142,9 +140,9 @@ export async function resetPasswordAdmin(
   const target = userRepository.findById(targetUserId);
   if (!target) throw new Error('Utilizador não encontrado.');
   if (target.role !== 'admin') throw new Error('O Root só pode resetar password de utilizadores Admin.');
-  if (newPassword.length < 6) throw new Error('A nova password tem de ter pelo menos 6 caracteres.');
+  validarTamanhoPassword(newPassword);
 
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  const passwordHash = await hashPassword(newPassword);
   userRepository.update(targetUserId, { passwordHash });
   userRepository.limparPedidoResetPassword(targetUserId);
 }
@@ -158,9 +156,9 @@ export async function resetPasswordUser(
   const target = userRepository.findById(targetUserId);
   if (!target) throw new Error('Utilizador não encontrado.');
   if (target.role !== 'user') throw new Error('Um Admin só pode resetar password de utilizadores do tipo "user".');
-  if (newPassword.length < 6) throw new Error('A nova password tem de ter pelo menos 6 caracteres.');
+  validarTamanhoPassword(newPassword);
 
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  const passwordHash = await hashPassword(newPassword);
   userRepository.update(targetUserId, { passwordHash });
 }
 

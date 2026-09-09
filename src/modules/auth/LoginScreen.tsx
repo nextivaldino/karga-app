@@ -36,7 +36,7 @@ export function LoginScreen(): React.JSX.Element {
     try {
       await login(email, password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao iniciar sessão.');
+      setError(cleanIpcError(err));
     } finally {
       setSubmitting(false);
     }

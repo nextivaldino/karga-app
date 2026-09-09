@@ -1,9 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { userRepository } from '../models/repositories/userRepository';
 import { sessaoRepository } from '../models/repositories/sessaoRepository';
+import { hashPassword, validarTamanhoPassword } from '../lib/passwordPolicy';
 import type { PublicUser, QuickLoginUser, SetupInput, User } from '../../src/types';
-
-const SALT_ROUNDS = 10;
 
 let currentUser: PublicUser | null = null;
 let currentSessaoId: string | null = null;
@@ -31,7 +30,7 @@ export async function completeSetup(input: SetupInput): Promise<PublicUser> {
     throw new Error('O Root e o Admin não podem usar o mesmo email.');
   }
 
-  const rootHash = await bcrypt.hash(input.rootPassword, SALT_ROUNDS);
+  const rootHash = await hashPassword(input.rootPassword);
   userRepository.create({
     name: input.rootName.trim(),
     email: input.rootEmail.toLowerCase().trim(),
@@ -39,7 +38,7 @@ export async function completeSetup(input: SetupInput): Promise<PublicUser> {
     role: 'root',
   });
 
-  const adminHash = await bcrypt.hash(input.adminPassword, SALT_ROUNDS);
+  const adminHash = await hashPassword(input.adminPassword);
   const admin = userRepository.create({
     name: input.adminName.trim(),
     email: input.adminEmail.toLowerCase().trim(),
@@ -131,16 +130,14 @@ export function updateProfile(userId: string, changes: { name: string; email: st
 }
 
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
-  if (newPassword.length < 6) {
-    throw new Error('A nova password tem de ter pelo menos 6 caracteres.');
-  }
+  validarTamanhoPassword(newPassword);
   const existing = userRepository.findById(userId);
   if (!existing) throw new Error('Utilizador não encontrado.');
 
   const valid = await bcrypt.compare(currentPassword, existing.passwordHash);
   if (!valid) throw new Error('Password atual incorreta.');
 
-  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  const passwordHash = await hashPassword(newPassword);
   userRepository.update(userId, { passwordHash });
 }
 

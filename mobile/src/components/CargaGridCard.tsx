@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowDownLeft, ArrowUpRight, List as Menu } from '@phosphor-icons/react';
-import { ESTADO_CLASS, ESTADO_ICON, ESTADO_LABEL, formatMoeda } from '@/lib/cargaEstado';
+import { ESTADO_ICON, ESTADO_LABEL, formatMoeda } from '@/lib/cargaEstado';
+import { corTextoSobre } from '@/lib/rowAccents';
 import type { AcaoLinhaCarga, CargaListRowData } from '@/components/CargaListRow';
 
 interface CargaGridCardProps {
@@ -10,12 +11,15 @@ interface CargaGridCardProps {
 }
 
 // Cartão compacto para a vista em grelha — mesma cor por contacto que a
-// vista em lista (consistência entre os dois modos), mas aqui cada carga
-// é o seu próprio bloco visual em vez de uma linha de tabela.
+// vista em lista (consistência entre os dois modos, incluindo o
+// preenchimento sólido da linguagem "blocos de cor vivos"), mas aqui cada
+// carga é o seu próprio bloco visual em vez de uma linha de tabela.
 export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.JSX.Element {
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const EstadoIcon = ESTADO_ICON[linha.estado];
+  const corTexto = corTextoSobre(cor);
+  const divisor = corTexto === '#ffffff' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)';
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent): void {
@@ -27,13 +31,13 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
 
   return (
     <div
-      className={`relative flex flex-col gap-2 card-surface p-3 ${menuAberto ? 'z-20' : ''}`}
-      style={{ borderTop: `3px solid ${cor}` }}
+      className={`relative flex flex-col gap-2 rounded-surface p-3 ${menuAberto ? 'z-20' : ''}`}
+      style={{ backgroundColor: cor, color: corTexto }}
     >
       <div className="flex items-start justify-between gap-1">
         <div className="min-w-0 flex-1">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-text-secondary">{linha.codigo}</span>
-          <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-text-primary">{linha.nomeCarga}</p>
+          <span className="text-[10px] font-bold uppercase tracking-wide opacity-70">{linha.codigo}</span>
+          <p className="line-clamp-2 text-[13px] font-semibold leading-tight">{linha.nomeCarga}</p>
         </div>
         {acoes && acoes.length > 0 ? (
           <div ref={menuRef} className="relative -mr-1 -mt-1 shrink-0">
@@ -41,7 +45,7 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
               type="button"
               onClick={() => setMenuAberto((v) => !v)}
               title="Opções"
-              className="flex h-7 w-7 items-center justify-center rounded-control text-text-tertiary active:bg-bg-app"
+              className="flex h-7 w-7 items-center justify-center rounded-control active:opacity-70"
             >
               <Menu size={15} />
             </button>
@@ -68,20 +72,20 @@ export function CargaGridCard({ linha, cor, acoes }: CargaGridCardProps): React.
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-0.5 text-[11px] text-text-secondary">
+      <div className="flex flex-col gap-0.5 text-[11px]">
         <span className="flex items-center gap-1 truncate">
-          <ArrowUpRight size={11} className="shrink-0 text-primary" />
+          <ArrowUpRight size={11} className="shrink-0" />
           <span className="truncate">{linha.emissorNome}</span>
         </span>
         <span className="flex items-center gap-1 truncate">
-          <ArrowDownLeft size={11} className="shrink-0 text-success" />
+          <ArrowDownLeft size={11} className="shrink-0" />
           <span className="truncate">{linha.recetorNome}</span>
         </span>
       </div>
 
-      <div className="mt-1 flex items-center justify-between border-t border-border pt-2">
-        <EstadoIcon size={14} className={ESTADO_CLASS[linha.estado]} aria-label={ESTADO_LABEL[linha.estado]} />
-        <span className="text-[13px] font-medium tabular-nums text-text-primary">{formatMoeda(linha.valor)}</span>
+      <div className="mt-1 flex items-center justify-between pt-2" style={{ borderTop: `1px solid ${divisor}` }}>
+        <EstadoIcon size={14} aria-label={ESTADO_LABEL[linha.estado]} />
+        <span className="text-[13px] font-semibold tabular-nums">{formatMoeda(linha.valor)}</span>
       </div>
     </div>
   );

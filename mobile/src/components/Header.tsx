@@ -1,22 +1,30 @@
-import { useTopBarSlotContent } from '@/hooks/useTopBarSlot';
+import { DynamicIsland } from './DynamicIsland';
 import { GearMenu } from './GearMenu';
-import { NotificationBell } from './NotificationBell';
 
-// Barra dinâmica única — o lado esquerdo muda por página (título +
-// controlos próprios, publicados via useTopBarSlot); o lado direito é
-// fixo em toda a app. O indicador online e o atalho de Mensagens saíram
-// daqui — mensagens agora só vivem dentro do sino de notificações, que já
-// as mistura com o resto dos avisos (doc 20 §5).
+// Cabeçalho único de toda a app — mesma banda de cor cheia em Início,
+// Cargas e Definições: logo, ilha dinâmica (seletor de contentor fundido
+// com notificações) e engrenagem. Cor sólida (não translúcida) é a
+// linguagem "blocos de cor vivos" pedida — uma banda que mudasse de tom
+// por página deixaria de ler como identidade, por isso é sempre a mesma.
 export function Header(): React.JSX.Element {
-  const conteudo = useTopBarSlotContent();
-
   return (
-    <header className="relative z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-bg-header px-4 backdrop-blur-xl">
-      <div className="flex min-w-0 flex-1 items-center gap-2">{conteudo}</div>
-      <div className="flex shrink-0 items-center gap-1.5">
-        <NotificationBell />
-        <GearMenu />
+    <div
+      className="relative z-30 grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-2 bg-primary px-4 pb-2.5 shadow-md"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 10px)' }}
+    >
+      {/* Crachá branco à volta do logo — o logo é um gradiente
+          verde→azul→roxo; sobre a banda azul sólida a parte azul do
+          gradiente perdia contraste. O crachá garante legibilidade
+          independentemente da cor da banda. */}
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white">
+        <img src="/karga-logo.svg" alt="Karga" className="h-5 w-5" />
+      </span>
+      <div className="flex justify-center overflow-hidden">
+        <DynamicIsland />
       </div>
-    </header>
+      <div className="flex shrink-0 items-center gap-1">
+        <GearMenu className="flex h-10 w-10 items-center justify-center rounded-control text-white active:bg-white/15" />
+      </div>
+    </div>
   );
 }

@@ -16,20 +16,31 @@ export function corAcento(index: number, tema: 'light' | 'dark' = 'light'): stri
   return paleta[index % paleta.length] ?? paleta[0]!;
 }
 
-// Versão de contraste da cor de acento — em tema claro escurece (sobre um
-// fundo tingido com a mesma cor a baixa opacidade, um tom escuro lê-se
-// melhor do que a cor "crua"); em tema escuro faz o oposto e aclara,
-// porque escurecer uma cor já pensada para fundo escuro deixava-a
-// baça/ilegível em vez de clara.
-export function corAcentoEscura(index: number, tema: 'light' | 'dark' = 'light'): string {
-  const hex = corAcento(index, tema).replace('#', '');
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  if (tema === 'dark') {
-    const clarear = (c: number) => Math.round(c + (255 - c) * 0.4);
-    return `rgb(${clarear(r)}, ${clarear(g)}, ${clarear(b)})`;
-  }
-  const escurecer = (c: number) => Math.round(c * 0.6);
-  return `rgb(${escurecer(r)}, ${escurecer(g)}, ${escurecer(b)})`;
+// Para blocos de cor cheia (não só um tint a 5-15%) — a cor de acento
+// crua nem sempre dá contraste suficiente com texto preto OU branco fixo,
+// por isso calculamos a luminância percetual e escolhemos o que se lê
+// melhor. Fórmula standard (ITU-R BT.601) é suficiente aqui — não é uma
+// verificação WCAG rigorosa, só uma escolha binária preto/branco.
+export function corTextoSobre(hex: string): string {
+  const limpo = hex.replace('#', '');
+  const r = parseInt(limpo.slice(0, 2), 16);
+  const g = parseInt(limpo.slice(2, 4), 16);
+  const b = parseInt(limpo.slice(4, 6), 16);
+  const luminancia = (r * 299 + g * 587 + b * 114) / 1000;
+  return luminancia > 150 ? '#0b0b0c' : '#ffffff';
+}
+
+// Versão mais leve de uma cor de acento — mistura-a com branco. Usada na
+// lista de Cargas: continua a ser um preenchimento sólido e contíguo (sem
+// cinzento neutro a separar grupos), mas menos intensa que a cor crua —
+// mais fácil de ler numa lista densa que se passa muito tempo a olhar,
+// sem perder a identidade de cor por contacto.
+export function corSuave(hex: string, mistura = 0.5): string {
+  const limpo = hex.replace('#', '');
+  const r = parseInt(limpo.slice(0, 2), 16);
+  const g = parseInt(limpo.slice(2, 4), 16);
+  const b = parseInt(limpo.slice(4, 6), 16);
+  const misturar = (c: number) => Math.round(c + (255 - c) * mistura);
+  const paraHex = (c: number) => c.toString(16).padStart(2, '0');
+  return `#${paraHex(misturar(r))}${paraHex(misturar(g))}${paraHex(misturar(b))}`;
 }

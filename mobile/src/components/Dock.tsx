@@ -3,15 +3,16 @@ import { useNavigation, type MobilePage } from '@/hooks/useNavigation';
 import { useNovaCargaOverlay } from '@/hooks/useNovaCargaOverlay';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { CARGA_BG, CARGA_INK } from '@/lib/cargaVisual';
+import { corTextoSobre } from '@/lib/rowAccents';
 
 const ITENS: {
   page: MobilePage;
   label: string;
   icon: React.ComponentType<{ size?: number; className?: string; weight?: 'regular' | 'fill' | 'bold' | 'duotone' }>;
-  colorClass: string;
+  cor: string;
 }[] = [
-  { page: 'home', label: 'Início', icon: House, colorClass: 'text-primary' },
-  { page: 'cargas', label: 'Cargas', icon: Package, colorClass: 'text-warning' },
+  { page: 'home', label: 'Início', icon: House, cor: '#006fee' },
+  { page: 'cargas', label: 'Cargas', icon: Package, cor: '#f5a524' },
 ];
 
 // Ilha dinâmica estilo iOS: mesma cápsula de navegação, que cresce para
@@ -76,15 +77,17 @@ function DockButton({
   onClick: () => void;
 }): React.JSX.Element {
   const Icon = item.icon;
+  const corTexto = corTextoSobre(item.cor);
   return (
     <button
       type="button"
       onClick={onClick}
       title={item.label}
-      className={`flex h-[52px] items-center gap-1.5 rounded-pill px-3.5 transition-all ${active ? 'bg-primary/15' : ''}`}
+      style={active ? { backgroundColor: item.cor, color: corTexto } : undefined}
+      className="flex h-[52px] items-center gap-1.5 rounded-pill px-3.5 transition-all"
     >
-      <Icon size={24} className={active ? item.colorClass : 'text-text-tertiary'} weight={active ? 'fill' : 'regular'} />
-      {active ? <span className="text-[13px] font-semibold text-text-primary">{item.label}</span> : null}
+      <Icon size={24} className={active ? '' : 'text-text-tertiary'} weight={active ? 'fill' : 'regular'} />
+      {active ? <span className="text-[13px] font-semibold">{item.label}</span> : null}
     </button>
   );
 }

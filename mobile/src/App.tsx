@@ -6,7 +6,8 @@ import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
 import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
 import { FilaOfflineProvider } from '@/hooks/useFilaOffline';
 import { ContentorAtivoProvider } from '@/hooks/useContentorAtivo';
-import { TopBarSlotProvider } from '@/hooks/useTopBarSlot';
+import { NotificationPanelProvider } from '@/hooks/useNotificationPanel';
+import { CargasToolbarProvider } from '@/hooks/useCargasToolbar';
 import { ToastContainer } from '@/components/ui/Toast';
 import { PasswordBanner } from '@/components/PasswordBanner';
 import { Header } from '@/components/Header';
@@ -16,7 +17,6 @@ import { LoginPage } from '@/pages/LoginPage';
 import { TrocarPasswordPage } from '@/pages/TrocarPasswordPage';
 import { HomePage } from '@/pages/HomePage';
 import { CargasPage } from '@/pages/CargasPage';
-import { MensagensPage } from '@/pages/MensagensPage';
 import { DefinicoesPage } from '@/pages/DefinicoesPage';
 import { RootPanelPage } from '@/pages/RootPanelPage';
 import { PinUnlockPage } from '@/pages/PinUnlockPage';
@@ -47,15 +47,11 @@ function AppShell(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
-      {/* A Home tem a sua própria barra de topo (marca + seletor de
-          contentor + notificações/menu) — não precisa da barra genérica
-          das outras páginas por cima disso. */}
-      {page !== 'home' ? <Header /> : null}
+      <Header />
       {mustChangePassword ? <PasswordBanner onAlterar={() => setTrocarPasswordAberto(true)} /> : null}
       <main className="flex-1 overflow-y-auto pb-24">
         {page === 'home' ? <HomePage /> : null}
         {page === 'cargas' ? <CargasPage /> : null}
-        {page === 'mensagens' ? <MensagensPage /> : null}
         {page === 'definicoes' ? <DefinicoesPage onTrocarPassword={() => setTrocarPasswordAberto(true)} /> : null}
       </main>
       <Dock />
@@ -73,10 +69,12 @@ export default function App(): React.JSX.Element {
             <ContentorAtivoProvider>
               <NavigationProvider>
                 <NovaCargaOverlayProvider>
-                  <TopBarSlotProvider>
-                    <AppShell />
-                    <ToastContainer />
-                  </TopBarSlotProvider>
+                  <NotificationPanelProvider>
+                    <CargasToolbarProvider>
+                      <AppShell />
+                      <ToastContainer />
+                    </CargasToolbarProvider>
+                  </NotificationPanelProvider>
                 </NovaCargaOverlayProvider>
               </NavigationProvider>
             </ContentorAtivoProvider>

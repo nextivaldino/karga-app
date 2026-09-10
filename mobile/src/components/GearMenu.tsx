@@ -4,7 +4,7 @@ import { useNavigation } from '@/hooks/useNavigation';
 // Deixou de ser um dropdown — abre agora o painel de Definições próprio
 // (estilo iOS), que junta tema, password e sobre num só sítio em vez de
 // um menu pequeno a competir por espaço/z-index com o resto do topo.
-export function GearMenu(): React.JSX.Element {
+export function GearMenu({ className }: { className?: string } = {}): React.JSX.Element {
   const { navigate } = useNavigation();
 
   return (
@@ -12,7 +12,7 @@ export function GearMenu(): React.JSX.Element {
       type="button"
       onClick={() => navigate('definicoes')}
       title="Definições"
-      className="flex h-10 w-10 items-center justify-center rounded-control text-text-secondary active:bg-bg-app"
+      className={className ?? 'flex h-10 w-10 items-center justify-center rounded-control text-text-secondary active:bg-bg-app'}
     >
       <Settings size={22} />
     </button>

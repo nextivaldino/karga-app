@@ -79,8 +79,8 @@
   --spacing-lg: 16px;
   --spacing-xl: 24px;
 
-  --radius-control: 11.4px;
-  --radius-surface: 15.2px;
+  --radius-control: 13px;
+  --radius-surface: 18px;
   --radius-pill: 999px;
 }
 
@@ -131,7 +131,6 @@ textarea {
 
   .card-surface {
     border-radius: var(--radius-surface);
-    border: 1px solid var(--border);
     background-color: var(--bg-surface);
     box-shadow: var(--shadow-soft);
   }
@@ -172,4 +171,30 @@ textarea {
 
 .root-panel-theme .card-surface {
   box-shadow: var(--shadow-soft);
+}
+
+/* Pílula da dynamic island a "trocar" de categoria — desliza a partir da
+   direita, estilo bilhete/ticker, em vez de simplesmente aparecer. */
+@keyframes pilula-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Painéis que "nascem" da dynamic island (notificações, seletor de
+   contentor) — crescem a partir do topo em vez de simplesmente aparecer. */
+@keyframes island-menu-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }

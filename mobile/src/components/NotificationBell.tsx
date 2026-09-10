@@ -4,11 +4,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigation } from '@/hooks/useNavigation';
 import { useFilaOffline } from '@/hooks/useFilaOffline';
 import { useTheme } from '@/hooks/useTheme';
+import { useNotificationPanel } from '@/hooks/useNotificationPanel';
 import { estiloTema } from '@/lib/themeTokens';
+import { corTextoSobre } from '@/lib/rowAccents';
 import { listMinhasCargasPendentes, listMensagens, marcarMensagemLida } from '@/lib/data';
 import { cargaNotificacaoVista, marcarCargaNotificacaoVista } from '@/lib/notificacoesVistas';
 import { lerPreferenciasNotificacoes } from '@/lib/preferenciasNotificacoes';
 import { formatRelativo } from '@/lib/formatRelativo';
+import { MensagensTab } from './MensagensTab';
 import type { CargaPendente, Mensagem } from '@/types';
 
 type TipoNotificacao = 'carga_importada' | 'carga_rejeitada' | 'mensagem' | 'fila_erro';
@@ -34,9 +37,33 @@ const COR_TIPO: Record<TipoNotificacao, string> = {
   fila_erro: 'text-warning',
 };
 
+// Título curto por categoria — a pílula da dynamic island mostra isto (não
+// só um número), para dar contexto de relance ("Carga sincronizada" em vez
+// de só "1"). Continua a ser um título fixo por categoria, não o texto
+// completo do item (esse só aparece já dentro do painel).
+const TITULO_TIPO: Record<TipoNotificacao, string> = {
+  carga_importada: 'Carga sincronizada',
+  carga_rejeitada: 'Carga rejeitada',
+  mensagem: 'Nova mensagem',
+  fila_erro: 'Falha ao enviar',
+};
+
 const POLL_MS = 60_000;
 
-export function NotificationBell(): React.JSX.Element {
+interface NotificationBellProps {
+  // Posição fixa (string CSS para `top`) em vez de medir o próprio botão
+  // — o gatilho é só um pedaço pequeno dentro da ilha, e o painel precisa
+  // de encostar exatamente ao fundo da ilha inteira, não do botão. Sem
+  // gap, sem borda — para parecer que a ilha "cresceu" para virar o
+  // painel, um único bloco, não dois.
+  fixedTop: string;
+  // Quando a zona do meio da ilha já está ocupada com controlos da página
+  // (ex: Cargas), não há espaço para a pílula com título a alternar — usa
+  // sempre o gatilho ícone+ponto, mesmo havendo notificações por ver.
+  compacta?: boolean;
+}
+
+export function NotificationBell({ fixedTop, compacta }: NotificationBellProps): React.JSX.Element {
   const { pwaUser } = useAuth();
   const { navigate } = useNavigation();
   const { fila } = useFilaOffline();
@@ -44,26 +71,17 @@ export function NotificationBell(): React.JSX.Element {
   // menu destaca-se sempre do fundo da app, em qualquer tema.
   const { theme } = useTheme();
   const temaInvertido = theme === 'dark' ? 'light' : 'dark';
+  const { open, aba, abrir, fechar, setAba } = useNotificationPanel();
   const [cargas, setCargas] = useState<CargaPendente[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [open, setOpen] = useState(false);
   // localStorage não é reativo — incrementar isto força reavaliar
   // `cargaNotificacaoVista` depois de marcar uma notificação como vista.
   const [, setVistasBump] = useState(0);
+  // Gatilho 'compact': uma só pílula, maior, que alterna entre as
+  // categorias com itens por ver (em vez de várias pílulas lado a lado a
+  // disputar o pouco espaço da dynamic island).
+  const [cicloIndex, setCicloIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  // O sino nem sempre está encostado ao canto direito do ecrã (na Home
-  // divide a barra com o seletor de contentor) — um popup `absolute
-  // right-0` ancorado ao botão ficava, nesses casos, a abrir mais para a
-  // esquerda do que cabia no ecrã, escondendo as opções. `fixed` +
-  // `right-4` prende sempre ao canto do ecrã; só o `top` precisa de ser
-  // calculado (a barra de topo tem alturas diferentes consoante a página).
-  const [popupTop, setPopupTop] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) setPopupTop(rect.bottom + 8);
-  }, [open]);
 
   const carregar = useCallback(() => {
     listMinhasCargasPendentes()
@@ -82,11 +100,11 @@ export function NotificationBell(): React.JSX.Element {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent): void {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) fechar();
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [fechar]);
 
   // 'carga_rejeitada' e 'fila_erro' nunca são filtrados — informação
   // crítica que precisa de ação do próprio utilizador, não desligável.
@@ -126,84 +144,145 @@ export function NotificationBell(): React.JSX.Element {
 
   const total = itens.length;
 
+  // Para o gatilho 'compact' (dentro da dynamic island): uma só pílula,
+  // maior, que alterna entre as categorias com itens por ver — cada uma
+  // com o seu ícone/cor — em vez de várias pílulas pequenas lado a lado.
+  const contagemPorTipo = itens.reduce<Partial<Record<TipoNotificacao, number>>>((acc, item) => {
+    acc[item.tipo] = (acc[item.tipo] ?? 0) + 1;
+    return acc;
+  }, {});
+  // Pílula com cor cheia (não tint a 20%) — consistente com o resto da app
+  // depois da passagem para "blocos de cor vivos"; o contraste do texto é
+  // sempre calculado, nunca fixo, para se ler bem em qualquer uma das 4 cores.
+  const CORES_TIPO: Record<TipoNotificacao, string> = {
+    carga_importada: '#17c964',
+    carga_rejeitada: '#f31260',
+    mensagem: '#006fee',
+    fila_erro: '#f5a524',
+  };
+  const tiposAtivos = (Object.keys(ICONE_TIPO) as TipoNotificacao[]).filter((tipo) => contagemPorTipo[tipo]);
+
+  useEffect(() => {
+    if (tiposAtivos.length < 2) {
+      setCicloIndex(0);
+      return;
+    }
+    const timer = setInterval(() => setCicloIndex((i) => (i + 1) % tiposAtivos.length), 2200);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tiposAtivos.length]);
+
+  const tipoEmDestaque = tiposAtivos[cicloIndex % tiposAtivos.length];
+
   function handleTap(item: NotificacaoItem): void {
-    setOpen(false);
     if (item.tipo === 'carga_importada' || item.tipo === 'carga_rejeitada') {
       marcarCargaNotificacaoVista(item.id);
       setVistasBump((v) => v + 1);
+      fechar();
       navigate('cargas');
     } else if (item.tipo === 'mensagem') {
       void marcarMensagemLida(item.id).then(() => setMensagens((prev) => prev.map((m) => (m.id === item.id ? { ...m, lida: true } : m))));
-      navigate('mensagens');
+      setAba('mensagens');
     } else {
+      fechar();
       navigate('cargas');
     }
   }
 
   return (
     <div ref={containerRef} className="relative z-40">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        title="Notificações"
-        className="relative flex h-9 w-9 items-center justify-center rounded-control text-text-secondary active:bg-bg-app"
-      >
-        <Bell size={20} />
-        {total > 0 ? (
-          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-pill bg-error px-1 text-[10px] font-semibold leading-none text-white">
-            {total > 9 ? '9+' : total}
+      {!compacta && total > 0 && tipoEmDestaque ? (
+        <button type="button" onClick={() => (open ? fechar() : abrir())} title="Notificações" className="overflow-hidden">
+          {/* key={tipoEmDestaque} força remount a cada troca — a transição
+              de entrada (fade + leve deslize) corre outra vez sozinha,
+              dando o efeito de "intercalar" entre categorias. */}
+          <span
+            key={tipoEmDestaque}
+            style={{ backgroundColor: CORES_TIPO[tipoEmDestaque], color: corTextoSobre(CORES_TIPO[tipoEmDestaque]) }}
+            className="flex h-8 max-w-full animate-[pilula-in_0.25s_ease-out] items-center gap-1.5 rounded-pill px-3"
+          >
+            {(() => {
+              const Icone = ICONE_TIPO[tipoEmDestaque];
+              return <Icone size={15} weight="fill" className="shrink-0" />;
+            })()}
+            <span className="truncate text-[12.5px] font-semibold leading-tight">{TITULO_TIPO[tipoEmDestaque]}</span>
+            {(contagemPorTipo[tipoEmDestaque] ?? 0) > 1 ? (
+              <span className="shrink-0 text-[11px] font-semibold opacity-80">{contagemPorTipo[tipoEmDestaque]}</span>
+            ) : null}
           </span>
-        ) : null}
-      </button>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => (open ? fechar() : abrir())}
+          title="Notificações"
+          className="relative flex h-7 w-7 items-center justify-center text-white/90"
+        >
+          <Bell size={18} />
+          {total > 0 ? <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-error" /> : null}
+        </button>
+      )}
 
-      {open && popupTop != null ? (
+      {open ? (
         <div
           data-theme={temaInvertido}
-          style={{ top: popupTop, ...estiloTema(temaInvertido) }}
-          className="fixed right-4 z-50 flex max-h-[70vh] w-72 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-surface border border-border bg-bg-surface shadow-medium"
+          style={{ top: fixedTop, transformOrigin: 'top', ...estiloTema(temaInvertido) }}
+          className="fixed inset-x-4 z-50 flex max-h-[70vh] animate-[island-menu-in_0.2s_ease-out] flex-col overflow-hidden rounded-b-surface bg-bg-surface shadow-medium"
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-border px-3.5 py-2.5">
-            <span className="text-[13px] font-semibold text-text-primary">Notificações</span>
-            {total > 0 ? <span className="text-[11px] text-text-tertiary">{total} por ver</span> : null}
+          <div className="flex shrink-0 items-center gap-1.5 border-b border-border p-2">
+            <button
+              type="button"
+              onClick={() => setAba('notificacoes')}
+              style={aba === 'notificacoes' ? { backgroundColor: '#006fee', color: '#ffffff' } : undefined}
+              className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-control text-[12.5px] font-semibold ${
+                aba === 'notificacoes' ? '' : 'text-text-tertiary'
+              }`}
+            >
+              <Bell size={14} /> Notificações
+              {total > 0 ? <span className={`text-[11px] font-normal ${aba === 'notificacoes' ? 'opacity-80' : 'text-text-tertiary'}`}>{total}</span> : null}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAba('mensagens')}
+              style={aba === 'mensagens' ? { backgroundColor: '#006fee', color: '#ffffff' } : undefined}
+              className={`flex h-8 flex-1 items-center justify-center gap-1.5 rounded-control text-[12.5px] font-semibold ${
+                aba === 'mensagens' ? '' : 'text-text-tertiary'
+              }`}
+            >
+              <MessageCircle size={14} /> Mensagens
+            </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
-            {itens.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-                <Inbox size={22} className="text-text-tertiary" />
-                <p className="text-[13px] text-text-tertiary">Sem notificações novas.</p>
-              </div>
-            ) : (
-              itens.map((item) => {
-                const Icone = ICONE_TIPO[item.tipo];
-                return (
-                  <button
-                    key={`${item.tipo}-${item.id}`}
-                    type="button"
-                    onClick={() => handleTap(item)}
-                    className="flex w-full items-start gap-2.5 border-b border-border px-3.5 py-2.5 text-left last:border-b-0 active:bg-bg-app"
-                  >
-                    <Icone size={16} className={`mt-0.5 shrink-0 ${COR_TIPO[item.tipo]}`} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] text-text-primary">{item.texto}</span>
-                      <span className="text-[11px] text-text-tertiary">{formatRelativo(item.createdAt)}</span>
-                    </span>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              navigate('mensagens');
-            }}
-            className="flex min-h-touch shrink-0 items-center justify-center gap-1.5 border-t border-border text-[13px] font-medium text-primary active:bg-bg-app"
-          >
-            <MessageCircle size={15} /> Ver todas as mensagens
-          </button>
+          {aba === 'mensagens' ? (
+            <MensagensTab />
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              {itens.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                  <Inbox size={22} className="text-text-tertiary" />
+                  <p className="text-[13px] text-text-tertiary">Sem notificações novas.</p>
+                </div>
+              ) : (
+                itens.map((item) => {
+                  const Icone = ICONE_TIPO[item.tipo];
+                  return (
+                    <button
+                      key={`${item.tipo}-${item.id}`}
+                      type="button"
+                      onClick={() => handleTap(item)}
+                      className="flex w-full items-start gap-2.5 border-b border-border px-3.5 py-2.5 text-left last:border-b-0 active:bg-bg-app"
+                    >
+                      <Icone size={16} className={`mt-0.5 shrink-0 ${COR_TIPO[item.tipo]}`} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] text-text-primary">{item.texto}</span>
+                        <span className="text-[11px] text-text-tertiary">{formatRelativo(item.createdAt)}</span>
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       ) : null}
     </div>

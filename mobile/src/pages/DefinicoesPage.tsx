@@ -13,7 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
-import { useTopBarSlot } from '@/hooks/useTopBarSlot';
+import { corTextoSobre } from '@/lib/rowAccents';
 import { Switch } from '@/components/ui/Switch';
 import { AvatarPickerMobile } from '@/components/AvatarPickerMobile';
 import { toast } from '@/components/ui/Toast';
@@ -38,6 +38,7 @@ function Grupo({ titulo, children }: { titulo?: string; children: ReactNode }): 
 function Linha({
   icon: Icon,
   iconClassName,
+  corIcone,
   label,
   onClick,
   right,
@@ -46,6 +47,11 @@ function Linha({
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconClassName?: string;
+  // Círculo de cor sólida por trás do ícone — toque controlado da
+  // linguagem "blocos de cor vivos" nesta página de formulário: só o
+  // ícone ganha cor cheia, o fundo da linha mantém-se neutro (um grupo
+  // inteiro em cor sólida tornaria switches/inputs difíceis de ler).
+  corIcone?: string;
   label: string;
   onClick?: () => void;
   right?: ReactNode;
@@ -57,13 +63,28 @@ function Linha({
     <Comp
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`flex min-h-touch w-full items-center gap-3 px-4 text-left ${!ultima ? 'border-b border-border' : ''} ${
+      className={`flex min-h-touch w-full items-center gap-3 pl-4 text-left ${
         onClick ? (destrutiva ? 'active:bg-error/10' : 'active:bg-bg-app') : ''
       }`}
     >
-      <Icon size={18} className={iconClassName ?? 'text-text-secondary'} />
-      <span className={`flex-1 text-[14px] ${destrutiva ? 'text-error' : 'text-text-primary'}`}>{label}</span>
-      {right ?? (onClick ? <ChevronRight size={15} className="text-text-tertiary" /> : null)}
+      {corIcone ? (
+        // Quadrado arredondado (squircle), não círculo — é a assinatura
+        // visual dos ícones de categoria em Definições do iOS.
+        <span
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]"
+          style={{ backgroundColor: corIcone, color: corTextoSobre(corIcone) }}
+        >
+          <Icon size={15} />
+        </span>
+      ) : (
+        <Icon size={18} className={iconClassName ?? 'text-text-secondary'} />
+      )}
+      {/* Separador começa depois do ícone (não edge-to-edge) — inset
+          característico das grouped table lists do iOS. */}
+      <span className={`flex min-h-touch flex-1 items-center pr-4 ${!ultima ? 'border-b border-border' : ''}`}>
+        <span className={`flex-1 text-[14px] ${destrutiva ? 'text-error' : 'text-text-primary'}`}>{label}</span>
+        {right ?? (onClick ? <ChevronRight size={15} className="text-text-tertiary" /> : null)}
+      </span>
     </Comp>
   );
 }
@@ -125,6 +146,7 @@ function PinSheet({
         className="w-full rounded-t-surface border-t border-border bg-bg-surface p-5 pb-[calc(env(safe-area-inset-bottom)+20px)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
         <p className="mb-4 text-[15px] font-semibold text-text-primary">{titulo}</p>
         <div className="flex flex-col gap-3">
           {acao !== 'configurar' ? (
@@ -180,8 +202,6 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
   const { theme, setTheme } = useTheme();
   const { logout, pwaUser, atualizarPerfil } = useAuth();
 
-  useTopBarSlot(<span className="text-[16px] font-semibold text-text-primary">Definições</span>);
-
   const [nome, setNome] = useState(pwaUser?.nome ?? '');
   const [avatar, setAvatar] = useState<string | null>(pwaUser?.avatar ?? null);
   const [aGuardarPerfil, setAGuardarPerfil] = useState(false);
@@ -220,7 +240,7 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
   const [sheetPin, setSheetPin] = useState<'configurar' | 'alterar' | 'desativar' | null>(null);
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
+    <div className="flex flex-col gap-6 px-4 py-4">
       <Grupo titulo="Perfil">
         <div className="p-4">
           <AvatarPickerMobile value={avatar} onChange={setAvatar} />
@@ -248,7 +268,9 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
 
       <Grupo titulo="Posto">
         <div className="flex min-h-touch items-center gap-3 px-4 py-2.5">
-          <MapPin size={18} className="shrink-0 text-text-secondary" />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px]" style={{ backgroundColor: '#17c964', color: corTextoSobre('#17c964') }}>
+            <MapPin size={15} />
+          </span>
           {posto === undefined ? (
             <span className="text-[13px] text-text-tertiary">A carregar...</span>
           ) : posto ? (
@@ -265,21 +287,24 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
       <Grupo titulo="Notificações">
         <Linha
           icon={Bell}
+          corIcone="#006fee"
           label="Carga importada"
           right={<Switch checked={prefs.carga_importada} onChange={(v) => handleTogglePref('carga_importada', v)} />}
         />
-        <Linha icon={Bell} label="Carga rejeitada" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} />
+        <Linha icon={Bell} corIcone="#006fee" label="Carga rejeitada" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} />
         <Linha
           icon={Bell}
+          corIcone="#006fee"
           label="Mensagem nova"
           right={<Switch checked={prefs.mensagem} onChange={(v) => handleTogglePref('mensagem', v)} />}
         />
-        <Linha icon={Bell} label="Falha no envio" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} ultima />
+        <Linha icon={Bell} corIcone="#006fee" label="Falha no envio" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} ultima />
       </Grupo>
 
       <Grupo titulo="Aparência">
         <Linha
           icon={theme === 'light' ? Sun : Moon}
+          corIcone="#f5a524"
           label={`Tema ${theme === 'light' ? 'claro' : 'escuro'}`}
           right={<Switch checked={theme === 'dark'} onChange={(v) => setTheme(v ? 'dark' : 'light')} />}
           ultima
@@ -287,9 +312,10 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
       </Grupo>
 
       <Grupo titulo="Segurança">
-        <Linha icon={KeyRound} label="Trocar Password" onClick={onTrocarPassword} />
+        <Linha icon={KeyRound} corIcone="#7828c8" label="Trocar Password" onClick={onTrocarPassword} />
         <Linha
           icon={ShieldCheck}
+          corIcone="#7828c8"
           label={pinAtivo ? 'Alterar PIN' : 'Configurar PIN'}
           onClick={() => setSheetPin(pinAtivo ? 'alterar' : 'configurar')}
           ultima={!pinAtivo}
@@ -297,7 +323,7 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
         {pinAtivo ? (
           <Linha
             icon={ShieldCheck}
-            iconClassName="text-error"
+            corIcone="#f31260"
             label="Desativar PIN"
             destrutiva
             onClick={() => setSheetPin('desativar')}
@@ -309,19 +335,22 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
       <Grupo titulo="Sobre">
         <Linha
           icon={Info}
+          corIcone="#71717a"
           label="Sobre o Karga"
           right={<span className="text-[12px] text-text-tertiary">v0.1.0</span>}
           ultima
         />
       </Grupo>
 
-      <button
-        type="button"
-        onClick={() => void logout()}
-        className="flex min-h-touch items-center justify-center gap-2 rounded-control text-[14px] font-medium text-error active:bg-error/10"
-      >
-        <LogOut size={16} /> Sair
-      </button>
+      <div className="card-surface overflow-hidden">
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="flex min-h-touch w-full items-center justify-center gap-2 text-[14px] font-medium text-error active:bg-error/10"
+        >
+          <LogOut size={16} /> Sair
+        </button>
+      </div>
 
       <div className="px-2 text-center">
         <p className="text-[11px] text-text-tertiary">

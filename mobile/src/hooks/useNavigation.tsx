@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-export type MobilePage = 'home' | 'cargas' | 'mensagens' | 'definicoes';
+export type MobilePage = 'home' | 'cargas' | 'definicoes';
 
 interface NavigationState {
   page: MobilePage;

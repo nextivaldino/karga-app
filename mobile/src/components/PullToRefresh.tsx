@@ -12,6 +12,10 @@ interface PullToRefreshProps {
   onRefresh: () => Promise<void> | void;
   children: ReactNode;
   className?: string;
+  // Repassado ao onScroll nativo do contentor — usado pelo Cargas Hub
+  // (docs/26 §6) para esconder o FAB ao dar scroll, sem precisar de um
+  // ref próprio para o mesmo elemento.
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
 // Gesto "puxar para atualizar" — só arranca quando o próprio container
@@ -19,7 +23,7 @@ interface PullToRefreshProps {
 // da lista. Cada página passa o seu próprio `onRefresh` (recarrega os
 // dados que essa página mostra), este componente só trata do gesto e do
 // indicador visual.
-export function PullToRefresh({ onRefresh, children, className }: PullToRefreshProps): React.JSX.Element {
+export function PullToRefresh({ onRefresh, children, className, onScroll }: PullToRefreshProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const puxandoRef = useRef(false);
   const [distancia, setDistancia] = useState(0);
@@ -75,6 +79,7 @@ export function PullToRefresh({ onRefresh, children, className }: PullToRefreshP
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={() => void onTouchEnd()}
+      onScroll={onScroll}
     >
       {rodar ? (
         <div

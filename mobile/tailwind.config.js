@@ -20,6 +20,12 @@ export default {
         'text-secondary': 'var(--text-secondary)',
         'text-tertiary': 'var(--text-tertiary)',
         border: 'var(--border)',
+        // Só existem dentro de .karga-hub-theme (docs/26) — glass/vidro e
+        // contorno reforçado não têm equivalente no resto da app.
+        glass: 'var(--glass)',
+        'glass-strong': 'var(--glass-strong)',
+        'glass-press': 'var(--glass-press)',
+        'border-strong': 'var(--border-strong)',
       },
       spacing: {
         xs: 'var(--spacing-xs)',

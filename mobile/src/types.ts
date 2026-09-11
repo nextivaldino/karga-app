@@ -37,6 +37,9 @@ export interface CargaPendente {
   motivoRejeicao: string | null;
   importadoEm: string | null;
   cargaLocalId: string | null;
+  // Só existe depois de importada no Desktop (electron/main/sync.ts
+  // nextCodigo()/código manual) — null enquanto 'pendente'/'rejeitada'.
+  codigo: string | null;
   createdAt: string;
 }
 

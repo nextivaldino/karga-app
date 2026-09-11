@@ -284,7 +284,7 @@ export async function importarCarga(input: ImportarCargaInput): Promise<Carga> {
     // posto (esta chamada é defesa em profundidade, tem de poder falhar).
     const { data, error } = await supabase
       .from('cargas_pendentes')
-      .update({ estado: 'importada', carga_local_id: carga.id, importado_em: new Date().toISOString() })
+      .update({ estado: 'importada', carga_local_id: carga.id, importado_em: new Date().toISOString(), codigo })
       .eq('id', input.pendenteId)
       .eq('posto_id', postoId)
       .select('id')

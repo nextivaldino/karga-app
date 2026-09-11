@@ -1,7 +1,11 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
-export type MobilePage = 'home' | 'cargas' | 'definicoes';
+// Reset v02 (docs/26): Cargas é a única página pós-login (hub central,
+// modo Cargas/Contactos é um segmented control interno, não navegação de
+// topo) — 'home' e 'contactos' deixaram de ser rotas próprias.
+// Definições só se chega pelo menu da ilha dinâmica.
+export type MobilePage = 'cargas' | 'definicoes';
 
 interface NavigationState {
   page: MobilePage;
@@ -15,7 +19,7 @@ interface NavigationContextValue extends NavigationState {
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 export function NavigationProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [state, setState] = useState<NavigationState>({ page: 'home' });
+  const [state, setState] = useState<NavigationState>({ page: 'cargas' });
 
   const value = useMemo<NavigationContextValue>(
     () => ({

@@ -181,6 +181,7 @@ interface CargaPendenteRow {
   motivo_rejeicao: string | null;
   importado_em: string | null;
   carga_local_id: string | null;
+  codigo: string | null;
   created_at: string;
 }
 
@@ -210,6 +211,7 @@ function mapCargaPendente(row: CargaPendenteRow): CargaPendente {
     motivoRejeicao: row.motivo_rejeicao,
     importadoEm: row.importado_em,
     cargaLocalId: row.carga_local_id,
+    codigo: row.codigo,
     createdAt: row.created_at,
   };
 }

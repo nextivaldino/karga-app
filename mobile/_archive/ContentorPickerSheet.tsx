@@ -19,6 +19,11 @@ interface ContentorPickerSheetProps {
   // Só relevante com variant='dropdown' — mesmo offset da ilha (ver
   // HomePage.tsx ISLAND_MENU_TOP), para encostar sem gap.
   topOffset?: string;
+  // Quando definido, mostra uma opção extra no topo da lista que chama
+  // onSelecionar('') (string vazia = "sem filtro/ver todos"). Só a
+  // SubBar de Cargas usa isto — o seletor do Nova Carga nunca passa esta
+  // prop, tem sempre de escolher um contentor concreto.
+  opcaoTodosLabel?: string;
 }
 
 // Seleção de contentor partilhada entre a Home e o Nova Carga — por
@@ -33,6 +38,7 @@ export function ContentorPickerSheet({
   onSelecionar,
   variant = 'sheet',
   topOffset = 'calc(env(safe-area-inset-top) + 64px)',
+  opcaoTodosLabel,
 }: ContentorPickerSheetProps): React.JSX.Element | null {
   const { theme } = useTheme();
   if (!open) return null;
@@ -42,6 +48,29 @@ export function ContentorPickerSheet({
 
   const lista = (
     <div className="max-h-[60vh] overflow-y-auto p-2">
+      {opcaoTodosLabel ? (
+        (() => {
+          const ativo = contentorAtivoId === null;
+          const corTexto = corTextoSobre('#006fee');
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                onSelecionar('');
+                onClose();
+              }}
+              style={ativo ? { backgroundColor: '#006fee' } : undefined}
+              className={`flex min-h-touch w-full items-center gap-2.5 rounded-control px-3 py-2.5 text-left ${ativo ? '' : 'active:bg-bg-app'}`}
+            >
+              <Layers size={16} className={`shrink-0 ${ativo ? '' : 'text-text-tertiary'}`} style={ativo ? { color: corTexto } : undefined} />
+              <span className={`flex-1 truncate text-[14px] font-medium ${ativo ? '' : 'text-text-primary'}`} style={ativo ? { color: corTexto } : undefined}>
+                {opcaoTodosLabel}
+              </span>
+              {ativo ? <CheckCircle2 size={16} weight="fill" className="shrink-0" style={{ color: corTexto }} /> : null}
+            </button>
+          );
+        })()
+      ) : null}
       {contentores.length === 0 ? (
         <p className="p-4 text-center text-[13px] text-text-tertiary">Sem contentores disponíveis.</p>
       ) : (

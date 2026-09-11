@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karga Mobile v02 — Protótipo</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --phone-top:#141c26;
+    --phone-bot:#0a0e13;
+    --glass: rgba(255,255,255,0.055);
+    --glass-strong: rgba(255,255,255,0.10);
+    --glass-press: rgba(255,255,255,0.14);
+    --border: rgba(255,255,255,0.095);
+    --border-strong: rgba(255,255,255,0.16);
+    --text-1:#F4F6F8;
+    --text-2:rgba(244,246,248,0.60);
+    --text-3:rgba(244,246,248,0.36);
+    --copper:#C89361;
+    --copper-strong:#DDAE7D;
+    --teal2:#4FA6A0;
+    --amber:#E3AC4E;
+    --red:#C15C50;
+    --radius-l: 22px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(200,147,97,0.08), transparent 45%),
+      radial-gradient(circle at 80% 90%, rgba(79,166,160,0.07), transparent 40%),
+      var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:40px 16px;
+  }
+
+  .stage{ display:flex; flex-direction:column; align-items:center; gap:18px; }
+  .stage-label{ color:var(--text-3); font-size:12px; letter-spacing:.02em; }
+
+  /* ---------- Phone frame ---------- */
+  .phone{
+    position:relative;
+    width:376px; height:812px;
+    background:linear-gradient(180deg,var(--phone-top),var(--phone-bot));
+    border-radius:52px;
+    border:1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.75), inset 0 0 0 8px rgba(0,0,0,0.35);
+    overflow:hidden;
+  }
+  .island{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    width:100px; height:26px; background:#000; border-radius:20px; z-index:45;
+    overflow:hidden; cursor:pointer;
+    transition:width .48s cubic-bezier(.32,.88,.32,1), height .48s cubic-bezier(.32,.88,.32,1),
+               border-radius .4s ease, top .4s ease;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .island-dot{
+    position:absolute; top:50%; right:10px; transform:translateY(-50%);
+    width:6px; height:6px; border-radius:50%; background:var(--copper);
+    transition:opacity .2s ease;
+  }
+  .island.expanded{
+    width:316px; height:328px; border-radius:30px; top:12px;
+  }
+  .island.expanded .island-dot{ opacity:0; }
+  .island-content{
+    opacity:0; height:100%; padding:16px 16px 12px;
+    transition:opacity .25s ease .18s;
+    display:flex; flex-direction:column;
+  }
+  .island.expanded .island-content{ opacity:1; }
+  .island-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-shrink:0; }
+  .island-head span{ color:#fff; font-size:13px; font-weight:650; }
+  .island-close{ color:rgba(255,255,255,0.45); font-size:15px; line-height:1; }
+  .island-user{
+    display:flex; align-items:center; gap:10px; padding:8px 6px 14px;
+    border-bottom:1px solid rgba(255,255,255,0.09); margin-bottom:6px; flex-shrink:0;
+  }
+  .island-avatar{
+    width:36px; height:36px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(145deg,var(--copper-strong),var(--copper));
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#241609;
+  }
+  .island-uname{ color:#fff; font-size:13.5px; font-weight:600; }
+  .island-uemail{ color:rgba(255,255,255,0.4); font-size:11px; margin-top:1px; }
+  .island-item{
+    display:flex; align-items:center; gap:11px; padding:9px 6px;
+    color:rgba(255,255,255,0.85); font-size:13px; border-radius:11px; cursor:pointer; flex-shrink:0;
+  }
+  .island-item:active{ background:rgba(255,255,255,0.08); }
+  .island-item svg{ width:16px; height:16px; color:rgba(255,255,255,0.55); flex-shrink:0; }
+  .island-item .meta{ margin-left:auto; font-size:11px; color:rgba(255,255,255,0.38); }
+  .island-item .meta.warn{ color:var(--amber); }
+  .island-item.danger{ color:var(--red); }
+  .island-item.danger svg{ color:var(--red); }
+  .home-indicator{
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    width:120px; height:4px; border-radius:3px; background:rgba(255,255,255,0.35); z-index:40;
+  }
+
+  .screen{ position:absolute; inset:0; display:flex; flex-direction:column; }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    padding:52px 20px 10px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
+  }
+  .topbar .title{ font-size:22px; font-weight:650; color:var(--text-1); letter-spacing:-0.01em; }
+  .topbar .actions{ display:flex; gap:10px; }
+  .icon-btn{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--glass); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-2); cursor:pointer; position:relative;
+  }
+  .icon-btn:active{ background:var(--glass-press); }
+  .dot-badge{
+    position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:50%;
+    background:var(--copper); border:2px solid var(--phone-top);
+  }
+
+  /* ---------- Segmented control ---------- */
+  .segmented{
+    margin:6px 20px 14px;
+    display:flex; position:relative;
+    background:var(--glass); border:1px solid var(--border);
+    border-radius:14px; padding:3px; flex-shrink:0;
+  }
+  .segmented .thumb{
+    position:absolute; top:3px; left:3px; height:calc(100% - 6px);
+    width:calc(50% - 3px); background:var(--glass-strong);
+    border:1px solid var(--border-strong);
+    border-radius:11px; transition:transform .32s cubic-bezier(.32,.9,.4,1);
+  }
+  .segmented button{
+    flex:1; z-index:1; padding:9px 0; background:transparent; border:none;
+    color:var(--text-2); font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .segmented button.active{ color:var(--text-1); }
+
+  /* ---------- List ---------- */
+  .list-scroll{ flex:1; overflow-y:auto; padding:2px 14px 120px; }
+  .list-scroll::-webkit-scrollbar{ display:none; }
+
+  .list-sheet{
+    background:var(--glass);
+    border:1px solid var(--border);
+    border-radius:var(--radius-l);
+    overflow:hidden;
+  }
+
+  .row{
+    display:grid;
+    grid-template-columns: 40px 1fr 60px 50px 24px;
+    align-items:center;
+    gap:8px;
+    padding:11px 12px;
+    border-bottom:1px solid var(--border);
+    position:relative;
+  }
+  .row:last-child{ border-bottom:none; }
+  .row:active{ background:rgba(255,255,255,0.03); }
+
+  .cell-code{ font-size:12px; font-weight:650; color:var(--copper-strong); font-variant-numeric:tabular-nums; }
+
+  .cell-parties{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .party{ font-size:13px; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .party.receptor{ color:var(--text-2); }
+  .party-row{ display:flex; align-items:center; gap:5px; }
+  .arrow{ color:var(--text-3); font-size:10px; }
+
+  .cell-dims{ display:flex; flex-direction:column; gap:1px; text-align:center; }
+  .dims-line{ font-size:10.5px; color:var(--text-3); font-variant-numeric:tabular-nums; }
+  .dims-line b{ color:var(--text-2); font-weight:600; }
+
+  .cell-valor{ font-size:13px; font-weight:650; color:var(--text-1); text-align:right; font-variant-numeric:tabular-nums; }
+
+  .cell-menu{
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--text-3); cursor:pointer;
+  }
+  .cell-menu:active{ background:var(--glass-press); color:var(--text-1); }
+
+  .state-dot{ position:absolute; left:3px; top:50%; transform:translateY(-50%); width:5px; height:5px; border-radius:50%; }
+  .state-dot.transito{ background:var(--copper); }
+  .state-dot.entregue{ background:var(--teal2); }
+  .state-dot.pendente{ background:var(--amber); }
+
+  .section-label{ font-size:11.5px; color:var(--text-3); padding:14px 6px 8px; letter-spacing:.01em; }
+
+  /* ---------- Contacts mode ---------- */
+  .contact-row{
+    display:flex; align-items:center; gap:12px;
+    padding:12px; border-bottom:1px solid var(--border);
+  }
+  .contact-row:last-child{ border-bottom:none; }
+  .avatar{
+    width:38px; height:38px; border-radius:50%;
+    background:linear-gradient(145deg, rgba(200,147,97,0.35), rgba(200,147,97,0.12));
+    border:1px solid var(--border-strong);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:650; color:var(--copper-strong); flex-shrink:0;
+  }
+  .contact-info{ flex:1; min-width:0; }
+  .contact-name{ font-size:14px; font-weight:600; color:var(--text-1); }
+  .contact-meta{ font-size:11.5px; color:var(--text-3); margin-top:2px; }
+  .wa-btn{
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(79,166,160,0.14); border:1px solid rgba(79,166,160,0.3);
+    color:var(--teal2); display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .wa-btn:active{ background:rgba(79,166,160,0.24); }
+  .chev{ color:var(--text-3); font-size:13px; margin-left:2px; }
+
+  /* ---------- Contact detail header ---------- */
+  .detail-header{
+    margin:2px 6px 12px; padding:16px;
+    background:var(--glass); border:1px solid var(--border); border-radius:var(--radius-l);
+  }
+  .detail-back{
+    display:flex; align-items:center; gap:6px; color:var(--text-2); font-size:13px;
+    margin-bottom:12px; cursor:pointer;
+  }
+  .detail-top{ display:flex; align-items:center; gap:12px; }
+  .detail-name{ font-size:17px; font-weight:650; color:var(--text-1); }
+  .detail-stats{ font-size:12px; color:var(--text-3); margin-top:3px; }
+  .detail-actions{ display:flex; gap:8px; margin-top:14px; }
+  .pill-btn{
+    flex:1; padding:9px 0; border-radius:12px; text-align:center;
+    background:var(--glass-strong); border:1px solid var(--border-strong);
+    font-size:12.5px; font-weight:600; color:var(--text-1); cursor:pointer;
+  }
+  .pill-btn:active{ background:var(--glass-press); }
+  .pill-btn.wa{ background:rgba(79,166,160,0.16); border-color:rgba(79,166,160,0.32); color:var(--teal2); }
+
+  /* ---------- FAB ---------- */
+  .fab-zone{
+    position:absolute; right:20px; bottom:34px; z-index:30;
+    display:flex; flex-direction:column; align-items:flex-end; gap:10px;
+  }
+  .fab{
+    width:56px; height:56px; border-radius:50%;
+    background:linear-gradient(150deg, var(--copper-strong), var(--copper));
+    box-shadow: 0 10px 24px -6px rgba(200,147,97,0.55), inset 0 1px 1px rgba(255,255,255,0.35);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; position:relative;
+    transition: transform .38s cubic-bezier(.32,.9,.35,1), opacity .3s ease, background .3s ease, box-shadow .3s ease;
+  }
+  .fab svg{ width:24px; height:24px; }
+  .fab.pending{
+    background:linear-gradient(150deg, #F0BE6E, var(--amber));
+    box-shadow: 0 10px 24px -6px rgba(227,172,78,0.6), inset 0 1px 1px rgba(255,255,255,0.35);
+  }
+  .fab.hidden{ transform:translateY(120px) scale(.7); opacity:0; pointer-events:none; }
+  .fab-badge{
+    position:absolute; top:-3px; right:-3px; min-width:18px; height:18px; padding:0 4px;
+    border-radius:9px; background:var(--red); color:#fff; font-size:10px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; border:2px solid var(--phone-bot);
+  }
+
+  /* ---------- Overlay & sheets ---------- */
+  .overlay{
+    position:absolute; inset:0; z-index:50;
+    background:rgba(6,9,13,0.55); backdrop-filter:blur(2px);
+    opacity:0; pointer-events:none; transition:opacity .3s ease;
+    display:flex; align-items:flex-end;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+
+  .sheet{
+    width:100%; background:linear-gradient(180deg, rgba(24,32,42,0.97), rgba(14,19,25,0.99));
+    border:1px solid var(--border-strong); border-bottom:none;
+    border-radius:28px 28px 0 0;
+    padding:10px 20px 26px;
+    transform:translateY(30px) scale(.94); transform-origin:bottom right;
+    opacity:0; transition:transform .38s cubic-bezier(.28,.9,.32,1.05), opacity .28s ease;
+    max-height:88%; overflow-y:auto;
+  }
+  .overlay.show .sheet{ transform:translateY(0) scale(1); opacity:1; }
+  .sheet-handle{ width:36px; height:4px; border-radius:3px; background:rgba(255,255,255,0.22); margin:4px auto 14px; }
+  .sheet-title{ font-size:16px; font-weight:650; color:var(--text-1); margin-bottom:2px; }
+  .sheet-sub{ font-size:12px; color:var(--text-3); margin-bottom:16px; }
+
+  /* form */
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--text-3); margin-bottom:5px; }
+  .field input, .field select{
+    width:100%; padding:11px 12px; border-radius:12px;
+    background:var(--glass); border:1px solid var(--border);
+    color:var(--text-1); font-size:14px; font-family:inherit;
+  }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--copper); }
+  .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .chip-row{ display:flex; gap:8px; }
+  .chip{
+    flex:1; text-align:center; padding:9px 0; border-radius:11px; font-size:12px; font-weight:600;
+    background:var(--glass); border:1px solid var(--border); color:var(--text-2); cursor:pointer;
+  }
+  .chip.selected{ background:rgba(200,147,97,0.18); border-color:var(--copper); color:var(--copper-strong); }
+  .save-btn{
+    width:100%; margin-top:6px; padding:13px 0; border:none; border-radius:14px;
+    background:linear-gradient(150deg, var(--copper-strong), var(--copper));
+    color:#241609; font-size:14.5px; font-weight:700; cursor:pointer;
+  }
+  .save-btn:active{ filter:brightness(0.95); }
+
+  /* form v2 — progressive disclosure, toggles, stacking */
+  .field-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .field-group{
+    border:1px solid var(--border); border-radius:14px; padding:12px; margin-bottom:12px; background:rgba(255,255,255,0.02);
+  }
+  .field-group-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .field-group-head .lbl{ font-size:12.5px; font-weight:650; color:var(--text-1); }
+  .more-toggle{
+    font-size:11.5px; color:var(--copper-strong); cursor:pointer; display:flex; align-items:center; gap:3px;
+  }
+  .more-toggle .chevmark{ transition:transform .2s ease; display:inline-block; }
+  .more-toggle.open .chevmark{ transform:rotate(90deg); }
+  .extra-fields{ display:grid; grid-template-columns:1fr 1fr; gap:8px; max-height:0; overflow:hidden;
+    transition:max-height .28s ease, margin-top .28s ease; margin-top:0; }
+  .extra-fields.open{ max-height:200px; margin-top:8px; }
+  .extra-fields .field{ margin-bottom:0; }
+  .extra-fields .field.full{ grid-column:1 / -1; }
+  .add-dest-link{ font-size:12px; color:var(--copper-strong); margin-top:8px; cursor:pointer; display:inline-block; }
+
+  .switch{ width:38px; height:22px; border-radius:12px; background:var(--glass-strong); border:1px solid var(--border-strong); position:relative; cursor:pointer; flex-shrink:0; }
+  .switch .knob{ position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--text-2); transition:transform .22s ease, background .22s ease; }
+  .switch.on{ background:rgba(200,147,97,0.28); border-color:var(--copper); }
+  .switch.on .knob{ transform:translateX(16px); background:var(--copper-strong); }
+
+  .m3-display{ font-size:11px; color:var(--text-3); text-align:right; margin-top:4px; }
+  .m3-display b{ color:var(--copper-strong); }
+
+  .stack-area{ margin:6px 0 4px; }
+  .stack-empty{ font-size:11.5px; color:var(--text-3); padding:4px 2px 10px; }
+  .stack-item{
+    display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:6px;
+    background:var(--glass); border:1px solid var(--border); border-radius:11px; font-size:12px; color:var(--text-2);
+  }
+  .stack-item .si-main{ flex:1; color:var(--text-1); font-weight:600; }
+  .stack-item .si-remove{ color:var(--text-3); cursor:pointer; font-size:14px; padding:2px 4px; }
+  .add-stack-btn{
+    width:100%; padding:11px 0; border-radius:12px; margin-top:2px; margin-bottom:14px;
+    background:var(--glass); border:1px dashed var(--border-strong); color:var(--text-1); font-size:13px; font-weight:600; cursor:pointer;
+  }
+
+  /* options mini-sheet */
+  .opt-sheet{ padding-bottom:14px; }
+  .opt-item{
+    display:flex; align-items:center; gap:12px; padding:12px 4px;
+    font-size:14px; color:var(--text-1); border-bottom:1px solid var(--border); cursor:pointer;
+  }
+  .opt-item:last-child{ border-bottom:none; }
+  .opt-item svg{ width:18px; height:18px; color:var(--text-2); flex-shrink:0; }
+  .opt-item.danger{ color:var(--red); }
+  .opt-item.danger svg{ color:var(--red); }
+
+  /* sync pill */
+  .sync-pill-wrap{
+    position:absolute; z-index:55; right:20px; bottom:104px;
+    transform:translateY(16px) scale(.9); opacity:0; pointer-events:none;
+    transition:transform .3s cubic-bezier(.3,.9,.35,1.05), opacity .25s ease;
+    transform-origin:bottom right;
+  }
+  .sync-pill-wrap.show{ transform:translateY(0) scale(1); opacity:1; pointer-events:auto; }
+  .sync-pill{
+    width:250px; background:rgba(22,29,38,0.97); border:1px solid var(--border-strong);
+    border-radius:18px; padding:14px; box-shadow:0 18px 40px -12px rgba(0,0,0,0.6);
+  }
+  .sync-pill-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .sync-pill-head .dot{ width:8px; height:8px; border-radius:50%; background:var(--amber); }
+  .sync-pill-head span{ font-size:12.5px; font-weight:650; color:var(--text-1); }
+  .sync-item{ font-size:12px; color:var(--text-2); padding:5px 0; display:flex; justify-content:space-between; }
+  .sync-item b{ color:var(--text-1); font-weight:600; }
+  .sync-action{
+    margin-top:8px; width:100%; padding:9px 0; border-radius:11px; border:none;
+    background:var(--glass-strong); border:1px solid var(--border-strong);
+    color:var(--text-1); font-size:12.5px; font-weight:650; cursor:pointer;
+  }
+
+  /* demo controls (outside phone, not part of app) */
+  .demo-controls{
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center; max-width:376px;
+  }
+  .demo-btn{
+    padding:8px 14px; border-radius:10px; background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12); color:rgba(244,246,248,0.7);
+    font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .demo-btn:hover{ background:rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="phone">
+    <div class="island" id="islandBtn">
+      <div class="island-dot" id="islandDot"></div>
+      <div class="island-content">
+        <div class="island-head"><span>Menu</span><div class="island-close">✕</div></div>
+        <div class="island-user">
+          <div class="island-avatar">IV</div>
+          <div>
+            <div class="island-uname">Ivaldino</div>
+            <div class="island-uemail">Empresa Sentinel · Posto 01</div>
+          </div>
+        </div>
+        <div class="island-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Notificações <span class="meta warn">3 novas</span>
+        </div>
+        <div class="island-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+          Sincronização <span class="meta">há 42 min</span>
+        </div>
+        <div class="island-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/><circle cx="12" cy="8" r="4"/></svg>
+          Perfil
+        </div>
+        <div class="island-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>
+          Definições
+        </div>
+        <div class="island-item danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          Sair
+        </div>
+      </div>
+    </div>
+    <div class="screen">
+
+      <div class="topbar">
+        <div class="title" id="pageTitle">Cargas</div>
+      </div>
+
+      <div class="segmented">
+        <div class="thumb" id="segThumb"></div>
+        <button class="active" id="segCargas">Cargas</button>
+        <button id="segContactos">Contactos</button>
+      </div>
+
+      <div class="list-scroll" id="listScroll">
+        <div id="listArea"></div>
+      </div>
+
+      <div class="fab-zone">
+        <div class="fab" id="fab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#241609" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <div class="fab-badge" id="fabBadge" style="display:none;">3</div>
+        </div>
+      </div>
+
+      <div class="sync-pill-wrap" id="syncPillWrap">
+        <div class="sync-pill">
+          <div class="sync-pill-head"><div class="dot"></div><span>Sincronização de cargas</span></div>
+          <div class="sync-item"><span>Pendentes</span><b>3 cargas</b></div>
+          <div class="sync-item"><span>Última sincronização</span><b>há 42 min</b></div>
+          <div class="sync-item"><span>Erros</span><b style="color:#C15C50">1 carga</b></div>
+          <button class="sync-action" id="syncNowBtn">Sincronizar agora</button>
+        </div>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="sheet" id="sheetContent"></div>
+      </div>
+
+      <div class="home-indicator"></div>
+    </div>
+  </div>
+
+  <div class="stage-label">Protótipo interativo — toca nos elementos</div>
+  <div class="demo-controls">
+    <button class="demo-btn" id="demoSyncToggle">demo: alternar pendência de sync</button>
+  </div>
+</div>
+
+<script>
+const cargas = [
+  {id:1, codigo:'KR-0231', emissor:'Delgado Import', receptor:'Casa Rosa Lda', c:120,a:80,l:100, valor:'42.000€', estado:'transito'},
+  {id:2, codigo:'KR-0232', emissor:'Delgado Import', receptor:'Mercearia Sul', c:60,a:60,l:60, valor:'8.500€', estado:'pendente'},
+  {id:3, codigo:'KR-0233', emissor:'Nuno Freight', receptor:'Auto Peças Mindelo', c:200,a:140,l:110, valor:'118.200€', estado:'entregue'},
+  {id:4, codigo:'KR-0234', emissor:'Cabo Trade', receptor:'Farmácia Central', c:40,a:40,l:35, valor:'3.100€', estado:'transito'},
+  {id:5, codigo:'KR-0235', emissor:'Nuno Freight', receptor:'Loja da Praça', c:90,a:70,l:65, valor:'21.750€', estado:'entregue'},
+  {id:6, codigo:'KR-0236', emissor:'Delgado Import', receptor:'Casa Rosa Lda', c:150,a:100,l:90, valor:'56.400€', estado:'pendente'},
+];
+
+let mode = 'cargas';
+let selectedContact = null;
+
+const listArea = document.getElementById('listArea');
+const overlay = document.getElementById('overlay');
+const sheetContent = document.getElementById('sheetContent');
+const fab = document.getElementById('fab');
+const pageTitle = document.getElementById('pageTitle');
+
+function stateDot(estado){ return `<div class="state-dot ${estado}"></div>`; }
+
+function rowHTML(carga){
+  return `
+  <div class="row" data-id="${carga.id}">
+    ${stateDot(carga.estado)}
+    <div class="cell-code">${carga.codigo}</div>
+    <div class="cell-parties">
+      <div class="party-row"><div class="party">${carga.emissor}</div></div>
+      <div class="party-row"><span class="arrow">→</span><div class="party receptor">${carga.receptor}</div></div>
+    </div>
+    <div class="cell-dims">
+      <div class="dims-line"><b>${carga.c}</b>×<b>${carga.a}</b>×<b>${carga.l}</b></div>
+      <div class="dims-line">cm</div>
+    </div>
+    <div class="cell-valor">${carga.valor}</div>
+    <div class="cell-menu" data-opt="${carga.id}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+    </div>
+  </div>`;
+}
+
+function renderCargasList(list){
+  listArea.innerHTML = `<div class="list-sheet">${list.map(rowHTML).join('')}</div>`;
+  attachRowEvents();
+}
+
+function renderContactsList(){
+  const groups = {};
+  cargas.forEach(c => {
+    if(!groups[c.emissor]) groups[c.emissor] = [];
+    groups[c.emissor].push(c);
+  });
+  const rows = Object.keys(groups).map(name => {
+    const items = groups[name];
+    const total = items.reduce((s,c)=> s + parseFloat(c.valor.replace(/[.€]/g,'').replace(',','.')), 0);
+    const initials = name.split(' ').map(w=>w[0]).slice(0,2).join('');
+    return `
+    <div class="contact-row" data-contact="${name}">
+      <div class="avatar">${initials}</div>
+      <div class="contact-info">
+        <div class="contact-name">${name}</div>
+        <div class="contact-meta">${items.length} carga${items.length>1?'s':''} · ${total.toLocaleString('pt-PT')}€</div>
+      </div>
+      <div class="wa-btn" data-wa="${name}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2zm5.6 14.3c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.7-1.2-4.4-3.9-4.6-4.1-.1-.2-1.1-1.5-1.1-2.8 0-1.3.7-2 1-2.3.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.4 0 .6-.1.2-.2.3-.3.5-.2.2-.3.3-.5.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.4 2.4 1.5.3.1.5.1.7-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.7.8.2.1.4.2.4.3.1.2.1.6-.1 1.1z"/></svg>
+      </div>
+      <div class="chev">›</div>
+    </div>`;
+  }).join('');
+  listArea.innerHTML = `<div class="section-label">Contactos</div><div class="list-sheet">${rows}</div>`;
+
+  listArea.querySelectorAll('.contact-row').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      if(e.target.closest('.wa-btn')) return;
+      selectedContact = el.dataset.contact;
+      renderContactDetail(selectedContact);
+    });
+  });
+  listArea.querySelectorAll('.wa-btn').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openWhatsAppSheet(el.dataset.wa);
+    });
+  });
+}
+
+function renderContactDetail(name){
+  pageTitle.textContent = name;
+  const items = cargas.filter(c=>c.emissor===name);
+  const total = items.reduce((s,c)=> s + parseFloat(c.valor.replace(/[.€]/g,'').replace(',','.')), 0);
+  listArea.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-back" id="backToContacts">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Contactos
+      </div>
+      <div class="detail-top">
+        <div class="avatar">${name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div>
+        <div>
+          <div class="detail-name">${name}</div>
+          <div class="detail-stats">${items.length} cargas · ${total.toLocaleString('pt-PT')}€ acumulado</div>
+        </div>
+      </div>
+      <div class="detail-actions">
+        <div class="pill-btn" id="editContactBtn">Editar dados</div>
+        <div class="pill-btn wa" id="waFromDetail">WhatsApp</div>
+      </div>
+    </div>
+    <div class="list-sheet">${items.map(rowHTML).join('')}</div>
+  `;
+  document.getElementById('backToContacts').addEventListener('click', ()=>{
+    pageTitle.textContent = 'Cargas';
+    renderContactsList();
+  });
+  document.getElementById('waFromDetail').addEventListener('click', ()=> openWhatsAppSheet(name));
+  document.getElementById('editContactBtn').addEventListener('click', ()=> openEditContactSheet(name));
+  attachRowEvents();
+}
+
+function attachRowEvents(){
+  listArea.querySelectorAll('.cell-menu').forEach(el=>{
+    el.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openOptionsSheet(parseInt(el.dataset.opt));
+    });
+  });
+}
+
+/* ---------- overlay helpers ---------- */
+function openOverlay(html){
+  sheetContent.innerHTML = html;
+  overlay.classList.add('show');
+}
+function closeOverlay(){
+  overlay.classList.remove('show');
+}
+overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeOverlay(); });
+
+/* ---------- Adicionar Carga ---------- */
+fab.addEventListener('click', ()=>{
+  if(fab.classList.contains('pending')){
+    toggleSyncPill(true);
+    return;
+  }
+  openAddCargaSheet();
+});
+
+let cargaStack = [];
+let nextCodigoNum = 237;
+let manualCodigo = false;
+let pagoState = false;
+let destCount = 1;
+
+function extraFieldsBlock(prefix){
+  return `
+    <div class="extra-fields" id="extra-${prefix}">
+      <div class="field"><label>Telefone</label><input placeholder="+238 9xx xx xx" /></div>
+      <div class="field"><label>Email</label><input placeholder="email@exemplo.com" /></div>
+      <div class="field full"><label>Morada</label><input placeholder="Rua, cidade" /></div>
+      <div class="field"><label>NIF</label><input placeholder="000000000" /></div>
+    </div>`;
+}
+
+function partyGroup(prefix, label, placeholder){
+  return `
+    <div class="field-group">
+      <div class="field-group-head">
+        <div class="lbl">${label}</div>
+        <div class="more-toggle" data-toggle="extra-${prefix}"><span>Mais campos</span><span class="chevmark">›</span></div>
+      </div>
+      <input placeholder="${placeholder}" list="contactos-sugestoes" />
+      ${extraFieldsBlock(prefix)}
+    </div>`;
+}
+
+function openAddCargaSheet(){
+  destCount = 1;
+  const codigoAtual = 'KR-0' + nextCodigoNum;
+  openOverlay(`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Adicionar carga</div>
+    <div class="sheet-sub">Contentor: Contentor Setembro 2026 · Praia</div>
+
+    <div class="field">
+      <div class="field-row">
+        <label style="margin-bottom:0;">Código</label>
+        <div class="field-row" style="gap:6px;">
+          <span style="font-size:11px;color:var(--text-3);">Manual</span>
+          <div class="switch" id="manualCodigoSwitch"><div class="knob"></div></div>
+        </div>
+      </div>
+      <input id="codigoInput" value="${codigoAtual}" disabled style="opacity:.55;" />
+    </div>
+
+    <div class="field"><label>Contentor de destino</label>
+      <select><option>Contentor Setembro 2026 · Praia</option><option>Contentor Outubro 2026 · Mindelo</option></select>
+    </div>
+
+    ${partyGroup('emissor', 'Emissor', 'Nome do emissor')}
+
+    <div id="destinatarios-wrap">${partyGroup('recetor-1', 'Recetor', 'Nome do recetor')}</div>
+    <div class="add-dest-link" id="addDestLink">+ Adicionar outro destinatário</div>
+
+    <div class="field"><label>Nome da carga</label><input placeholder="Ex: Eletrodomésticos, roupa..." /></div>
+
+    <div class="field">
+      <label>Dimensões (cm)</label>
+      <div class="row3">
+        <input id="dimC" placeholder="C" inputmode="numeric" />
+        <input id="dimA" placeholder="A" inputmode="numeric" />
+        <input id="dimL" placeholder="L" inputmode="numeric" />
+      </div>
+      <div class="m3-display">Volume: <b id="m3Val">0.00 m³</b></div>
+    </div>
+
+    <div class="row3" style="grid-template-columns:1fr 1fr;">
+      <div class="field"><label>Peso (kg)</label><input placeholder="0" inputmode="numeric" /></div>
+      <div class="field"><label>Valor</label><input placeholder="0,00 €" inputmode="decimal" /></div>
+    </div>
+
+    <div class="field">
+      <div class="field-row">
+        <label style="margin-bottom:0;">Faturação</label>
+        <div class="field-row" style="gap:6px;">
+          <span style="font-size:12px;color:var(--text-2);" id="pagoLabel">Devido</span>
+          <div class="switch" id="pagoSwitch"><div class="knob"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Estado</label>
+      <div class="chip-row">
+        <div class="chip selected">Pendente</div>
+        <div class="chip">Em trânsito</div>
+        <div class="chip">Entregue</div>
+      </div>
+    </div>
+
+    <div class="stack-area">
+      <div class="stack-empty" id="stackEmptyMsg">Nenhuma carga na lista ainda — preenche e adiciona quantas precisares antes de enviar.</div>
+      <div id="stackList"></div>
+    </div>
+    <button class="add-stack-btn" id="addStackBtn">+ Adicionar à lista</button>
+
+    <button class="save-btn" id="saveCargaBtn">Guardar carga</button>
+  `);
+
+  // chips estado
+  sheetContent.querySelectorAll('.chip-row .chip').forEach(chip=>{
+    chip.addEventListener('click', ()=>{
+      chip.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
+  });
+
+  // toggles "mais campos"
+  function bindMoreToggles(){
+    sheetContent.querySelectorAll('.more-toggle').forEach(t=>{
+      t.onclick = ()=>{
+        t.classList.toggle('open');
+        document.getElementById(t.dataset.toggle).classList.toggle('open');
+      };
+    });
+  }
+  bindMoreToggles();
+
+  // switches
+  const manualSwitch = document.getElementById('manualCodigoSwitch');
+  const codigoInput = document.getElementById('codigoInput');
+  manualSwitch.addEventListener('click', ()=>{
+    manualCodigo = !manualCodigo;
+    manualSwitch.classList.toggle('on', manualCodigo);
+    codigoInput.disabled = !manualCodigo;
+    codigoInput.style.opacity = manualCodigo ? '1' : '.55';
+  });
+
+  const pagoSwitch = document.getElementById('pagoSwitch');
+  const pagoLabel = document.getElementById('pagoLabel');
+  pagoSwitch.addEventListener('click', ()=>{
+    pagoState = !pagoState;
+    pagoSwitch.classList.toggle('on', pagoState);
+    pagoLabel.textContent = pagoState ? 'Pago' : 'Devido';
+  });
+
+  // + destinatário
+  document.getElementById('addDestLink').addEventListener('click', (e)=>{
+    destCount++;
+    const wrap = document.getElementById('destinatarios-wrap');
+    const div = document.createElement('div');
+    div.innerHTML = partyGroup('recetor-'+destCount, 'Recetor '+destCount, 'Nome do recetor adicional');
+    wrap.appendChild(div.firstElementChild);
+    bindMoreToggles();
+  });
+
+  // cálculo m³ em tempo real
+  function recalcM3(){
+    const c = parseFloat(document.getElementById('dimC').value)||0;
+    const a = parseFloat(document.getElementById('dimA').value)||0;
+    const l = parseFloat(document.getElementById('dimL').value)||0;
+    const m3 = (c*a*l)/1000000;
+    document.getElementById('m3Val').textContent = m3.toFixed(2)+' m³';
+  }
+  ['dimC','dimA','dimL'].forEach(id=> document.getElementById(id).addEventListener('input', recalcM3));
+
+  // stacking
+  function renderStack(){
+    const stackList = document.getElementById('stackList');
+    const emptyMsg = document.getElementById('stackEmptyMsg');
+    const saveBtn = document.getElementById('saveCargaBtn');
+    if(cargaStack.length === 0){
+      emptyMsg.style.display='block';
+      stackList.innerHTML='';
+      saveBtn.textContent = 'Guardar carga';
+    } else {
+      emptyMsg.style.display='none';
+      stackList.innerHTML = cargaStack.map((s,i)=>`
+        <div class="stack-item">
+          <span class="si-main">${s}</span>
+          <span class="si-remove" data-idx="${i}">✕</span>
+        </div>`).join('');
+      stackList.querySelectorAll('.si-remove').forEach(r=>{
+        r.addEventListener('click', ()=>{ cargaStack.splice(parseInt(r.dataset.idx),1); renderStack(); });
+      });
+      saveBtn.textContent = `Enviar todas (${cargaStack.length + 1})`;
+    }
+  }
+  document.getElementById('addStackBtn').addEventListener('click', ()=>{
+    const emissorVal = sheetContent.querySelector('.field-group input').value || 'Sem emissor';
+    cargaStack.push(emissorVal + ' — nova carga');
+    nextCodigoNum++;
+    document.getElementById('codigoInput').value = 'KR-0'+nextCodigoNum;
+    renderStack();
+  });
+
+  document.getElementById('saveCargaBtn').addEventListener('click', ()=>{
+    cargaStack = [];
+    nextCodigoNum++;
+    closeOverlay();
+  });
+}
+
+/* ---------- opções de carga ---------- */
+function openOptionsSheet(id){
+  const carga = cargas.find(c=>c.id===id);
+  openOverlay(`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">${carga.codigo}</div>
+    <div class="sheet-sub">${carga.emissor} → ${carga.receptor}</div>
+    <div class="opt-sheet">
+      ${optItem('Ver detalhes','eye')}
+      ${optItem('Editar','edit')}
+      ${optItem('Duplicar','copy')}
+      ${optItem('Alterar estado','flag')}
+      ${optItem('Marcar faturação','tag')}
+      ${optItem('Enviar por WhatsApp','wa')}
+      ${optItem('Exportar recibo','file')}
+      ${optItem('Histórico','clock')}
+      ${optItem('Eliminar','trash', true)}
+    </div>
+  `);
+  sheetContent.querySelectorAll('.opt-item').forEach(el=> el.addEventListener('click', closeOverlay));
+}
+
+function optItem(label, icon, danger){
+  const icons = {
+    eye:'<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>',
+    edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>',
+    copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    flag:'<path d="M4 22V3"/><path d="M4 4h14l-3 5 3 5H4"/>',
+    tag:'<path d="M20 12l-8 8-9-9V4h7l10 8z"/><circle cx="7.5" cy="7.5" r="1"/>',
+    wa:'<path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2z"/>',
+    file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+    trash:'<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>'
+  };
+  return `<div class="opt-item ${danger?'danger':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[icon]}</svg>${label}</div>`;
+}
+
+/* ---------- contacto: editar / whatsapp ---------- */
+function openEditContactSheet(name){
+  openOverlay(`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Editar contacto</div>
+    <div class="sheet-sub">${name}</div>
+    <div class="field"><label>Nome</label><input value="${name}" /></div>
+    <div class="field"><label>Telefone</label><input placeholder="+238 9xx xx xx" /></div>
+    <div class="field"><label>Email</label><input placeholder="email@exemplo.com" /></div>
+    <button class="save-btn" id="saveContactBtn">Guardar alterações</button>
+  `);
+  document.getElementById('saveContactBtn').addEventListener('click', closeOverlay);
+}
+function openWhatsAppSheet(name){
+  openOverlay(`
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Enviar por WhatsApp</div>
+    <div class="sheet-sub">${name}</div>
+    <div class="field"><label>Mensagem</label><input value="Resumo das suas cargas em anexo." /></div>
+    <button class="save-btn" id="sendWaBtn">Abrir WhatsApp</button>
+  `);
+  document.getElementById('sendWaBtn').addEventListener('click', closeOverlay);
+}
+
+/* ---------- segmented control ---------- */
+const segCargas = document.getElementById('segCargas');
+const segContactos = document.getElementById('segContactos');
+const segThumb = document.getElementById('segThumb');
+
+segCargas.addEventListener('click', ()=>{
+  mode='cargas'; pageTitle.textContent='Cargas';
+  segCargas.classList.add('active'); segContactos.classList.remove('active');
+  segThumb.style.transform='translateX(0)';
+  renderCargasList(cargas);
+});
+segContactos.addEventListener('click', ()=>{
+  mode='contactos'; pageTitle.textContent='Contactos';
+  segContactos.classList.add('active'); segCargas.classList.remove('active');
+  segThumb.style.transform='translateX(100%)';
+  renderContactsList();
+});
+
+/* ---------- FAB hide on scroll ---------- */
+const listScroll = document.getElementById('listScroll');
+let lastY = 0;
+listScroll.addEventListener('scroll', ()=>{
+  const y = listScroll.scrollTop;
+  if(Math.abs(y-lastY) < 4) return;
+  if(y > lastY && y > 20){ fab.classList.add('hidden'); }
+  else { fab.classList.remove('hidden'); }
+  lastY = y;
+  toggleSyncPill(false);
+});
+
+/* ---------- sync pill ---------- */
+const syncPillWrap = document.getElementById('syncPillWrap');
+function toggleSyncPill(force){
+  if(force === false){ syncPillWrap.classList.remove('show'); return; }
+  syncPillWrap.classList.toggle('show', force);
+}
+document.getElementById('syncNowBtn').addEventListener('click', ()=>{
+  toggleSyncPill(false);
+  setPending(false);
+});
+
+const demoSyncToggle = document.getElementById('demoSyncToggle');
+const fabBadge = document.getElementById('fabBadge');
+let pending = false;
+function setPending(v){
+  pending = v;
+  fab.classList.toggle('pending', v);
+  fabBadge.style.display = v ? 'flex' : 'none';
+  if(!v) toggleSyncPill(false);
+}
+demoSyncToggle.addEventListener('click', ()=> setPending(!pending));
+
+/* ---------- ilha dinâmica (menu) ---------- */
+const islandBtn = document.getElementById('islandBtn');
+islandBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  islandBtn.classList.toggle('expanded');
+});
+document.addEventListener('click', (e)=>{
+  if(islandBtn.classList.contains('expanded') && !islandBtn.contains(e.target)){
+    islandBtn.classList.remove('expanded');
+  }
+});
+
+/* ---------- init ---------- */
+renderCargasList(cargas);
+</script>
+</body>
+</html>

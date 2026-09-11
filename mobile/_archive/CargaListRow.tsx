@@ -25,14 +25,6 @@ export interface CargaListRowData {
 
 interface CargaListRowProps {
   linha: CargaListRowData;
-  corGrupo: string;
-  // Cor de texto/ícones calculada para dar contraste sobre `corGrupo`
-  // sólido (`corTextoSobre`, lib/rowAccents.ts). Só se passa isto quando a
-  // linha deve preencher-se a 100% com `corGrupo` (lista principal de
-  // Cargas — linguagem "blocos de cor vivos"). Sem esta prop, mantém-se o
-  // visual antigo (tint a 5% + texto nos tokens neutros), usado no preview
-  // compacto do popup Nova Carga, que não deve mudar de linguagem visual.
-  corTexto?: string;
   acoes?: AcaoLinhaCarga[];
   // Contexto mais estreito (ex: dentro do popup Nova Carga, ~440px em vez
   // da largura toda do ecrã) — encolhe a coluna de Contactos para dar
@@ -40,10 +32,9 @@ interface CargaListRowProps {
   compacto?: boolean;
 }
 
-// Grelha comum a esta linha e ao cabeçalho do grupo (GrupoContactoHeader,
-// em CargasPage.tsx) — a coluna de Valor e o botão de ação à direita têm
-// SEMPRE a mesma largura e o mesmo preenchimento exterior nos dois sítios,
-// para o "Valor" alinhar verticalmente entre o resumo e as suas cargas.
+// Grelha comum a esta linha e ao cabeçalho de coluna — a coluna de Valor
+// e o botão de ação à direita têm SEMPRE a mesma largura/preenchimento
+// exterior nos dois sítios, para o "Valor" alinhar verticalmente.
 export const LARGURA_VALOR = 'w-[70px]';
 export const LARGURA_ACAO = 'w-9';
 const LARGURA_CONTACTOS = 'w-[150px]';
@@ -52,7 +43,7 @@ const LARGURA_CONTACTOS_COMPACTA = 'w-[92px]';
 // Cabeçalho de colunas — companion do CargaListRow.
 export function CargaListHeader({ compacto }: { compacto?: boolean } = {}): React.JSX.Element {
   return (
-    <div className="flex items-center gap-2 py-1 pl-5 pr-4 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
+    <div className="flex items-center gap-2 py-1 pl-4 pr-4 text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">
       <span className="w-16 shrink-0">Código</span>
       <span className={`${compacto ? LARGURA_CONTACTOS_COMPACTA : LARGURA_CONTACTOS} shrink-0`}>Contactos</span>
       <span className="min-w-0 flex-1">Carga</span>
@@ -62,18 +53,15 @@ export function CargaListHeader({ compacto }: { compacto?: boolean } = {}): Reac
   );
 }
 
-// Linha "encostada" (sem cantos arredondados, sem sombra, sem espaço entre
-// linhas) — faixa de cor à esquerda identifica o GRUPO (emissor), não a
-// linha individual; indentada (pl-5) para se ler como filha do cabeçalho
-// do grupo. Não há tap na linha: todas as ações vivem no menu "☰".
-export function CargaListRow({ linha, corGrupo, corTexto, acoes, compacto }: CargaListRowProps): React.JSX.Element {
+// Linha plana e neutra — sempre fundo branco, separador fino em baixo.
+// O único sinal de cor é o ícone/ponto de estado (o que precisa de
+// atenção, não a que grupo pertence) e as setas emissor/recetor, que já
+// eram pequenas o suficiente para não ler como "bloco de cor".
+export function CargaListRow({ linha, acoes, compacto }: CargaListRowProps): React.JSX.Element {
   const [menuAberto, setMenuAberto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const dimensoes = formatDimensoes(linha.comprimentoCm, linha.larguraCm, linha.alturaCm);
   const EstadoIcon = ESTADO_ICON[linha.estado];
-  const solido = corTexto != null;
-  const texto = corTexto ?? undefined;
-  const divisor = corTexto === '#ffffff' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)';
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent): void {
@@ -84,66 +72,38 @@ export function CargaListRow({ linha, corGrupo, corTexto, acoes, compacto }: Car
   }, []);
 
   // "Aberta" — ainda não fechou o ciclo (por enviar, na fila, com erro ou
-  // pendente de revisão no desktop); ganha um pouco mais de altura e uma
-  // bolinha antes do código, para se notar de imediato dentro da lista
-  // expandida que ainda precisa de atenção.
+  // pendente de revisão no desktop) — ganha um ponto antes do código,
+  // para se notar de imediato dentro da lista que ainda precisa de atenção.
   const aberta = linha.estado !== 'importada';
 
   return (
-    <div
-      className={`relative ${aberta ? 'py-[8.8px]' : 'py-2'} pl-5 pr-4 ${menuAberto ? 'z-20' : ''} ${solido ? '' : 'border-b border-border'}`}
-      style={
-        solido
-          ? { backgroundColor: corGrupo, borderBottom: `1px solid ${divisor}` }
-          : { borderLeft: `3px solid ${corGrupo}`, backgroundColor: `${corGrupo}0d` }
-      }
-    >
+    <div className={`relative border-b border-border bg-bg-surface ${aberta ? 'py-[8.8px]' : 'py-2'} pl-4 pr-4 ${menuAberto ? 'z-20' : ''}`}>
       <div className="flex items-center gap-2">
         <span className="flex w-16 shrink-0 items-center gap-1">
-          {aberta ? (
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: texto ?? corGrupo }} />
-          ) : null}
-          <span className={`truncate text-[12px] font-bold ${solido ? '' : 'text-text-primary'}`} style={{ color: texto }}>
-            {linha.codigo}
-          </span>
+          {aberta ? <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ESTADO_CLASS[linha.estado]} bg-current`} /> : null}
+          <span className="truncate text-[12px] font-bold text-text-primary">{linha.codigo}</span>
         </span>
 
         <span className={`flex ${compacto ? LARGURA_CONTACTOS_COMPACTA : LARGURA_CONTACTOS} shrink-0 flex-col gap-0.5 text-[12px]`}>
-          <span className={`flex items-center gap-1 font-medium ${solido ? '' : 'text-text-primary'}`} style={{ color: texto }}>
-            <ArrowUpRight size={12} className={`shrink-0 ${solido ? '' : 'text-primary'}`} style={{ color: texto }} />
+          <span className="flex items-center gap-1 font-medium text-text-primary">
+            <ArrowUpRight size={12} className="shrink-0 text-primary" />
             <span className="truncate">{linha.emissorNome}</span>
           </span>
-          <span className={`flex items-center gap-1 font-medium ${solido ? '' : 'text-text-primary'}`} style={{ color: texto }}>
-            <ArrowDownLeft size={12} className={`shrink-0 ${solido ? '' : 'text-success'}`} style={{ color: texto }} />
+          <span className="flex items-center gap-1 font-medium text-text-primary">
+            <ArrowDownLeft size={12} className="shrink-0 text-success" />
             <span className="truncate">{linha.recetorNome}</span>
           </span>
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className={`min-w-0 flex-1 truncate text-[14px] font-semibold ${solido ? '' : 'text-text-primary'}`} style={{ color: texto }}>
-              {linha.nomeCarga}
-            </span>
-            <EstadoIcon
-              size={14}
-              className={`shrink-0 ${solido ? '' : ESTADO_CLASS[linha.estado]}`}
-              style={solido ? { color: texto } : undefined}
-              aria-label={ESTADO_LABEL[linha.estado]}
-            />
+            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-text-primary">{linha.nomeCarga}</span>
+            <EstadoIcon size={14} className={`shrink-0 ${ESTADO_CLASS[linha.estado]}`} aria-label={ESTADO_LABEL[linha.estado]} />
           </div>
-          {dimensoes ? (
-            <span className={`block truncate text-[11px] font-light ${solido ? '' : 'text-text-tertiary'}`} style={{ color: texto, opacity: solido ? 0.7 : undefined }}>
-              {dimensoes}
-            </span>
-          ) : null}
+          {dimensoes ? <span className="block truncate text-[11px] font-light text-text-tertiary">{dimensoes}</span> : null}
         </div>
 
-        <span
-          className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-medium tabular-nums ${solido ? '' : 'text-text-primary'}`}
-          style={{ color: texto }}
-        >
-          {formatMoeda(linha.valor)}
-        </span>
+        <span className={`${LARGURA_VALOR} shrink-0 text-right text-[13px] font-medium tabular-nums text-text-primary`}>{formatMoeda(linha.valor)}</span>
 
         <div ref={menuRef} className={`relative flex ${LARGURA_ACAO} shrink-0 items-center justify-center`}>
           {acoes && acoes.length > 0 ? (
@@ -152,8 +112,7 @@ export function CargaListRow({ linha, corGrupo, corTexto, acoes, compacto }: Car
                 type="button"
                 onClick={() => setMenuAberto((v) => !v)}
                 title="Opções"
-                className={`flex h-9 w-9 items-center justify-center rounded-control ${solido ? 'active:opacity-70' : 'text-text-tertiary active:bg-bg-app'}`}
-                style={{ color: texto }}
+                className="flex h-9 w-9 items-center justify-center rounded-control text-text-tertiary active:bg-bg-app"
               >
                 <Menu size={17} />
               </button>

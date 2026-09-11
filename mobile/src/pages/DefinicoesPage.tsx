@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Bell,
+  CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
   Info,
   Key as KeyRound,
@@ -12,6 +13,7 @@ import {
   Sun,
 } from '@phosphor-icons/react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigation } from '@/hooks/useNavigation';
 import { useTheme } from '@/hooks/useTheme';
 import { corTextoSobre } from '@/lib/rowAccents';
 import { Switch } from '@/components/ui/Switch';
@@ -25,6 +27,10 @@ import {
 } from '@/lib/preferenciasNotificacoes';
 import { definirPin, pinConfigurado, removerPin, verificarPin } from '@/lib/pinLocal';
 import type { MeuPostoInfo } from '@/types';
+
+// Ver 27f (docs/27 §3.7) — sino/painel de notificações saiu do fluxo
+// principal; a secção fica escondida, não apagada.
+const MOSTRAR_NOTIFICACOES = false;
 
 function Grupo({ titulo, children }: { titulo?: string; children: ReactNode }): React.JSX.Element {
   return (
@@ -201,6 +207,7 @@ function PinSheet({
 export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => void }): React.JSX.Element {
   const { theme, setTheme } = useTheme();
   const { logout, pwaUser, atualizarPerfil } = useAuth();
+  const { navigate } = useNavigation();
 
   const [nome, setNome] = useState(pwaUser?.nome ?? '');
   const [avatar, setAvatar] = useState<string | null>(pwaUser?.avatar ?? null);
@@ -241,6 +248,17 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
 
   return (
     <div className="flex flex-col gap-6 px-4 py-4">
+      {/* Reset v02 (docs/26): Definições deixou de ser uma aba paritária
+          — só se chega aqui pelo menu da ilha dinâmica — por isso ganha
+          esta seta de voltar. Resto da página fica inalterado. */}
+      <button
+        type="button"
+        onClick={() => navigate('cargas')}
+        className="-mb-2 flex min-h-touch items-center gap-1.5 self-start text-[14px] font-medium text-primary"
+      >
+        <ChevronLeft size={17} /> Cargas
+      </button>
+
       <Grupo titulo="Perfil">
         <div className="p-4">
           <AvatarPickerMobile value={avatar} onChange={setAvatar} />
@@ -284,22 +302,28 @@ export function DefinicoesPage({ onTrocarPassword }: { onTrocarPassword: () => v
         </div>
       </Grupo>
 
-      <Grupo titulo="Notificações">
-        <Linha
-          icon={Bell}
-          corIcone="#006fee"
-          label="Carga importada"
-          right={<Switch checked={prefs.carga_importada} onChange={(v) => handleTogglePref('carga_importada', v)} />}
-        />
-        <Linha icon={Bell} corIcone="#006fee" label="Carga rejeitada" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} />
-        <Linha
-          icon={Bell}
-          corIcone="#006fee"
-          label="Mensagem nova"
-          right={<Switch checked={prefs.mensagem} onChange={(v) => handleTogglePref('mensagem', v)} />}
-        />
-        <Linha icon={Bell} corIcone="#006fee" label="Falha no envio" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} ultima />
-      </Grupo>
+      {/* Escondida na 27f — o sino/painel que estas preferências
+          controlavam saiu do fluxo principal (docs/27 §2/§3.7). A lógica
+          em preferenciasNotificacoes.ts fica intacta; é só reativar
+          MOSTRAR_NOTIFICACOES se/quando o sino voltar. */}
+      {MOSTRAR_NOTIFICACOES ? (
+        <Grupo titulo="Notificações">
+          <Linha
+            icon={Bell}
+            corIcone="#006fee"
+            label="Carga importada"
+            right={<Switch checked={prefs.carga_importada} onChange={(v) => handleTogglePref('carga_importada', v)} />}
+          />
+          <Linha icon={Bell} corIcone="#006fee" label="Carga rejeitada" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} />
+          <Linha
+            icon={Bell}
+            corIcone="#006fee"
+            label="Mensagem nova"
+            right={<Switch checked={prefs.mensagem} onChange={(v) => handleTogglePref('mensagem', v)} />}
+          />
+          <Linha icon={Bell} corIcone="#006fee" label="Falha no envio" right={<span className="text-[11px] text-text-tertiary">Sempre ativo</span>} ultima />
+        </Grupo>
+      ) : null}
 
       <Grupo titulo="Aparência">
         <Linha

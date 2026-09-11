@@ -198,3 +198,54 @@ textarea {
     transform: scaleY(1);
   }
 }
+
+/* Karga Mobile v02 (docs/26) — dark glassmorphism com acento cobre, para
+   o hub de Cargas. Isolado do resto da app: mesmo padrão de
+   .root-panel-theme (sobrescreve os NOMES de token já partilhados —
+   --border, --bg-app/--bg-surface/--bg-input, --text-primary/secondary/
+   tertiary, --color-primary/success/error/warning-rgb — só dentro desta
+   classe, para as classes Tailwind existentes (bg-primary, text-error,
+   border, card-surface...) lerem os valores escuros/vidro automaticamente
+   nesta subárvore, sem duplicar utilitários). Só "glass" e "border-strong"
+   são tokens genuinamente novos, sem equivalente no resto da app — ver
+   tailwind.config.js. */
+.karga-hub-theme {
+  --bg: #0b0f14;
+  --surface-top: #141c26;
+  --surface-bot: #0a0e13;
+  --glass: rgba(255, 255, 255, 0.055);
+  --glass-strong: rgba(255, 255, 255, 0.1);
+  --glass-press: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --copper: #c89361;
+  --copper-strong: #ddae7d;
+  --teal2: #4fa6a0;
+  --amber: #e3ac4e;
+  --red: #c15c50;
+  --ease-hub: cubic-bezier(0.32, 0.9, 0.35, 1);
+
+  /* Nomes partilhados, valores do hub */
+  --border: rgba(255, 255, 255, 0.095);
+  --bg-app: #0b0f14;
+  --bg-surface: var(--glass);
+  --bg-header: var(--glass);
+  --bg-input: var(--glass);
+  --text-primary: #f4f6f8;
+  --text-secondary: rgba(244, 246, 248, 0.6);
+  --text-tertiary: rgba(244, 246, 248, 0.36);
+  --color-primary: var(--copper);
+  --color-primary-hover: var(--copper-strong);
+  --color-primary-light: rgba(200, 147, 97, 0.18);
+  --color-primary-rgb: 200 147 97;
+  --color-success-rgb: 79 166 160;
+  --color-error-rgb: 193 92 80;
+  --color-warning-rgb: 227 172 78;
+  --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 2px 12px rgba(0, 0, 0, 0.4);
+  --shadow-medium: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
+  --radius-control: 15px;
+  --radius-surface: 22px;
+
+  background: linear-gradient(180deg, var(--surface-top), var(--surface-bot)), var(--bg);
+  color: var(--text-primary);
+  min-height: 100%;
+}

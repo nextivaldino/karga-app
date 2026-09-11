@@ -1,26 +1,20 @@
 import { useState } from 'react';
-import { AuthProvider, useAuth } from '@/hooks/useAuth';
-import { PinLockProvider, usePinLock } from '@/hooks/usePinLock';
-import { ThemeProvider } from '@/hooks/useTheme';
-import { NavigationProvider, useNavigation } from '@/hooks/useNavigation';
-import { NovaCargaOverlayProvider } from '@/hooks/useNovaCargaOverlay';
-import { FilaOfflineProvider } from '@/hooks/useFilaOffline';
-import { ContentorAtivoProvider } from '@/hooks/useContentorAtivo';
-import { NotificationPanelProvider } from '@/hooks/useNotificationPanel';
-import { CargasToolbarProvider } from '@/hooks/useCargasToolbar';
+import { useAuth } from '@/hooks/useAuth';
+import { usePinLock } from '@/hooks/usePinLock';
+import { useNavigation } from '@/hooks/useNavigation';
 import { ToastContainer } from '@/components/ui/Toast';
-import { PasswordBanner } from '@/components/PasswordBanner';
-import { Header } from '@/components/Header';
-import { Dock } from '@/components/Dock';
-import { NovaCargaOverlay } from '@/components/NovaCargaOverlay';
+import { AppProviders } from '@/components/AppProviders';
+import { CargasHubPage } from '@/pages/CargasHubPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { TrocarPasswordPage } from '@/pages/TrocarPasswordPage';
-import { HomePage } from '@/pages/HomePage';
-import { CargasPage } from '@/pages/CargasPage';
 import { DefinicoesPage } from '@/pages/DefinicoesPage';
 import { RootPanelPage } from '@/pages/RootPanelPage';
 import { PinUnlockPage } from '@/pages/PinUnlockPage';
 
+// Reset v02 (docs/26 §1-§2): Cargas é a única rota pós-login — hub
+// central onde tudo (menu, notificações, sync, ações) acontece via
+// pop-ups e a ilha dinâmica, não em páginas separadas. Definições é a
+// única outra página, só alcançável pelo menu da ilha.
 function AppShell(): React.JSX.Element {
   const { loading, session, mustChangePassword, pwaUser } = useAuth();
   const { bloqueado } = usePinLock();
@@ -45,42 +39,18 @@ function AppShell(): React.JSX.Element {
 
   if (pwaUser?.tipoAcesso === 'root') return <RootPanelPage />;
 
-  return (
-    <div className="flex h-full flex-col">
-      <Header />
-      {mustChangePassword ? <PasswordBanner onAlterar={() => setTrocarPasswordAberto(true)} /> : null}
-      <main className="flex-1 overflow-y-auto pb-24">
-        {page === 'home' ? <HomePage /> : null}
-        {page === 'cargas' ? <CargasPage /> : null}
-        {page === 'definicoes' ? <DefinicoesPage onTrocarPassword={() => setTrocarPasswordAberto(true)} /> : null}
-      </main>
-      <Dock />
-      <NovaCargaOverlay />
-    </div>
-  );
+  if (page === 'definicoes') {
+    return <DefinicoesPage onTrocarPassword={() => setTrocarPasswordAberto(true)} />;
+  }
+
+  return <CargasHubPage />;
 }
 
 export default function App(): React.JSX.Element {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <PinLockProvider>
-          <FilaOfflineProvider>
-            <ContentorAtivoProvider>
-              <NavigationProvider>
-                <NovaCargaOverlayProvider>
-                  <NotificationPanelProvider>
-                    <CargasToolbarProvider>
-                      <AppShell />
-                      <ToastContainer />
-                    </CargasToolbarProvider>
-                  </NotificationPanelProvider>
-                </NovaCargaOverlayProvider>
-              </NavigationProvider>
-            </ContentorAtivoProvider>
-          </FilaOfflineProvider>
-        </PinLockProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <AppProviders>
+      <AppShell />
+      <ToastContainer />
+    </AppProviders>
   );
 }
